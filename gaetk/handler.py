@@ -15,11 +15,9 @@ Copyright (c) 2010 HUDORA. All rights reserved.
 import config
 config.imported = True
 
-from google.appengine.api import memcache
 from google.appengine.ext import webapp
 #from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 import logging
-import urllib
 import urlparse
 
 
@@ -52,9 +50,9 @@ class BasicHandler(webapp.RequestHandler):
     #    content = template.render(myval)
     #    self.response.out.write(content)
 
-    def paginate(self, query, defaultcount=10, datanodename='objects', calctotal=True):
+    def paginate(self, query, defaultcount=10, datanodename='objects', calctotal=True, formatter=None):
         """Pagination a la  http://mdornseif.github.com/2010/10/02/appengine-paginierung.html
-        
+
         Returns something like
         {more_objects=True, prev_objects=True,
          prev_start=10, next_start=30,
@@ -74,7 +72,10 @@ class BasicHandler(webapp.RequestHandler):
                    prev_start=prev_start, next_start=next_start)
         if more_objects:
             ret['cursor'] = query.cursor()
-        ret[datanodename] = objects
         if calctotal:
             ret['total'] = query.count()
+        if formatter:
+            ret[datanodename] = objects
+        else:
+            ret[datanodename] = [formatter(x) for x in objects]
         return ret
