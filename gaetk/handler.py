@@ -16,10 +16,10 @@ import config
 config.imported = True
 
 from google.appengine.ext import webapp
-#from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 import logging
 import urlparse
 
+jinja2 = None
 
 class BasicHandler(webapp.RequestHandler):
     """Generische Handler Funktionalität."""
@@ -37,18 +37,6 @@ class BasicHandler(webapp.RequestHandler):
         if str(code) == '404':
             self.response.headers['Content-Type'] = 'text/plain'
             self.response.out.write('Daten nicht gefunden.')
-
-    #def render(self, values, template_name):
-    #    """Render a Jinja2 Template"""
-    #    env = Environment(loader=FileSystemLoader(config.template_dirs))
-    #    try:
-    #        template = env.get_template(template_name)
-    #    except TemplateNotFound:
-    #        raise TemplateNotFound(template_name)
-    #    myval = dict(credential=self.credential, uri=self.request.url, navsection=None)
-    #    myval.update(values)
-    #    content = template.render(myval)
-    #    self.response.out.write(content)
 
     def paginate(self, query, defaultcount=10, datanodename='objects', calctotal=True, formatter=None):
         """Pagination a la  http://mdornseif.github.com/2010/10/02/appengine-paginierung.html
@@ -75,7 +63,22 @@ class BasicHandler(webapp.RequestHandler):
         if calctotal:
             ret['total'] = query.count()
         if formatter:
-            ret[datanodename] = objects
-        else:
             ret[datanodename] = [formatter(x) for x in objects]
+        else:
+            ret[datanodename] = objects
         return ret
+
+    def render(self, values, template_name):
+        """Render a Jinja2 Template"""
+        global jinja2
+        if not jinja2:
+            import jinja2
+        env = jinja2.Environment(loader=jinja2.FileSystemLoader(config.template_dirs))
+        try:
+            template = env.get_template(template_name)
+        except TemplateNotFound:
+            raise jinja2.TemplateNotFound(template_name)
+        myval = dict(uri=self.request.url)
+        myval.update(values)
+        content = template.render(myval)
+        self.response.out.write(content)
