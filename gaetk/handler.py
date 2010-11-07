@@ -15,13 +15,19 @@ Copyright (c) 2010 HUDORA. All rights reserved.
 import config
 config.imported = True
 
-from google.appengine.ext import webapp
+from gaetk import webapp2
 import logging
 import urlparse
 
+from webob.exc import HTTPUnauthorized as HTTP401_Unauthorized
+from webob.exc import HTTPUnauthorized as HTTP403_Forbidden
+from webob.exc import HTTPUnauthorized as HTTP404_NotFound
+
+
+# for lazy loading
 jinja2 = None
 
-class BasicHandler(webapp.RequestHandler):
+class BasicHandler(webapp2.RequestHandler):
     """Generische Handler Funktionalität."""
     def abs_url(self, url):
         return urlparse.urljoin(self.request.uri, url)
