@@ -18,14 +18,24 @@ config.imported = True
 from gaetk import webapp2
 import logging
 import urlparse
+from gaetk.gaesessions import get_current_session
+from google.appengine.api import memcache
+from google.appengine.ext import webapp
+from jinja2 import Environment, FileSystemLoader, TemplateNotFound
+import logging
+from ablage.models import Credential
+import urllib
+import urlparse
 
 from webob.exc import HTTPUnauthorized as HTTP401_Unauthorized
-from webob.exc import HTTPUnauthorized as HTTP403_Forbidden
-from webob.exc import HTTPUnauthorized as HTTP404_NotFound
+from webob.exc import HTTPForbidden as HTTP403_Forbidden
+from webob.exc import HTTPNotFound as HTTP404_NotFound
+from webob.exc import HTTPFound as HTTP302_Found
 
 
 # for lazy loading
 jinja2 = None
+
 
 class BasicHandler(webapp2.RequestHandler):
     """Generische Handler Funktionalität."""
@@ -88,3 +98,60 @@ class BasicHandler(webapp2.RequestHandler):
         myval.update(values)
         content = template.render(myval)
         self.response.out.write(content)
+
+    def login_required(self):
+        """Returns the currently logged in user."""
+        self.session = get_current_session()
+        self.credential = None
+        if self.session.get('uid'):
+            self.credential = memcache.get("cred_%s" % self.session['uid'])
+            if self.credential is None:
+                self.credential = Credential.get_by_key_name(self.session['uid'])
+                memcache.add("cred_%s" % self.session['uid'], self.credential, 300)
+
+        # we don't have an active session
+        if not self.credential:
+            # no session information - try HTTP - Auth
+            uid, secret = None, None
+            # see if we have HTTP-Basic Auth Data
+            if self.request.headers.get('Authorization'):
+                auth_type, encoded = self.request.headers.get('Authorization').split(None, 1)
+                if auth_type.lower() == 'basic':
+                    uid, secret = encoded.decode('base64').split(':', 1)
+                    credential = Credential.get_by_key_name(uid.strip() or ' *invalid* ')
+                    if credential and credential.secret == secret.strip():
+                        # Siccessful login
+                        self.credential = credential
+                        self.session['uid'] = credential.uid
+                        # Log, but only once every 10h
+                        data = memcache.get("login_%s_%s" % (uid, request.remote_addr))
+                        if not data:
+                            logging.info("API-Login von %s/%s", uid, request.remote_addr)
+                            memcache.set("login_%s_%s" % (uid, request.remote_addr), True, 60 * 60 * 10)
+                    else:
+                        logging.error("failed API-Login von %s/%s", uid, request.remote_addr)
+
+        # HTTP basic Auth failed
+        if not self.credential:
+            # Login not successfull
+            if 'text/html' in self.request.headers.get('Accept', ''):
+                # we assume the request came via a browser - redirect to the "nice" login page
+                self.response.set_status(302)
+                absolute_url = self.abs_url("/_ah/login_required?continue=%s" % urllib.quote(self.request.url))
+                self.response.headers['Location'] = str(absolute_url)
+                raise HTTP302_Found(location=str(absolute_url))
+            else:
+                # We assume the access came via cURL et al, request Auth vie 401 Status code.
+                self.response.set_status(401)
+                self.response.headers['Content-Type'] = 'text/html; charset=utf-8'
+                self.response.headers['WWW-Authenticate'] = 'Basic realm="hdEDIhub"'
+                self.response.out.write("""<html>
+  <head><title>Authentication Required</title></head>
+  <body>
+    <h1>Authentication Required</h1>
+    Can't get in? Stay out!
+  </body>
+</html>""")
+                raise HTTP401_Unauthorized(headers={'WWW-Authenticate': 'Basic realm="API Login'})
+
+        return self.credential
