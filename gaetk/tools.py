@@ -7,7 +7,26 @@ Created by Maximillian Dornseif on 2010-11-07.
 Copyright (c) 2010 HUDORA. All rights reserved.
 """
 
+import config
+config.imported = True
+
 import re
+
+
+def import_credentials_class():
+    """ dynamically import the credentials class bases on the class configured 
+        in the settings (config.py). That way there are no project specific configuration
+        in the toolkit """
+    try:
+        config.GAETK_CREDENTIALS_CLASS
+    except AttributeError:
+        raise Exception('no credentials class configured for the Google AppEngine toolkit!')
+
+    parts = config.GAETK_CREDENTIALS_CLASS.split('.')
+    cred_class = parts[-1]
+    cred_module = '.'.join(parts[0:-1])
+    mod = __import__(cred_module, globals(), locals(), [cred_class])
+    return getattr(mod, cred_class)
 
 
 def split(s):

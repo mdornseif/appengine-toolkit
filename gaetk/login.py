@@ -13,7 +13,6 @@ Copyright (c) 2010 HUDORA. All rights reserved.
 import config
 config.imported = True
 
-from ablage.models import Credential
 from gaetk import webapp2
 from gaetk.gaesessions import get_current_session
 from gaetk.handler import BasicHandler
@@ -24,6 +23,10 @@ from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 import logging
 
 ALLOWED_DOMAINS = config.LOGIN_ALLOWED_DOMAINS
+
+# dynamically import the credentials class bases on the 
+# class configured in the settings (config.py)
+Credential = tools.import_credentials_class()
 
 
 class OpenIdLoginHandler(BasicHandler):

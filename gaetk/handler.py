@@ -15,7 +15,7 @@ Copyright (c) 2010 HUDORA. All rights reserved.
 import config
 config.imported = True
 
-from gaetk import webapp2
+from gaetk import webapp2, tools
 import logging
 import urlparse
 from gaetk.gaesessions import get_current_session
@@ -23,7 +23,6 @@ from google.appengine.api import memcache
 from google.appengine.ext import webapp
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 import logging
-from ablage.models import Credential
 import urllib
 import urlparse
 
@@ -35,6 +34,10 @@ from webob.exc import HTTPFound as HTTP302_Found
 
 # for lazy loading
 jinja2 = None
+
+# dynamically import the credentials class bases on the 
+# class configured in the settings (config.py)
+Credential = tools.import_credentials_class()
 
 
 class BasicHandler(webapp2.RequestHandler):
