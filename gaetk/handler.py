@@ -19,6 +19,7 @@ from gaetk import webapp2, tools
 import logging
 import urlparse
 from gaetk.gaesessions import get_current_session
+from django.utils import simplejson as json
 from google.appengine.api import memcache
 from google.appengine.ext import webapp
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
@@ -86,6 +87,12 @@ class BasicHandler(webapp2.RequestHandler):
         else:
             ret[datanodename] = objects
         return ret
+
+    def render_json(self, data):
+        """ render the given data as JSON """
+        data = json.dumps(data)
+        self.response.headers['Content-Type'] = 'application/json'
+        self.response.out.write(data)
 
     def render(self, values, template_name):
         """Render a Jinja2 Template"""
