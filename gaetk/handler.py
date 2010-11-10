@@ -124,12 +124,12 @@ class BasicHandler(webapp2.RequestHandler):
                         self.credential = credential
                         self.session['uid'] = credential.uid
                         # Log, but only once every 10h
-                        data = memcache.get("login_%s_%s" % (uid, request.remote_addr))
+                        data = memcache.get("login_%s_%s" % (uid, self.request.remote_addr))
                         if not data:
-                            logging.info("API-Login von %s/%s", uid, request.remote_addr)
-                            memcache.set("login_%s_%s" % (uid, request.remote_addr), True, 60 * 60 * 10)
+                            logging.info("API-Login von %s/%s", uid, self.request.remote_addr)
+                            memcache.set("login_%s_%s" % (uid, self.request.remote_addr), True, 60 * 60 * 10)
                     else:
-                        logging.error("failed API-Login von %s/%s", uid, request.remote_addr)
+                        logging.error("failed API-Login von %s/%s", uid, self.request.remote_addr)
 
         # HTTP basic Auth failed
         if not self.credential:
@@ -142,16 +142,6 @@ class BasicHandler(webapp2.RequestHandler):
                 raise HTTP302_Found(location=str(absolute_url))
             else:
                 # We assume the access came via cURL et al, request Auth vie 401 Status code.
-                self.response.set_status(401)
-                self.response.headers['Content-Type'] = 'text/html; charset=utf-8'
-                self.response.headers['WWW-Authenticate'] = 'Basic realm="hdEDIhub"'
-                self.response.out.write("""<html>
-  <head><title>Authentication Required</title></head>
-  <body>
-    <h1>Authentication Required</h1>
-    Can't get in? Stay out!
-  </body>
-</html>""")
-                raise HTTP401_Unauthorized(headers={'WWW-Authenticate': 'Basic realm="API Login'})
+                raise HTTP401_Unauthorized(headers={'WWW-Authenticate': 'Basic realm="API Login"'})
 
         return self.credential
