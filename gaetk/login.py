@@ -42,13 +42,16 @@ class OpenIdLoginHandler(BasicHandler):
         user = users.get_current_user()
         logging.info('Google user = %s', user)
         if user:
-            #yes
+            # yes, active OpenID session
             # assert user.federated_provider() == 'https://www.google.com/a/hudora.de/o8/ud?be=o8'
             username = user.email()
             credential = Credential.get_by_key_name(username)
             if not credential or not credential.uid == username:
                 # So far we have no Credential entity for that user, create one
-                credential = Credential.create('CYLGI', user=user, uid=username, email=user.email(),
+                tenant = 'CYLGI'
+                if 'hudora.de' in user.federated_provider():
+                    tenant = 'HDRA'
+                credential = Credential.create(tenant, user=user, uid=username, email=user.email(),
                     text="Automatisch durch OpenID %s angelegt" % user.federated_provider()) #  ,admin=True)
             session['uid'] = credential.uid
             self.redirect(continue_url)
