@@ -15,26 +15,60 @@ Copyright (c) 2010 HUDORA. All rights reserved.
 import config
 config.imported = True
 
+
+from ablage.models import Credential
 from gaetk import webapp2
-import logging
-import urlparse
 from gaetk.gaesessions import get_current_session
 from google.appengine.api import memcache
+from google.appengine.ext import db
 from google.appengine.ext import webapp
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
+from webob.exc import HTTPForbidden as HTTP403_Forbidden
+from webob.exc import HTTPFound as HTTP302_Found
+from webob.exc import HTTPNotFound as HTTP404_NotFound
+from webob.exc import HTTPUnauthorized as HTTP401_Unauthorized
 import logging
-from ablage.models import Credential
 import urllib
 import urlparse
-
-from webob.exc import HTTPUnauthorized as HTTP401_Unauthorized
-from webob.exc import HTTPForbidden as HTTP403_Forbidden
-from webob.exc import HTTPNotFound as HTTP404_NotFound
-from webob.exc import HTTPFound as HTTP302_Found
-
+import uuid
+import base64
+import hashlib
 
 # for lazy loading
 jinja2 = None
+
+
+class Credential(db.Model):
+    """Represents an access token and somebody who is allowed to use it.
+
+    Credentials MIGHT map to a google user object
+    """
+    tenant = db.StringProperty(required=True, default='_unknown')
+    email = db.EmailProperty(required=False)
+    user = db.UserProperty(required=False)
+    uid = db.StringProperty(required=True)
+    secret = db.StringProperty(required=True)
+    text = db.StringProperty(required=False)
+    created_at = db.DateTimeProperty(auto_now_add=True)
+    updated_at = db.DateTimeProperty(auto_now=True)
+    created_by = db.UserProperty(required=False, auto_current_user_add=True)
+    updated_by = db.UserProperty(required=False, auto_current_user=True)
+
+    @classmethod
+    def create(cls, tenant=None, user=None, uid=None, text='', email=None):
+        """Creates a credential Object generating a random secret and a random uid if needed."""
+        # secret hopfully contains about 64 bits of entropy - more than most passwords
+        data = "%s%s%s%s%s" % (user, uuid.uuid1(), uid, text, email)
+        secret = str(base64.b32encode(hashlib.md5(data).digest()).rstrip('='))[1:15]
+        if not uid:
+            handmade_key = db.Key.from_path('Credential', 1)
+            uid = "u%s" % (db.allocate_ids(handmade_key, 1)[0])
+        instance = cls.get_or_insert(key_name=uid, uid=uid, secret=secret, tenant=tenant,
+                                     user=user, text=text, email=email)
+        return instance
+
+    def __repr__(self):
+        return "<gaetk.Credential %s>" % self.uid
 
 
 class BasicHandler(webapp2.RequestHandler):
@@ -126,12 +160,12 @@ class BasicHandler(webapp2.RequestHandler):
                         # Log, but only once every 10h
                         data = memcache.get("login_%s_%s" % (uid, self.request.remote_addr))
                         if not data:
-                            logging.info("API-Login von %s/%s", uid, self.request.remote_addr)
+                            logging.info("HTTP-Login from %s/%s", uid, self.request.remote_addr)
                             memcache.set("login_%s_%s" % (uid, self.request.remote_addr), True, 60 * 60 * 10)
                     else:
-                        logging.error("failed API-Login von %s/%s", uid, self.request.remote_addr)
+                        logging.error("failed HTTP-Login from %s/%s", uid, self.request.remote_addr)
 
-        # HTTP basic Auth failed
+        # HTTP Basic Auth failed
         if not self.credential:
             # Login not successfull
             if 'text/html' in self.request.headers.get('Accept', ''):

@@ -3,6 +3,14 @@
 """
 login.py - login handler for appengine
 
+In app.yaml add:
+
+    handlers:
+    - url: /_ah/login_required
+      script: lib/gaetk/gaetk/login.py
+    - url: /logout
+      script: lib/gaetk/gaetk/login.py
+
 Created by Maximillian Dornseif on 2010-09-24.
 Copyright (c) 2010 HUDORA. All rights reserved.
 """
@@ -13,7 +21,7 @@ Copyright (c) 2010 HUDORA. All rights reserved.
 import config
 config.imported = True
 
-from ablage.models import Credential
+from gaetk.handler import Credential
 from gaetk import webapp2
 from gaetk.gaesessions import get_current_session
 from gaetk.handler import BasicHandler
@@ -23,14 +31,18 @@ from google.appengine.ext.webapp import util
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 import logging
 
-ALLOWED_DOMAINS = config.LOGIN_ALLOWED_DOMAINS
+try:
+    ALLOWED_DOMAINS = config.LOGIN_ALLOWED_DOMAINS
+except:
+    ALLOWED_DOMAINS = []
 
 
 class OpenIdLoginHandler(BasicHandler):
     def get(self):
-        """Handler for Federated login consumer (OpenID)
+        """Handler for Federated login consumer (OpenID) AND HTTP-Basic-Auth.
 
         See http://code.google.com/appengine/articles/openid.html"""
+        
         continue_url = self.request.GET.get('continue', '/')
         openid_url = None
         session = get_current_session()
@@ -43,16 +55,19 @@ class OpenIdLoginHandler(BasicHandler):
         logging.info('Google user = %s', user)
         if user:
             # yes, active OpenID session
-            # assert user.federated_provider() == 'https://www.google.com/a/hudora.de/o8/ud?be=o8'
+            # user.federated_provider() == 'https://www.google.com/a/hudora.de/o8/ud?be=o8'
+            if not user.federated_provider():
+                # development server
+                apps_domain = user.email().split('@')[-1].lower()
+            else:
+                apps_domain = user.federated_provider().split('/')[4].lower()
             username = user.email()
             credential = Credential.get_by_key_name(username)
             if not credential or not credential.uid == username:
                 # So far we have no Credential entity for that user, create one
-                tenant = 'CYLGI'
-                if 'hudora.de' in user.federated_provider():
-                    tenant = 'HDRA'
-                credential = Credential.create(tenant, user=user, uid=username, email=user.email(),
-                    text="Automatisch durch OpenID %s angelegt" % user.federated_provider()) #  ,admin=True)
+                credential = Credential.create(tenant=apps_domain, user=user, uid=username,
+                    email=user.email(),
+                    text="Automatically created via OpenID Provider %s" % user.federated_provider())
             session['uid'] = credential.uid
             self.redirect(continue_url)
             return
