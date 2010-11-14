@@ -12,145 +12,107 @@ architecture, and the fact that only one sequence is allocated from at a time,
 all allocations of numbers from the database will synchronise on the same
 resource and the performance will be low - around 5-10 queries per second.
 
-Performance could be achieved by a smart sharing setup. Rather than allocating
-from a single Sequence at a time, there could be several shards which have
-pre-allocated some amount of the Sequence (e.g. 100 of the sequence), and these
-could be allocated from on an e.g. random basis, performing a sort of load
-balancing of the transactions. This wouldn't necessarily guarantee a lack of
-gaps, but as long as enough small queries are received (e.g. for 1 numbers)
-over time the gaps will be filled.
+Example::
 
-To ensure correct allocation from one sequence to the next, sequences must be
-in the same entity group. Practically, this means all sequences need to have
-"parent" set: it's easiest to always set this to be the first sequence, though
-it could be anything (e.g. a special SequenceRoot model could be created just
-for this purpose to simplify the design perhaps).
+    init_sequence('test', start=1000, end=1003)
+    init_sequence('other', start=1005, end=1010)
+    init_sequence('test', start=10100, end=10250)
+    get_numbers('test', 5)
+    [1000, 1001, 1002, 10100, 10101]
+
 """
 
-# Created 2010-01 by Sam Jansen for HUDORA
+# Performance could be achieved by a smart sharing setup. Rather than allocating
+# from a single Sequence at a time, there could be several shards which have
+# pre-allocated some amount of the Sequence (e.g. 100 of the sequence), and these
+# could be allocated from on an e.g. random basis, performing a sort of load
+# balancing of the transactions. This wouldn't necessarily guarantee a lack of
+# gaps, but as long as enough small queries are received (e.g. for 1 numbers)
+# over time the gaps will be filled.
+# 
+# To ensure correct allocation from one sequence to the next, sequences must be
+# in the same entity group. Practically, this means all sequences need to have
+# "parent" set. init_sequence() ensures this.
+#
+# See http://stackoverflow.com/questions/3985812 for a general discussion of the
+# problem space.
+# 
+# Created 2010-11 by Sam Jansen for HUDORA
 
-from google.appengine.ext import webapp
-from google.appengine.ext.webapp import util
+# pylint: disable-msg=E1103
+
+
 from google.appengine.ext import db
 
-class Sequence(db.Model):
+
+class gaetkSequence(db.Model):
     """Sequence of numbers, as contained in the spec."""
-    start = db.IntegerProperty()
-    end = db.IntegerProperty()
-    current = db.IntegerProperty()
-    active = db.BooleanProperty(default=False)
-    deleted = db.BooleanProperty(default=False)
+    type = db.StringProperty()      # to differentiate betwwen dirrerent types (invoices, consignments, ...)
+    start = db.IntegerProperty()    # fist number to be allocated
+    end = db.IntegerProperty()      # first number to be ot allocated -> [start ; end [
+    current = db.IntegerProperty()  # this is currentliy selected for allocation
+    active = db.BooleanProperty(default=False)  # this can be selected for allocation
     created_at = db.DateTimeProperty(auto_now_add=True)
 
-    def __str__(self):
-        return ('Sequence: start=%d,end=%d,current=%s,active=%s,deleted=%s,'
-            'created_at=%s') % (self.start, self.end, self.current,
-                    self.active, self.deleted, self.created_at)
+    def __repr__(self):
+        return ('<gaetkSequence: type=%s, start=%d, end=%d, current=%s, active=%s, '
+            'created_at=%s>') % (self.type, self.start, self.end, self.current,
+                    self.active, self.created_at)
 
 
-def get_numbers(count=1):
+def _init_sequence_helper(typ, start, end, root):
+    # ensure there are no overlapping ranges
+    query1 = gaetkSequence.all().ancestor(root).filter('type = ', typ).filter(
+                'start >= ', start).filter('start <', end).fetch(1)
+    query2 = gaetkSequence.all().ancestor(root).filter('type = ', typ).filter(
+                'end >= ', start).filter('end <', end).fetch(1)
+    if query1 or query2:
+        raise ValueError('%d:%d overlaps with %s/%s' % (start, end, query1, query2))
+    seq = gaetkSequence(type=typ, parent=root, start=start, end=end, active=True)
+    seq.put()
+    return seq
+
+
+def init_sequence(typ, start, end):
+    assert start < end
+    root = gaetkSequence.get_by_key_name('_%s_root' % typ)
+    if not root:
+        root = gaetkSequence.get_or_insert('_%s_root' % typ, type='_root', start=0, end=1, active=False)
+    return db.run_in_transaction(_init_sequence_helper, typ, start, end, root.key())
+
+
+def _get_numbers_helper(keys, needed):
+    """Transaction to allocate numbers from a sequence."""
+    results = []
+    
+    for key in keys:
+        seq = db.get(key)
+        start = seq.current or seq.start
+        end = seq.end
+        avail = end - start
+        consumed = needed
+
+        if avail <= needed:
+            seq.active = False
+            consumed = avail
+        seq.current = start + consumed
+        seq.put()
+
+        results += range(start, start + consumed)
+        needed -= consumed
+
+        if needed == 0:
+            return results
+
+    raise RuntimeError('Not enough sequence space to allocate %d numbers.' % needed)
+
+
+def get_numbers(typ, needed):
     """Returns a list of sequential numbers from the database."""
 
-    def get_nums_from_db(keys, count):
-        """Transaction to allocate numbers from a sequence."""
-        results = []
-        orig_count = count
-        
-        for key in keys:
-            # pylint: disable-msg=E1103
-            seq = db.get(key)
-
-            if seq.current:
-                start = seq.current
-            else:
-                start = seq.start
-
-            end = seq.end
-            avail = end - start
-            consumed = count
-
-            if avail <= count:
-                seq.active = False
-                consumed = avail
-
-            seq.current = start + consumed
-            seq.put()
-
-            # pylint: enable-msg=E1103
-
-            results += range(start, start + consumed)
-            count -= consumed
-
-            if count == 0:
-                return results
-
-        raise Exception('Not enough sequence space to allocate %d numbers.' %
-                orig_count)
-
-    query = db.GqlQuery(
-            'SELECT * FROM Sequence '
-            'WHERE active = TRUE '
-            'ORDER BY start')
-    rows = query.fetch(2)
-
+    query = gaetkSequence.all(keys_only=True).filter('type = ', typ).filter('active = ', True).order('start')
+    rows = query.fetch(5)
     if rows:
-        return db.run_in_transaction(get_nums_from_db,
-                [r.key() for r in rows], count)
+        return db.run_in_transaction(_get_numbers_helper, rows, needed)
     else:
         raise Exception('No active sequences in database.')
-
-
-class MainHandler(webapp.RequestHandler):
-    """Handler for /, allocates numbers."""
-    def get(self):
-        """Allocates numbers and prints them in a plain textual form."""
-        self.response.headers['Content-type'] = 'text/plain'
-
-        # All a bit ugly, just a hack to make it easy to use
-        try:
-            num_required = int(self.request.get('num', default_value='1'))
-        except ValueError:
-            num_required = 1
-
-        self.response.out.write('\n'.join([str(x) for x in
-            get_numbers(num_required)]))
-
-
-class StateHandler(webapp.RequestHandler):
-    """Handler for /status, prints database status."""
-    def get(self):
-        """Prints the current database state in a human-readable form."""
-        self.response.headers['Content-type'] = 'text/plain'
-
-        query = db.GqlQuery(
-            'SELECT * FROM Sequence '
-            'ORDER BY start ')
-        
-        self.response.out.write('\n'.join([str(x) for x in query]))
-
-
-def main():
-    """Just creates a simple Google App Engine "wepapp" to show the use of the
-    number allocation."""
-
-    application = webapp.WSGIApplication(
-            [('/', MainHandler),
-             ('/status', StateHandler)],
-            debug=True)
-    util.run_wsgi_app(application)
-
-
-if __name__ == '__main__':
-    # Some test code below to set up the database, uncomment for testing.
-    #s = Sequence(start=0, end=100, active=True)
-    #s.put()
-    #Sequence(parent=s, start=1000, end=1010, active=True).put()
-    #Sequence(parent=s, start=10100, end=10250, active=False).put()
-    #Sequence(parent=s, start=10500, end=11000, active=True).put()
-    #Sequence(parent=s, start=20000, end=100000, active=True).put()
-    #Sequence(parent=s, start=30000, end=39999, active=False)
-    #Sequence(parent=s, start=10000000, end=10049999, active=False)
-    #Sequence(parent=s, start=10010000, end=10019999, active=False)
-    main()
-
-# vim: set sts=4 shiftwidth=4 :

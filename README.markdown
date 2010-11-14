@@ -1,8 +1,7 @@
 gaetk - Google Appengine Toolkit
 ================================
 
-gaetk is a small collection of tools that tries to make programming Google AppEngine faster, more comfortable
-and less error prone. It is pre-alpha quality software.
+gaetk is a small collection of tools that tries to make programming Google AppEngine faster, more comfortable and less error prone. It is pre-alpha quality software.
 
 It comes bundled with [gaesession][1] and [webapp2][2]. Check the documentation of these projects for further information.
 
@@ -23,12 +22,23 @@ Create a appengine Project, then:
 Functionality
 =============
 
+Sequence generation
+-------------------
+
+Generation of sequential numbers ('autoincrement') on Google appengine is hard. See [Stackoverflow](http://stackoverflow.com/questions/3985812) for some discussion of the issues. `gaetk` implements a sequence number generation based on transactions. This will yield only a preformance of half a dozen or so requests per second but at least allows to alocate more than one number in a single request.
+
+    >>> from gaeth.sequences import * 
+    >>> init_sequence('invoce_number', start=1, end=0xffffffff)
+    >>> get_numbers('invoce_number', 1)
+    [1, 2]
+    
+
 Login / Authentication
 ----------------------
 
 gaetk offers a hybrid Google Apps / Credential based authentication via Session Coockies and HTTP Auth. Currently to much of this functionality hardcoded.
 
-In app.yaml add::
+In app.yaml add:
 
     handlers:
     - url: /_ah/login_required
