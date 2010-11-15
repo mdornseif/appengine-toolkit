@@ -38,6 +38,9 @@ import hashlib
 jinja2 = None
 
 
+CRED_CACHE_TIMEOUT = 600
+
+
 class Credential(db.Model):
     """Represents an access token and somebody who is allowed to use it.
 
@@ -141,7 +144,7 @@ class BasicHandler(webapp2.RequestHandler):
             self.credential = memcache.get("cred_%s" % self.session['uid'])
             if self.credential is None:
                 self.credential = Credential.get_by_key_name(self.session['uid'])
-                memcache.add("cred_%s" % self.session['uid'], self.credential, 300)
+                memcache.add("cred_%s" % self.session['uid'], self.credential, CRED_CACHE_TIMEOUT)
 
         # we don't have an active session
         if not self.credential:
@@ -152,7 +155,10 @@ class BasicHandler(webapp2.RequestHandler):
                 auth_type, encoded = self.request.headers.get('Authorization').split(None, 1)
                 if auth_type.lower() == 'basic':
                     uid, secret = encoded.decode('base64').split(':', 1)
-                    credential = Credential.get_by_key_name(uid.strip() or ' *invalid* ')
+                    credential = memcache.get("cred_%s" % uid)
+                    if not credential:
+                        credential = Credential.get_by_key_name(uid.strip() or ' *invalid* ')
+                        memcache.add("cred_%s" % uid, credential, CRED_CACHE_TIMEOUT)
                     if credential and credential.secret == secret.strip():
                         # Siccessful login
                         self.credential = credential
