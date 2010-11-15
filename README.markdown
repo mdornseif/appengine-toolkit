@@ -29,7 +29,7 @@ Generation of sequential numbers ('autoincrement') on Google appengine is hard. 
 
     >>> from gaeth.sequences import * 
     >>> init_sequence('invoce_number', start=1, end=0xffffffff)
-    >>> get_numbers('invoce_number', 1)
+    >>> get_numbers('invoce_number', 2)
     [1, 2]
     
 
