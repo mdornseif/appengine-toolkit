@@ -38,6 +38,13 @@ except:
 
 
 class OpenIdLoginHandler(BasicHandler):
+    def create_credential_from_federated_login(self, user, apps_domain):
+        """Create a new credential object for a newly logged in OpenID user."""
+        credential = Credential.create(tenant=apps_domain, user=user, uid=user.email(),
+            email=user.email(),
+            text="Automatically created via OpenID Provider %s" % user.federated_provider())
+        return credential
+
     def get(self):
         """Handler for Federated login consumer (OpenID) AND HTTP-Basic-Auth.
 
@@ -65,9 +72,7 @@ class OpenIdLoginHandler(BasicHandler):
             credential = Credential.get_by_key_name(username)
             if not credential or not credential.uid == username:
                 # So far we have no Credential entity for that user, create one
-                credential = Credential.create(tenant=apps_domain, user=user, uid=username,
-                    email=user.email(),
-                    text="Automatically created via OpenID Provider %s" % user.federated_provider())
+                credential = create_credential_from_federated_login(self, user, apps_domain)
             session['uid'] = credential.uid
             self.redirect(continue_url)
             return

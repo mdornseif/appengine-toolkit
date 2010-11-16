@@ -3,7 +3,7 @@
 import config
 config.imported = True
 
-from gaesessions import SessionMiddleware
+from gaetk.gaesessions import SessionMiddleware
 COOKIE_KEY = '%%PUT_RANDOM_VALUE_HERE%%'
 
 

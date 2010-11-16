@@ -16,7 +16,6 @@ import config
 config.imported = True
 
 
-from ablage.models import Credential
 from gaetk import webapp2
 from gaetk.gaesessions import get_current_session
 from google.appengine.api import memcache
@@ -38,7 +37,7 @@ import hashlib
 jinja2 = None
 
 
-class Credential(db.Model):
+class Credential(db.Expando):
     """Represents an access token and somebody who is allowed to use it.
 
     Credentials MIGHT map to a google user object
@@ -49,6 +48,7 @@ class Credential(db.Model):
     uid = db.StringProperty(required=True)
     secret = db.StringProperty(required=True)
     text = db.StringProperty(required=False)
+    admin = db.BooleanProperty(default=False)
     created_at = db.DateTimeProperty(auto_now_add=True)
     updated_at = db.DateTimeProperty(auto_now=True)
     created_by = db.UserProperty(required=False, auto_current_user_add=True)
