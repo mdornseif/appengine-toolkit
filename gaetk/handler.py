@@ -23,9 +23,11 @@ from google.appengine.api import memcache
 from google.appengine.ext import db
 from google.appengine.ext import webapp
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
+from webob.exc import HTTPBadRequest as HTTP400_BadRequest
 from webob.exc import HTTPForbidden as HTTP403_Forbidden
 from webob.exc import HTTPFound as HTTP302_Found
 from webob.exc import HTTPNotFound as HTTP404_NotFound
+from webob.exc import HTTPRequestEntityTooLarge as HTTP413_TooLarge
 from webob.exc import HTTPUnauthorized as HTTP401_Unauthorized
 import logging
 import urllib
@@ -160,16 +162,20 @@ class BasicHandler(webapp2.RequestHandler):
                         credential = Credential.get_by_key_name(uid.strip() or ' *invalid* ')
                         memcache.add("cred_%s" % uid, credential, CRED_CACHE_TIMEOUT)
                     if credential and credential.secret == secret.strip():
-                        # Siccessful login
+                        # Successful login
                         self.credential = credential
                         self.session['uid'] = credential.uid
                         # Log, but only once every 10h
                         data = memcache.get("login_%s_%s" % (uid, self.request.remote_addr))
                         if not data:
-                            logging.info("HTTP-Login from %s/%s", uid, self.request.remote_addr)
                             memcache.set("login_%s_%s" % (uid, self.request.remote_addr), True, 60 * 60 * 10)
+                            logging.info("HTTP-Login from %s/%s", uid, self.request.remote_addr)
                     else:
-                        logging.error("failed HTTP-Login from %s/%s", uid, self.request.remote_addr)
+                        logging.error("failed HTTP-Login from %s/%s %s", uid, self.request.remote_addr,
+                                       self.request.headers.get('Authorization'))
+                else:
+                    logging.error("unknown HTTP-Login type %r %s %s", auth_type, self.request.remote_addr,
+                                   self.request.headers.get('Authorization'))
 
         # HTTP Basic Auth failed
         if not self.credential:
@@ -182,6 +188,8 @@ class BasicHandler(webapp2.RequestHandler):
                 raise HTTP302_Found(location=str(absolute_url))
             else:
                 # We assume the access came via cURL et al, request Auth vie 401 Status code.
+                logging.debug("requesting HTTP-Auth %s %s", self.request.remote_addr,
+                              self.request.headers.get('Authorization'))
                 raise HTTP401_Unauthorized(headers={'WWW-Authenticate': 'Basic realm="API Login"'})
 
         return self.credential
