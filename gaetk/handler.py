@@ -124,7 +124,7 @@ class BasicHandler(webapp2.RequestHandler):
         env = jinja2.Environment(loader=jinja2.FileSystemLoader(config.template_dirs))
         try:
             template = env.get_template(template_name)
-        except TemplateNotFound:
+        except jinja2.TemplateNotFound:
             raise jinja2.TemplateNotFound(template_name)
         myval = dict(uri=self.request.url)
         myval.update(values)
