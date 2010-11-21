@@ -13,10 +13,13 @@ Create a appengine Project, then:
     mkdir lib
     git submodule add git@github.com:mdornseif/appengine-toolkit.git lib/gaetk
     git submodule update --init lib/gaetk
-    cp libs/gaetk/example/Makefile .
-    cp libs/gaetk/example/config.py .
-    cp libs/gaetk/example/appengine_config.py .
-    sed -i -e "s/%%PUT_RANDOM_VALUE_HERE%%/`(date;md5 /etc/* 2&>/dev/null)|md5`/" appengine_config.py
+    cp lib/gaetk/examples/Makefile .
+    cp lib/gaetk/examples/config.py .
+    cp lib/gaetk/examples/appengine_config.py .
+    sed -i -e "s/%%PUT_RANDOM_VALUE_HERE%%/`(date;md5 /etc/* 2&>/dev/null)|md5`-5a17/" appengine_config.py
+    # If you want to use jinja2
+    git submodule add https://github.com/mitsuhiko/jinja2.git lib/jinja2
+    git submodule update --init lib/jinja2
 
 
 Functionality
@@ -75,7 +78,8 @@ Updated 2010-10-02 (v1.05), Licensed under the Apache License Version 2.0.
 Contains code from [webapp2][2], Copyright 2010 Rodrigo Moraes.
 Licensed under the Apache License, Version 2.0
 
-gaetk code is Copyright 2010 Hudora GmbH and licensed under the Apache License Version 2.0.
+gaetk code is Copyright 2010 Hudora GmbH and dual licensed under GPLv3 and the
+Apache License Version 2.0.
 
 
 [1]: https://github.com/dound/gae-sessions

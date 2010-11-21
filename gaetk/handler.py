@@ -15,13 +15,11 @@ Copyright (c) 2010 HUDORA. All rights reserved.
 import config
 config.imported = True
 
-
 from gaetk import webapp2
 from gaetk.gaesessions import get_current_session
 from google.appengine.api import memcache
 from google.appengine.ext import db
 from google.appengine.ext import webapp
-from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 from webob.exc import HTTPForbidden as HTTP403_Forbidden
 from webob.exc import HTTPFound as HTTP302_Found
 from webob.exc import HTTPNotFound as HTTP404_NotFound
