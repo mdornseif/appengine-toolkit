@@ -92,9 +92,11 @@ class BasicHandler(webapp2.RequestHandler):
         """Pagination a la  http://mdornseif.github.com/2010/10/02/appengine-paginierung.html
 
         Returns something like
-        {more_objects=True, prev_objects=True,
-         prev_start=10, next_start=30,
-         objects: [...], cursor='ABCDQWERY'}
+            {more_objects=True, prev_objects=True,
+             prev_start=10, next_start=30,
+             objects: [...], cursor='ABCDQWERY'}
+
+        `formatter` is called for each object and can transfor it into something suitable.
         """
         start = self.request.get_range('start', min_value=0, max_value=1000, default=0)
         limit = self.request.get_range('limit', min_value=1, max_value=100, default=defaultcount)
