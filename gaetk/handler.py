@@ -15,16 +15,16 @@ Copyright (c) 2010 HUDORA. All rights reserved.
 import config
 config.imported = True
 
-
 from gaetk import webapp2
 from gaetk.gaesessions import get_current_session
 from google.appengine.api import memcache
 from google.appengine.ext import db
 from google.appengine.ext import webapp
-from jinja2 import Environment, FileSystemLoader, TemplateNotFound
+from webob.exc import HTTPBadRequest as HTTP400_BadRequest
 from webob.exc import HTTPForbidden as HTTP403_Forbidden
 from webob.exc import HTTPFound as HTTP302_Found
 from webob.exc import HTTPNotFound as HTTP404_NotFound
+from webob.exc import HTTPRequestEntityTooLarge as HTTP413_TooLarge
 from webob.exc import HTTPUnauthorized as HTTP401_Unauthorized
 import logging
 import urllib
@@ -35,6 +35,9 @@ import hashlib
 
 # for lazy loading
 jinja2 = None
+
+
+CRED_CACHE_TIMEOUT = 600
 
 
 class Credential(db.Expando):
@@ -128,7 +131,7 @@ class BasicHandler(webapp2.RequestHandler):
         env = jinja2.Environment(loader=jinja2.FileSystemLoader(config.template_dirs))
         try:
             template = env.get_template(template_name)
-        except TemplateNotFound:
+        except jinja2.TemplateNotFound:
             raise jinja2.TemplateNotFound(template_name)
         myval = dict(uri=self.request.url)
         myval.update(values)
@@ -143,7 +146,7 @@ class BasicHandler(webapp2.RequestHandler):
             self.credential = memcache.get("cred_%s" % self.session['uid'])
             if self.credential is None:
                 self.credential = Credential.get_by_key_name(self.session['uid'])
-                memcache.add("cred_%s" % self.session['uid'], self.credential, 300)
+                memcache.add("cred_%s" % self.session['uid'], self.credential, CRED_CACHE_TIMEOUT)
 
         # we don't have an active session
         if not self.credential:
@@ -154,18 +157,25 @@ class BasicHandler(webapp2.RequestHandler):
                 auth_type, encoded = self.request.headers.get('Authorization').split(None, 1)
                 if auth_type.lower() == 'basic':
                     uid, secret = encoded.decode('base64').split(':', 1)
-                    credential = Credential.get_by_key_name(uid.strip() or ' *invalid* ')
+                    credential = memcache.get("cred_%s" % uid)
+                    if not credential:
+                        credential = Credential.get_by_key_name(uid.strip() or ' *invalid* ')
+                        memcache.add("cred_%s" % uid, credential, CRED_CACHE_TIMEOUT)
                     if credential and credential.secret == secret.strip():
-                        # Siccessful login
+                        # Successful login
                         self.credential = credential
                         self.session['uid'] = credential.uid
                         # Log, but only once every 10h
                         data = memcache.get("login_%s_%s" % (uid, self.request.remote_addr))
                         if not data:
-                            logging.info("HTTP-Login from %s/%s", uid, self.request.remote_addr)
                             memcache.set("login_%s_%s" % (uid, self.request.remote_addr), True, 60 * 60 * 10)
+                            logging.info("HTTP-Login from %s/%s", uid, self.request.remote_addr)
                     else:
-                        logging.error("failed HTTP-Login from %s/%s", uid, self.request.remote_addr)
+                        logging.error("failed HTTP-Login from %s/%s %s", uid, self.request.remote_addr,
+                                       self.request.headers.get('Authorization'))
+                else:
+                    logging.error("unknown HTTP-Login type %r %s %s", auth_type, self.request.remote_addr,
+                                   self.request.headers.get('Authorization'))
 
         # HTTP Basic Auth failed
         if not self.credential:
@@ -178,6 +188,8 @@ class BasicHandler(webapp2.RequestHandler):
                 raise HTTP302_Found(location=str(absolute_url))
             else:
                 # We assume the access came via cURL et al, request Auth vie 401 Status code.
+                logging.debug("requesting HTTP-Auth %s %s", self.request.remote_addr,
+                              self.request.headers.get('Authorization'))
                 raise HTTP401_Unauthorized(headers={'WWW-Authenticate': 'Basic realm="API Login"'})
 
         return self.credential
