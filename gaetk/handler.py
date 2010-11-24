@@ -45,7 +45,7 @@ class Credential(db.Expando):
 
     Credentials MIGHT map to a google user object
     """
-    tenant = db.StringProperty(required=True, default='_unknown')
+    tenant = db.StringProperty(required=False, default='_unknown')
     email = db.EmailProperty(required=False)
     user = db.UserProperty(required=False)
     uid = db.StringProperty(required=True)
