@@ -58,7 +58,7 @@ class Credential(db.Expando):
     updated_by = db.UserProperty(required=False, auto_current_user=True)
 
     @classmethod
-    def create(cls, tenant=None, user=None, uid=None, text='', email=None):
+    def create(cls, tenant='_unknown', user=None, uid=None, text='', email=None):
         """Creates a credential Object generating a random secret and a random uid if needed."""
         # secret hopfully contains about 64 bits of entropy - more than most passwords
         data = "%s%s%s%s%s" % (user, uuid.uuid1(), uid, text, email)
