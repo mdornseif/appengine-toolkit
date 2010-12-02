@@ -74,6 +74,8 @@ class OpenIdLoginHandler(BasicHandler):
                 # So far we have no Credential entity for that user, create one
                 credential = create_credential_from_federated_login(self, user, apps_domain)
             session['uid'] = credential.uid
+            # for automatic relogins
+            self.response.set_cookie('gaetk_opid', apps_domain, max_age=60*60*24*90)
             self.redirect(continue_url)
             return
 
