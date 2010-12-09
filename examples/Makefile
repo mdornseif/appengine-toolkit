@@ -15,7 +15,8 @@ lib/google_appengine/google/__init__.py:
 	rm google_appengine_1.3.8.zip
 
 dependencies: clean
-	git submodule update --init lib/gaetk/
+	git submodule update --init lib/gaetk
+	git submodule update --init lib/jinja2
 	virtualenv --python=python2.5 --no-site-packages --unzip-setuptools pythonenv
 	pythonenv/bin/pip -q install -E pythonenv -r requirements.txt
 
