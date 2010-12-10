@@ -72,7 +72,7 @@ class OpenIdLoginHandler(BasicHandler):
             credential = Credential.get_by_key_name(username)
             if not credential or not credential.uid == username:
                 # So far we have no Credential entity for that user, create one
-                credential = create_credential_from_federated_login(self, user, apps_domain)
+                credential = self.create_credential_from_federated_login(user, apps_domain)
             session['uid'] = credential.uid
             self.redirect(continue_url)
             return
