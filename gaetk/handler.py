@@ -58,7 +58,7 @@ class Credential(db.Expando):
     updated_by = db.UserProperty(required=False, auto_current_user=True)
 
     @classmethod
-    def create(cls, tenant='_unknown', user=None, uid=None, text='', email=None):
+    def create(cls, tenant='_unknown', user=None, uid=None, text='', email=None, admin=False):
         """Creates a credential Object generating a random secret and a random uid if needed."""
         # secret hopfully contains about 64 bits of entropy - more than most passwords
         data = "%s%s%s%s%s" % (user, uuid.uuid1(), uid, text, email)
@@ -67,7 +67,7 @@ class Credential(db.Expando):
             handmade_key = db.Key.from_path('Credential', 1)
             uid = "u%s" % (db.allocate_ids(handmade_key, 1)[0])
         instance = cls.get_or_insert(key_name=uid, uid=uid, secret=secret, tenant=tenant,
-                                     user=user, text=text, email=email)
+                                     user=user, text=text, email=email, admin=admin)
         return instance
 
     def __repr__(self):
