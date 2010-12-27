@@ -12,6 +12,7 @@ import logging
 import re
 import urllib
 import urlparse
+import warnings
 
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp.util import run_bare_wsgi_app, run_wsgi_app
@@ -146,8 +147,9 @@ class RequestHandler(object):
         :param response:
             A :class:`Response` instance.
         """
-        logging.warning('RequestHandler.initialize() is deprecated. '
-            'Use __init__() instead.')
+
+        warnings.warn('RequestHandler.initialize() is deprecated. '
+            'Use __init__() instead.', DeprecationWarning, stacklevel=2)
 
         self.app = WSGIApplication.app
         self.request = request
