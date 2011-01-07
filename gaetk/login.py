@@ -75,7 +75,7 @@ class OpenIdLoginHandler(BasicHandler):
                 credential = self.create_credential_from_federated_login(user, apps_domain)
             session['uid'] = credential.uid
             # self.response.set_cookie('gaetk_opid', apps_domain, max_age=60*60*24*90)
-            self.response.headers.add_header('Set-Cookie', 'gaetk_opid=%s; Max-Age=7776000' % apps_domain)
+            self.response.headers['Set-Cookie'] = 'gaetk_opid=%s; Max-Age=7776000' % apps_domain
 
             self.redirect(continue_url)
             return

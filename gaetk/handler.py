@@ -143,8 +143,12 @@ class BasicHandler(webapp2.RequestHandler):
         content = template.render(myval)
         self.response.out.write(content)
 
-    def login_required(self):
-        """Returns the currently logged in user."""
+    def login_required(self, deny_localhost=False):
+        """Returns the currently logged in user and forces login.
+
+        Access from 127.0.0.1 is alowed without authentication if deny_localhost is false.
+        """
+
         self.session = get_current_session()
         self.credential = None
         if self.session.get('uid'):
@@ -184,17 +188,21 @@ class BasicHandler(webapp2.RequestHandler):
 
         # HTTP Basic Auth failed
         if not self.credential:
-            # Login not successfull
-            if 'text/html' in self.request.headers.get('Accept', ''):
-                # we assume the request came via a browser - redirect to the "nice" login page
-                self.response.set_status(302)
-                absolute_url = self.abs_url("/_ah/login_required?continue=%s" % urllib.quote(self.request.url))
-                self.response.headers['Location'] = str(absolute_url)
-                raise HTTP302_Found(location=str(absolute_url))
+            if (self.request.remote_addr == '127.0.0.1') and not deny_localhost:
+                # for testing we allow unauthenticted access from localhost
+                pass
             else:
-                # We assume the access came via cURL et al, request Auth vie 401 Status code.
-                logging.debug("requesting HTTP-Auth %s %s", self.request.remote_addr,
-                              self.request.headers.get('Authorization'))
-                raise HTTP401_Unauthorized(headers={'WWW-Authenticate': 'Basic realm="API Login"'})
+                # Login not successfull
+                if 'text/html' in self.request.headers.get('Accept', ''):
+                    # we assume the request came via a browser - redirect to the "nice" login page
+                    self.response.set_status(302)
+                    absolute_url = self.abs_url("/_ah/login_required?continue=%s" % urllib.quote(self.request.url))
+                    self.response.headers['Location'] = str(absolute_url)
+                    raise HTTP302_Found(location=str(absolute_url))
+                else:
+                    # We assume the access came via cURL et al, request Auth vie 401 Status code.
+                    logging.debug("requesting HTTP-Auth %s %s", self.request.remote_addr,
+                                  self.request.headers.get('Authorization'))
+                    raise HTTP401_Unauthorized(headers={'WWW-Authenticate': 'Basic realm="API Login"'})
 
         return self.credential
