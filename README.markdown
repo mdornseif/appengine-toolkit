@@ -71,6 +71,37 @@ Now in your views/handlers you can easyly force authentication like this:
             ...
 
 
+Tools
+-----
+
+Tools contians general helpers. It is independent of the rest of gaetk.
+
+`tools.split(s)` "Splits a string at space characters while respecting quoting.
+
+    >>> split('''A "B and C" D 'E or F' G " "''')
+    ['A',
+     'B and C',
+     'D',
+     'E or F',
+     'G',
+     '']
+
+Infrastructure
+--------------
+
+Infrastructure contians helpers for accessing the GAE infrastructure. It is independent of the rest of gaetk.
+
+
+`taskqueue_add_multi` batch adds jobs to a Taskqueue:
+
+    tasks = []
+    for kdnnr in kunden.get_changed():
+        tasks.append(dict(kundennr=kdnnr))
+    taskqueue_add_multi('softmq', '/some/path', tasks)
+
+
+
+
 Thanks
 ======
 
