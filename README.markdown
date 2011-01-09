@@ -22,6 +22,9 @@ Create a appengine Project, then:
     git submodule update --init lib/jinja2
 
 
+You might also want to install https://github.com/hudora/huTools for some additional functionality.
+
+
 Functionality
 =============
 
