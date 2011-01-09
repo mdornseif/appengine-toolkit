@@ -71,6 +71,30 @@ Now in your views/handlers you can easyly force authentication like this:
             ...
 
 
+Pre-Made Views
+--------------
+
+Add the following lines to your `app.yaml`:
+
+    - url: /gaetk/.*
+      script: lib/gaetk/gaetk/defaulthandlers.py
+
+This will allow you to get JSON encoded statistics at `/gaetk/stats.json`:
+
+    curl http://localhost:8080/gaetk/stats.json
+    {"datastore": {"count": 149608,
+                   "kinds": 16,
+                   "bytes": 95853319},
+     "memcache": {"hits": 0,
+                  "items": 0,
+                  "bytes": 0,
+                  "oldest_item_age": 0,
+                  "misses": 0,
+                  "byte_hits": 0}}
+
+You might want eo use Munin to graph these values.
+
+
 Tools
 -----
 
@@ -85,6 +109,7 @@ Tools contians general helpers. It is independent of the rest of gaetk.
      'E or F',
      'G',
      '']
+
 
 Infrastructure
 --------------
