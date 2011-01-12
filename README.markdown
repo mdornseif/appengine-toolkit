@@ -70,6 +70,25 @@ Now in your views/handlers you can easyly force authentication like this:
             user = self.login_required() # results in 401/403 if can't login
             ...
 
+Statistics
+
+Add the following to app.yaml:
+
+    - url: /gaetk/.*
+      script: lib/gaetk/gaetk/defaulthandlers.py
+
+Now you can get some Application statistics at http://EXAMPLE.appspot.com/gaetk/stats.json:
+
+    {"datastore": {"count": 174789,
+                   "kinds": 16,
+                   "bytes": 102391232},
+     "memcache": {"hits": 1665726,
+                  "items": 1171,
+                  "bytes": 4588130,
+                  "oldest_item_age": 2916,
+                  "misses": 50674,
+                  "byte_hits": 833839440}}
+
 
 Thanks
 ======
