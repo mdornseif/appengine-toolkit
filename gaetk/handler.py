@@ -201,3 +201,65 @@ class BasicHandler(webapp2.RequestHandler):
                     raise HTTP401_Unauthorized(headers={'WWW-Authenticate': 'Basic realm="API Login"'})
 
         return self.credential
+
+class JsonResponseHandler(BasicHandler):
+    """Handler which is specialized for returning JSON.
+    
+    Excepts the method to return
+    
+    * dict(), e.g. `{'foo': bar}`
+    * (dict(), int status), e.g. `({'foo': bar}, 200)`
+    * (dict(), int status, int cachingtime), e.g. `({'foo': bar}, 200, 86400)`
+
+    Dict is converted to JSON. `status` is used as HTTP status code. `cachingtime`
+    is used to generate a `Cache-Control` header. If `cachingtime is None`, no header
+    is generated. `cachingtime` defaults to two hours.
+    """
+
+    def __call__(self, _method, *args, **kwargs):
+        """Dispatches the requested method. """
+
+        # Lazily import hujson to allow using the other classes in this module to be used without
+        # huTools beinin installed.
+        import huTools.hujson
+
+        # Find Method to be called.
+        method = getattr(self, _method, None)
+        if method is None:
+            # No Mehtod is found.
+            # Answer will be `405 Method Not Allowed`.
+            # The response MUST include an Allow header containing a
+            # list of valid methods for the requested resource.
+            # http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.6
+            # so get a lsit of valid Methods and send them back.
+            valid = ', '.join(get_valid_methods(self))
+            # `self.abort()` will raise an Exception thus exiting this function
+            self.abort(405, headers=[('Allow', valid)])
+
+        # Execute the method.
+        reply = method(*args, **kwargs)
+
+        # find out which return convention was used - first set defaults ...
+        content = reply
+        statuscode = 200
+        cachingtime = (60 * 60 * 2)
+        # ... then check if we got a 2-tuple reply ...
+        if isinstance(reply, tuple) and len(reply) == 2:
+            content, statuscode = reply
+        # ... or a 3-tuple reply.
+        if isinstance(reply, tuple) and len(reply) == 3:
+            content, statuscode, cachingtime = reply
+
+        # Finally begin sending the response
+        response = huTools.hujson.dumps(content)
+        self.response.headers['Content-Type'] = 'application/json'
+        if cachingtime:
+            self.response.headers['Cache-Control'] = 'max-age=%d, public' % cachingtime
+        # If we have gotten a `callback` parameter, we expect that this is a
+        # [JSONP](http://en.wikipedia.org/wiki/JSONP#JSONP) cann and therefore add the padding
+        if self.request.get('callback', None):
+            response = "%s (%s)" % (self.request.get('callback', None), response)
+        # Set status code and write JSON to output stream
+        self.response.set_status(statuscode)
+        self.response.out.write(response)
+

@@ -74,6 +74,21 @@ Now in your views/handlers you can easyly force authentication like this:
             ...
 
 
+JSONviews
+---------
+
+`gaetk.handler.JsonResponseHandler` helps to generate nice JSON and JSONP responses. A valid view will look like this:
+
+    class VersandauslastungHandler(gaetk.handler.JsonResponseHandler):
+        def get(self):
+            entity = BiStatistikZeile.get_by_key_name('versandauslastung_aktuell')
+            ret = dict(werte=hujson.loads(entity.jsonValue),
+                       ...)
+            return (ret, 200, 60)
+
+This will generate a JSON reply with 60 Second caching and a 200 status code. The reply will support [JSONP](http://en.wikipedia.org/wiki/JSONP#JSONP) via an optional `callback` parameter in the URL.
+
+
 Pre-Made Views
 --------------
 
@@ -133,7 +148,7 @@ Infrastructure contians helpers for accessing the GAE infrastructure. It is inde
 Thanks
 ======
 
-Axel Schlüter for suggestions on abstracting login.
+Axel Schlüter for suggestions on abstracting login and JsonResponseHandler.
 
 Contains [gaesession.py][1] by David Underhill - http://github.com/dound/gae-sessions
 Updated 2010-10-02 (v1.05), Licensed under the Apache License Version 2.0.
