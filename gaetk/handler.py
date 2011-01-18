@@ -252,13 +252,15 @@ class JsonResponseHandler(BasicHandler):
 
         # Finally begin sending the response
         response = huTools.hujson.dumps(content)
-        self.response.headers['Content-Type'] = 'application/json'
         if cachingtime:
             self.response.headers['Cache-Control'] = 'max-age=%d, public' % cachingtime
         # If we have gotten a `callback` parameter, we expect that this is a
         # [JSONP](http://en.wikipedia.org/wiki/JSONP#JSONP) cann and therefore add the padding
         if self.request.get('callback', None):
             response = "%s (%s)" % (self.request.get('callback', None), response)
+            self.response.headers['Content-Type'] = 'text/javascript'
+        else:
+            self.response.headers['Content-Type'] = 'application/json'
         # Set status code and write JSON to output stream
         self.response.set_status(statuscode)
         self.response.out.write(response)
