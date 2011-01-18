@@ -143,6 +143,15 @@ Infrastructure contians helpers for accessing the GAE infrastructure. It is inde
     taskqueue_add_multi('softmq', '/some/path', tasks)
 
 
+client side functionality
+=========================
+
+In addition to the server side functionality gaetk also includes various javascript helper methods. They must be used in combination with ExtJS and provide methods for easy handling of often-used tasks. To use the javascript helpers you will have to link the `web` directory into the directory declared the `static_dir` directory in your `app.yaml`. Then include the `gaetk-extjs-helpers.js` and `gaetk-extjs-helpers.css` files into your HTML page template.
+
+Currently the helpers include two methods:
+
+ * `Hudora.Helpers.spinnerMessageBox(message)`: display a non-closable messagebox with a spinner indicating progress
+ * `Hudora.Helpers.errorMessageBox(title, message)`: display a error message box without having to write five lines of code every time you need an error messagebox.
 
 
 Thanks
