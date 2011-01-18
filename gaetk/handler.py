@@ -19,7 +19,6 @@ from gaetk import webapp2
 from gaetk.gaesessions import get_current_session
 from google.appengine.api import memcache
 from google.appengine.ext import db
-from google.appengine.ext import webapp
 from webob.exc import HTTPBadRequest as HTTP400_BadRequest
 from webob.exc import HTTPForbidden as HTTP403_Forbidden
 from webob.exc import HTTPFound as HTTP302_Found
@@ -33,9 +32,8 @@ import uuid
 import base64
 import hashlib
 
-# for lazy loading
-jinja2 = None
-
+# to mark the exception as being used
+config.dummy = [HTTP400_BadRequest, HTTP403_Forbidden, HTTP404_NotFound, HTTP413_TooLarge]
 
 CRED_CACHE_TIMEOUT = 600
 
@@ -125,9 +123,7 @@ class BasicHandler(webapp2.RequestHandler):
 
     def render(self, values, template_name):
         """Render a Jinja2 Template"""
-        global jinja2
-        if not jinja2:
-            import jinja2
+        import jinja2
         env = jinja2.Environment(loader=jinja2.FileSystemLoader(config.template_dirs))
         try:
             template = env.get_template(template_name)
@@ -202,11 +198,12 @@ class BasicHandler(webapp2.RequestHandler):
 
         return self.credential
 
+
 class JsonResponseHandler(BasicHandler):
     """Handler which is specialized for returning JSON.
-    
+
     Excepts the method to return
-    
+
     * dict(), e.g. `{'foo': bar}`
     * (dict(), int status), e.g. `({'foo': bar}, 200)`
     * (dict(), int status, int cachingtime), e.g. `({'foo': bar}, 200, 86400)`
@@ -232,7 +229,7 @@ class JsonResponseHandler(BasicHandler):
             # list of valid methods for the requested resource.
             # http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.6
             # so get a lsit of valid Methods and send them back.
-            valid = ', '.join(get_valid_methods(self))
+            valid = ', '.join(webapp2.get_valid_methods(self))
             # `self.abort()` will raise an Exception thus exiting this function
             self.abort(405, headers=[('Allow', valid)])
 
@@ -264,4 +261,3 @@ class JsonResponseHandler(BasicHandler):
         # Set status code and write JSON to output stream
         self.response.set_status(statuscode)
         self.response.out.write(response)
-
