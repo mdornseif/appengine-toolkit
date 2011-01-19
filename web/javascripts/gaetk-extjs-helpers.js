@@ -4,7 +4,37 @@
  */
 
 Hudora = {
+  FormatPatterns: {
+    hudoraDate: 'dddd, yyyy-MM-dd'
+  }
 }
+
+Hudora.Formatters = function() {
+  return {
+    /**
+     * Formatiert eine HUDORA-Adresse als HTML so, das sie in einen 70px
+     * hohen DisplayField perfekt ausgegeben werden kann.
+     * @param {Object} fields ein Objekt, das mindestens die Felder name1,
+     * name2, name3, strasse, land, plz und ort unterstuetzen sollte.
+     * @return {String} die HTML-formattierte Adresse in drei Zeilen
+     */
+    formatAddress: function(fields) {
+      var addr = fields.name1;
+      if(fields.name2 || fields.name3)
+        addr += '<br/>' + [fields.name2, fields.name3].join(' ');
+      if(fields.strasse)
+        addr += '<br/>' + fields.strasse;
+      addr += '<br/>' + [fields.land, fields.plz, fields.ort].join(' ');
+      return addr;
+    },
+
+    formatDate: function(date) {
+      if(!date)
+        return '';
+      return Date.parse(date).toString(Hudora.FormatPatterns.hudoraDate);
+    }
+  };
+}();
 
 Hudora.Helpers = function() {
   return {
