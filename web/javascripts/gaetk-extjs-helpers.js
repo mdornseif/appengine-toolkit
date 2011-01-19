@@ -39,6 +39,20 @@ Hudora.Helpers = function() {
         buttons: Ext.Msg.OK,
         icon: Ext.MessageBox.ERROR
       });
+    },
+
+    /**
+     * Liefert einen GET-Parameter aus der aktuellen URL.
+     * @param {String} param der Name des auszulesenden Parameters oder undefined.
+     * @return {String} der Wert des ausgelesenen Parameters, oder undefined
+     * wenn der Wert nicht existiert. Wenn als +param+ undefined uebergeben wurde
+     * wird ein Object mit allen Parameters der aktuellen URL zurueckgeliefert.
+     */
+    getUrlParameter: function(param) {
+      var params = Ext.urlDecode(location.search.substring(1));
+      if(param)
+        return params[param] ? params[param] : undefined;
+      return params;
     }
   };
 }();
