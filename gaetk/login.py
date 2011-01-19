@@ -130,13 +130,19 @@ class LogoutHandler(OpenIdLoginHandler):
         session['uid'] = None
         if session.is_active():
             session.terminate()
-        # log out OpenID
+
+        # log out OpenID and either redirect to 'continue' or display
+        # the default logout confirmation page 
+        continue_url = self.request.get('continue')
         user = users.get_current_user()
         if user:
-            self.redirect(users.create_logout_url("/logout"))
+            self.redirect(users.create_logout_url(continue_url or '/logout'))
         else:
-            # Render Template with logout confirmation
-            self.render({}, 'logout.html')
+            # render template with logout confirmation
+            if continue_url:
+                self.redirect(continue_url)
+            else:
+                self.render({}, 'logout.html')
 
 
 def main():
