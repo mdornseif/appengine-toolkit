@@ -31,7 +31,7 @@ Hudora.Formatters = function() {
     formatDate: function(date) {
       if(!date)
         return '';
-      return Date.parse(date).toString(Hudora.FormatPatterns.hudoraDate);
+      return Date.parseExact(date, 'yyyy-MM-dd').toString(Hudora.FormatPatterns.hudoraDate);
     }
   };
 }();
