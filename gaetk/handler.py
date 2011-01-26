@@ -240,6 +240,8 @@ class JsonResponseHandler(BasicHandler):
     is used to generate a `Cache-Control` header. If `cachingtime is None`, no header
     is generated. `cachingtime` defaults to two hours.
     """
+    # Our default caching is 2 h
+    default_cachingtime = (60 * 60 * 2)
 
     def __call__(self, _method, *args, **kwargs):
         """Dispatches the requested method. """
@@ -267,14 +269,13 @@ class JsonResponseHandler(BasicHandler):
         # find out which return convention was used - first set defaults ...
         content = reply
         statuscode = 200
-        cachingtime = (60 * 60 * 2)
+        cachingtime = self.default_cachingtime
         # ... then check if we got a 2-tuple reply ...
         if isinstance(reply, tuple) and len(reply) == 2:
             content, statuscode = reply
         # ... or a 3-tuple reply.
         if isinstance(reply, tuple) and len(reply) == 3:
             content, statuscode, cachingtime = reply
-
         # Finally begin sending the response
         response = huTools.hujson.dumps(content)
         if cachingtime:
