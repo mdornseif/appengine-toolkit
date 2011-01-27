@@ -37,13 +37,14 @@ except:
     ALLOWED_DOMAINS = []
 
 
+def create_credential_from_federated_login(user, apps_domain):
+    """Create a new credential object for a newly logged in OpenID user."""
+    credential = Credential.create(tenant=apps_domain, user=user, uid=user.email(),
+        email=user.email(),
+        text="Automatically created via OpenID Provider %s" % user.federated_provider())
+    return credential
+
 class OpenIdLoginHandler(BasicHandler):
-    def create_credential_from_federated_login(self, user, apps_domain):
-        """Create a new credential object for a newly logged in OpenID user."""
-        credential = Credential.create(tenant=apps_domain, user=user, uid=user.email(),
-            email=user.email(),
-            text="Automatically created via OpenID Provider %s" % user.federated_provider())
-        return credential
 
     def get(self):
         """Handler for Federated login consumer (OpenID) AND HTTP-Basic-Auth.
@@ -72,11 +73,10 @@ class OpenIdLoginHandler(BasicHandler):
             credential = Credential.get_by_key_name(username)
             if not credential or not credential.uid == username:
                 # So far we have no Credential entity for that user, create one
-                credential = self.create_credential_from_federated_login(user, apps_domain)
+                credential = create_credential_from_federated_login(user, apps_domain)
             session['uid'] = credential.uid
             # self.response.set_cookie('gaetk_opid', apps_domain, max_age=60*60*24*90)
             self.response.headers['Set-Cookie'] = 'gaetk_opid=%s; Max-Age=7776000' % apps_domain
-
             self.redirect(continue_url)
             return
 
@@ -130,13 +130,19 @@ class LogoutHandler(OpenIdLoginHandler):
         session['uid'] = None
         if session.is_active():
             session.terminate()
-        # log out OpenID
+
+        # log out OpenID and either redirect to 'continue' or display
+        # the default logout confirmation page 
+        continue_url = self.request.get('continue')
         user = users.get_current_user()
         if user:
-            self.redirect(users.create_logout_url("/logout"))
+            self.redirect(users.create_logout_url(continue_url or '/logout'))
         else:
-            # Render Template with logout confirmation
-            self.render({}, 'logout.html')
+            # render template with logout confirmation
+            if continue_url:
+                self.redirect(continue_url)
+            else:
+                self.render({}, 'logout.html')
 
 
 def main():

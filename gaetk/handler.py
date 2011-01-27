@@ -18,6 +18,7 @@ config.imported = True
 from gaetk import webapp2
 from gaetk.gaesessions import get_current_session
 from google.appengine.api import memcache
+from google.appengine.api import users
 from google.appengine.ext import db
 from webob.exc import HTTPBadRequest as HTTP400_BadRequest
 from webob.exc import HTTPForbidden as HTTP403_Forbidden
@@ -36,6 +37,14 @@ import hashlib
 config.dummy = [HTTP400_BadRequest, HTTP403_Forbidden, HTTP404_NotFound, HTTP413_TooLarge]
 
 CRED_CACHE_TIMEOUT = 600
+
+
+def create_credential_from_federated_login(user, apps_domain):
+    """Create a new credential object for a newly logged in OpenID user."""
+    credential = Credential.create(tenant=apps_domain, user=user, uid=user.email(),
+        email=user.email(),
+        text="Automatically created via OpenID Provider %s" % user.federated_provider())
+    return credential
 
 
 class Credential(db.Expando):
@@ -156,9 +165,28 @@ class BasicHandler(webapp2.RequestHandler):
                 self.credential = Credential.get_by_key_name(self.session['uid'])
                 memcache.add("cred_%s" % self.session['uid'], self.credential, CRED_CACHE_TIMEOUT)
 
-        # we don't have an active session
+        # we don't have an active session - check if we are logged in via OpenID at least
+        user = users.get_current_user()
+        logging.info('Google user = %s', user)
+        if user:
+            # yes, active OpenID session
+            # user.federated_provider() == 'https://www.google.com/a/hudora.de/o8/ud?be=o8'
+            if not user.federated_provider():
+                # development server
+                apps_domain = user.email().split('@')[-1].lower()
+            else:
+                apps_domain = user.federated_provider().split('/')[4].lower()
+            username = user.email()
+            self.credential = Credential.get_by_key_name(username)
+            if not self.credential or not self.credential.uid == username:
+                # So far we have no Credential entity for that user, create one
+                self.credential = create_credential_from_federated_login(user, apps_domain)
+            self.session['uid'] = self.credential.uid
+            # self.response.set_cookie('gaetk_opid', apps_domain, max_age=60*60*24*90)
+            self.response.headers['Set-Cookie'] = 'gaetk_opid=%s; Max-Age=7776000' % apps_domain
+
         if not self.credential:
-            # no session information - try HTTP - Auth
+            # still no session information - try HTTP - Auth
             uid, secret = None, None
             # see if we have HTTP-Basic Auth Data
             if self.request.headers.get('Authorization'):
@@ -220,6 +248,8 @@ class JsonResponseHandler(BasicHandler):
     is used to generate a `Cache-Control` header. If `cachingtime is None`, no header
     is generated. `cachingtime` defaults to two hours.
     """
+    # Our default caching is 2 h
+    default_cachingtime = (60 * 60 * 2)
 
     def __call__(self, _method, *args, **kwargs):
         """Dispatches the requested method. """
@@ -247,14 +277,13 @@ class JsonResponseHandler(BasicHandler):
         # find out which return convention was used - first set defaults ...
         content = reply
         statuscode = 200
-        cachingtime = (60 * 60 * 2)
+        cachingtime = self.default_cachingtime
         # ... then check if we got a 2-tuple reply ...
         if isinstance(reply, tuple) and len(reply) == 2:
             content, statuscode = reply
         # ... or a 3-tuple reply.
         if isinstance(reply, tuple) and len(reply) == 3:
             content, statuscode, cachingtime = reply
-
         # Finally begin sending the response
         response = huTools.hujson.dumps(content)
         if cachingtime:
