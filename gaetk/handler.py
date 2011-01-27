@@ -134,7 +134,15 @@ class BasicHandler(webapp2.RequestHandler):
         content = template.render(myval)
         self.response.out.write(content)
 
-    def login_required(self, deny_localhost=False):
+    def is_admin(self):
+        """Returns if the currently logged in user is admin"""
+        if not hasattr(self, 'credential'):
+            return False
+        elif self.credential is None:
+            return False
+        return self.credential.admin
+
+    def login_required(self, deny_localhost=True):
         """Returns the currently logged in user and forces login.
 
         Access from 127.0.0.1 is alowed without authentication if deny_localhost is false.
