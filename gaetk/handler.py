@@ -83,6 +83,11 @@ class Credential(db.Expando):
 
 class BasicHandler(webapp2.RequestHandler):
     """Generische Handler Funktionalität."""
+    def __init__(self, *args, **kwargs):
+        """Initialize RequestHandler"""
+        self.credential = self.session = None
+        super(BasicHandler, self).__init__(*args, **kwargs)
+
     def abs_url(self, url):
         return urlparse.urljoin(self.request.uri, url)
 
@@ -234,6 +239,40 @@ class BasicHandler(webapp2.RequestHandler):
 
         return self.credential
 
+    def authchecker(self, method, *args, **kwargs):
+        """Function to allow implementing authentication for all subclasses. To be overwirtten."""
+        pass
+
+    def __call__(self, _method, *args, **kwargs):
+        """Dispatches the requested method.
+
+        :param _method:
+            The method to be dispatched: the request method in lower case
+            (e.g., 'get', 'post', 'head', 'put' etc).
+        :param args:
+            Positional arguments to be passed to the method, coming from the
+            matched :class:`Route`.
+        :param kwargs:
+            Keyword arguments to be passed to the method, coming from the
+            matched :class:`Route`.
+        :returns:
+            None.
+        """
+        method = getattr(self, _method, None)
+        if method is None:
+            # 405 Method Not Allowed.
+            # The response MUST include an Allow header containing a
+            # list of valid methods for the requested resource.
+            # http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.6
+            valid = ', '.join(webapp2.get_valid_methods(self))
+            self.abort(405, headers=[('Allow', valid)])
+
+        # Give authentication Hooks opportunity to do their thing
+        self.authchecker(method, *args, **kwargs)
+
+        # Execute the method.
+        method(*args, **kwargs)
+
 
 class JsonResponseHandler(BasicHandler):
     """Handler which is specialized for returning JSON.
@@ -270,6 +309,9 @@ class JsonResponseHandler(BasicHandler):
             valid = ', '.join(webapp2.get_valid_methods(self))
             # `self.abort()` will raise an Exception thus exiting this function
             self.abort(405, headers=[('Allow', valid)])
+
+        # Give authentication Hooks opportunity to do their thing
+        self.authchecker(method, *args, **kwargs)
 
         # Execute the method.
         reply = method(*args, **kwargs)
