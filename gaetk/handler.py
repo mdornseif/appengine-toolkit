@@ -22,6 +22,7 @@ from google.appengine.api import users
 from google.appengine.ext import db
 from webob.exc import HTTPBadRequest as HTTP400_BadRequest
 from webob.exc import HTTPForbidden as HTTP403_Forbidden
+from webob.exc import HTTPMovedPermanently as HTTP301_Moved
 from webob.exc import HTTPFound as HTTP302_Found
 from webob.exc import HTTPNotFound as HTTP404_NotFound
 from webob.exc import HTTPRequestEntityTooLarge as HTTP413_TooLarge
@@ -34,7 +35,7 @@ import base64
 import hashlib
 
 # to mark the exception as being used
-config.dummy = [HTTP400_BadRequest, HTTP403_Forbidden, HTTP404_NotFound, HTTP413_TooLarge]
+config.dummy = [HTTP301_Moved, HTTP400_BadRequest, HTTP403_Forbidden, HTTP404_NotFound, HTTP413_TooLarge]
 
 CRED_CACHE_TIMEOUT = 600
 
@@ -89,6 +90,7 @@ class BasicHandler(webapp2.RequestHandler):
         super(BasicHandler, self).__init__(*args, **kwargs)
 
     def abs_url(self, url):
+        """Converts an relative into an absolute URL."""
         return urlparse.urljoin(self.request.uri, url)
 
     def error(self, code):
@@ -104,7 +106,7 @@ class BasicHandler(webapp2.RequestHandler):
             self.response.out.write('Daten nicht gefunden.')
 
     def paginate(self, query, defaultcount=10, datanodename='objects', calctotal=True, formatter=None):
-        """Pagination a la  http://mdornseif.github.com/2010/10/02/appengine-paginierung.html
+        """Pagination a la http://mdornseif.github.com/2010/10/02/appengine-paginierung.html
 
         Returns something like
             {more_objects=True, prev_objects=True,
@@ -112,12 +114,28 @@ class BasicHandler(webapp2.RequestHandler):
              objects: [...], cursor='ABCDQWERY'}
 
         `formatter` is called for each object and can transfor it into something suitable.
+
+        if `calctotal == True` then the total number of matching rows is given as an integer value. This
+        is a ecpensive operation on the AppEngine and results might be capped at 1000.
+
+        `datanodename` is the key in the returned dict, where the Objects resulting form the query resides.
+
+        `defaultcount` is the default number of results returned. It can be overwritten with the
+        HTTP-parameter `limit`.
+
+        The `start` HTTP-parameter can skip records at the beginning of the result set.
+
+        If the `cursor` HTTP-parameter is given we assume this is a cursor returned from an earlier query.
+        See http://blog.notdot.net/2010/02/New-features-in-1-3-1-prerelease-Cursors and
+        http://code.google.com/appengine/docs/python/datastore/queryclass.html#Query_cursor for
+        further Information.
         """
         start = self.request.get_range('start', min_value=0, max_value=1000, default=0)
         limit = self.request.get_range('limit', min_value=1, max_value=100, default=defaultcount)
         if self.request.get('cursor'):
-            query.with_cursor(self.request.get('cursor'))
-        objects = query.fetch(limit + 1, start)
+            objects = query.with_cursor(self.request.get('cursor'))
+        else:
+            objects = query.fetch(limit + 1, start)
         more_objects = len(objects) > limit
         objects = objects[:limit]
         prev_objects = start > 0
@@ -135,18 +153,116 @@ class BasicHandler(webapp2.RequestHandler):
             ret[datanodename] = objects
         return ret
 
-    def render(self, values, template_name):
-        """Render a Jinja2 Template"""
+    def default_template_vars(self, values):
+        """Helper to provide additional values to HTML Templates. To be overwirtten in subclasses. E.g.
+
+            def default_template_vars(self, values):
+                myval = dict(credential_empfaenger=self.credential_empfaenger,
+                             navsection=None)
+                myval.update(values)
+                return myval
+        """
+        return values
+
+    def rendered(self, values, template_name):
+        """Return the rendered content of a Jinja2 Template.
+
+        Pe default the template is provided with the `uri` and `credential` cariables plus everything
+        which is given in `values`."""
         import jinja2
         env = jinja2.Environment(loader=jinja2.FileSystemLoader(config.template_dirs))
         try:
             template = env.get_template(template_name)
         except jinja2.TemplateNotFound:
             raise jinja2.TemplateNotFound(template_name)
-        myval = dict(uri=self.request.url)
-        myval.update(values)
+        myval = dict(uri=self.request.url, credential=self.credential)
+        myval.update(self.default_template_vars(values))
         content = template.render(myval)
-        self.response.out.write(content)
+        return content
+
+    def render(self, values, template_name):
+        """Render a Jinja2 Template and wite it to the client."""
+        self.response.out.write(self.rendered(values, template_name))
+
+    def multirender(self, fmt, data, mappers=None, contenttypes=None, filename='download',
+                    defaultfmt='html', template='data'):
+        """Multirender is meant to provide rendering for a variety of formats with minimal code.
+        For the three major formats HTML, XML und JSON you can get away with virtually no code.
+        Some real-world view method might look like this:
+
+            # URL matches '/empfaenger/([A-Za-z0-9_-]+)/rechnungen\.?(json|xml|html)?',
+            def get(self, kundennr, fmt):
+                query = models.Rechnung.all().filter('kundennr = ', kundennr)
+                values = self.paginate(query, 25, datanodename='rechnungen')
+                self.multirender(fmt, values,
+                                 filename='rechnungen-%s' % kundennr,
+                                 template='rechnungen')
+
+        `/empfaenger/12345/rechnungen` and `/empfaenger/12345/rechnungen.html` will result in
+        `rechnungen.html` beeing rendered.
+        `/empfaenger/12345/rechnungen.json` results in JSON being returned with a
+        `Content-Disposition` header sending it to the file `rechnungen-12345.json`. Likewise for
+        `/empfaenger/12345/rechnungen.xml`.
+        If you add the Parameter `disposition=inline` no Content-Desposition header is generated.
+
+        If you use fmt=json with a `callback` parameter, JSONP is generated. See
+        http://en.wikipedia.org/wiki/JSONP#JSONP for details.
+
+        For more sophisticated layout you can give customized mappers. Using functools.partial
+        is very helpfiull for thiss. E.g.
+
+            from functools import partial
+            multirender(fmt, values,
+                        mappers=dict(xml=partial(dict2xml, roottag='response',
+                                                 listnames={'rechnungen': 'rechnung', 'odlines': 'odline'},
+                                                  pretty=True),
+                                     html=lambda x: '<body><head><title>%s</title></head></body>' % x))
+        """
+
+        # We lazy import huTools to keep gaet usable without hutools
+        import huTools.hujson
+        import huTools.structured
+
+        # If no format is given, we assume HTML (or whatever is given in defaultfmt)
+        # We also provide a list of convinient default content types and encodings.
+        fmt = fmt or defaultfmt
+        mycontenttypes = dict(pdf='application/pdf',
+                              xml="application/xml; encoding=utf-8",
+                              json="application/json; encoding=utf-8",
+                              html="text/html; encoding=utf-8",
+                              csv="text/csv; encoding=utf-8",
+                              invoic="application/edifact; encoding=iso-8859-1")
+        if contenttypes:
+            mycontenttypes.update(contenttypes)
+
+        # Default mappers are there for XML and JSON (provided by huTools) and HTML provided by Jinja2
+        mymappers = dict(xml=huTools.structured.dict2xml,
+                         json=huTools.hujson.dumps,
+                         html=lambda x: self.rendered(x, '%s.html' % template))
+        if mappers:
+            mymappers.update(mappers)
+
+        # Check early if we have no corospondending configuration to provide more meaningful error messages.
+        if fmt not in mycontenttypes:
+            raise ValueError('No content-type for format "%r"', contenttypes)
+        if fmt not in mymappers:
+            raise ValueError('No mapper for format "%r"', fmt)
+
+        # Disposition helps the browser to decide if something should be downloaded to disk or
+        # if it should displayed in the browser window. It also can provide a filename.
+        # per default we provide downloadable files
+        if self.request.get('disposition') != 'inline' and fmt != 'html':
+            disposition = "attachment; filename=%s.%s" % (filename, fmt)
+            self.response.headers["Content-Disposition"] = disposition
+        # If we have gotten a `callback` parameter, we expect that this is a
+        # [JSONP](http://en.wikipedia.org/wiki/JSONP#JSONP) can and therefore add the padding
+        if self.request.get('callback', None) and fmt == 'json':
+            response = "%s (%s)" % (self.request.get('callback', None), mymappers[fmt](data))
+            self.response.headers['Content-Type'] = 'text/javascript'
+        else:
+            self.response.headers['Content-Type'] = mycontenttypes[fmt]
+            response = mymappers[fmt](data)
+        self.response.out.write(response)
 
     def is_admin(self):
         """Returns if the currently logged in user is admin"""
