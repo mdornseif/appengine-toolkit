@@ -214,7 +214,7 @@ class BasicHandler(webapp2.RequestHandler):
 
         IF you give a dict in `html_addon` this dict is additionaly passed the the HTML rendering function
         (but not to the rendering functions of other formats).
-        
+
         You can give the `xml_root` and `xml_lists` parameters to provide `huTools.structured.dict2xml()`
         with defenitions on how to name elements. Dee the documentation of `roottag` and `listnames` in
         dict2xml documentation.
