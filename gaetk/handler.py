@@ -15,6 +15,9 @@ Copyright (c) 2010 HUDORA. All rights reserved.
 import config
 config.imported = True
 
+
+from functools import partial
+
 from gaetk import webapp2
 from gaetk.gaesessions import get_current_session
 from google.appengine.api import memcache
@@ -185,7 +188,8 @@ class BasicHandler(webapp2.RequestHandler):
         self.response.out.write(self.rendered(values, template_name))
 
     def multirender(self, fmt, data, mappers=None, contenttypes=None, filename='download',
-                    defaultfmt='html', template='data'):
+                    defaultfmt='html', html_template='data', html_addon=None,
+                    xml_root='data', xml_lists=None):
         """Multirender is meant to provide rendering for a variety of formats with minimal code.
         For the three major formats HTML, XML und JSON you can get away with virtually no code.
         Some real-world view method might look like this:
@@ -207,6 +211,13 @@ class BasicHandler(webapp2.RequestHandler):
 
         If you use fmt=json with a `callback` parameter, JSONP is generated. See
         http://en.wikipedia.org/wiki/JSONP#JSONP for details.
+
+        IF you give a dict in `html_addon` this dict is additionaly passed the the HTML rendering function
+        (but not to the rendering functions of other formats).
+        
+        You can give the `xml_root` and `xml_lists` parameters to provide `huTools.structured.dict2xml()`
+        with defenitions on how to name elements. Dee the documentation of `roottag` and `listnames` in
+        dict2xml documentation.
 
         For more sophisticated layout you can give customized mappers. Using functools.partial
         is very helpfiull for thiss. E.g.
@@ -236,9 +247,15 @@ class BasicHandler(webapp2.RequestHandler):
             mycontenttypes.update(contenttypes)
 
         # Default mappers are there for XML and JSON (provided by huTools) and HTML provided by Jinja2
-        mymappers = dict(xml=huTools.structured.dict2xml,
+        # we provide a default dict2xml renderer based on the xml_* parameters given
+        mydict2xml = partial(huTools.structured.dict2xml, roottag=xml_root, listnames=xml_lists, pretty=True)
+        # The HTML Render integrates additional data via html_addon
+        htmldata = data.copy()
+        htmldata.update(html_addon)
+        htmlrender = lambda x: self.rendered(htmldata, html_template)
+        mymappers = dict(xml=mydict2xml,
                          json=huTools.hujson.dumps,
-                         html=lambda x: self.rendered(x, '%s.html' % template))
+                         html=htmlrender)
         if mappers:
             mymappers.update(mappers)
 
