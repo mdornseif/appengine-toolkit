@@ -17,13 +17,13 @@ def taskqueue_add_multi(name, url, paramlist, **kwargs):
     tasks = []
     for kdnnr in kunden.get_changed():
         tasks.append(dict(kundennr=kdnnr))
-    taskqueue_add_multi(name='softmq', url='/some/path', tasks)
+    taskqueue_add_multi('softmq', '/some/path', tasks)
     """
 
     tasks = []
     for params in paramlist:
         tasks.append(taskqueue.Task(url=url, params=params, **kwargs))
-        # Patch Addition to Taskqueue
+        # Batch Addition to Taskqueue
         if len(tasks) >= 100:
             taskqueue.Queue(name=name).add(tasks)
             tasks = []
