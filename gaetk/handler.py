@@ -30,6 +30,7 @@ from webob.exc import HTTPFound as HTTP302_Found
 from webob.exc import HTTPNotFound as HTTP404_NotFound
 from webob.exc import HTTPRequestEntityTooLarge as HTTP413_TooLarge
 from webob.exc import HTTPUnauthorized as HTTP401_Unauthorized
+from webob.exc import HTTPNotAcceptable as HTTP406_NotAcceptable
 import logging
 import urllib
 import urlparse
