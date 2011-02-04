@@ -39,7 +39,8 @@ import base64
 import hashlib
 
 # to mark the exception as being used
-config.dummy = [HTTP301_Moved, HTTP400_BadRequest, HTTP403_Forbidden, HTTP404_NotFound, HTTP413_TooLarge]
+config.dummy = [HTTP301_Moved, HTTP400_BadRequest, HTTP403_Forbidden, HTTP404_NotFound,
+                HTTP413_TooLarge, HTTP406_NotAcceptable]
 
 CRED_CACHE_TIMEOUT = 600
 
