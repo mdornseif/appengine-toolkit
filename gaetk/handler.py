@@ -31,6 +31,8 @@ from webob.exc import HTTPNotFound as HTTP404_NotFound
 from webob.exc import HTTPRequestEntityTooLarge as HTTP413_TooLarge
 from webob.exc import HTTPUnauthorized as HTTP401_Unauthorized
 from webob.exc import HTTPNotAcceptable as HTTP406_NotAcceptable
+from webob.exc import HTTPConflict as HTTP409_Conflict
+from webob.exc import HTTPGone as HTTP410_Gone
 import logging
 import urllib
 import urlparse
@@ -40,7 +42,7 @@ import hashlib
 
 # to mark the exception as being used
 config.dummy = [HTTP301_Moved, HTTP400_BadRequest, HTTP403_Forbidden, HTTP404_NotFound,
-                HTTP413_TooLarge, HTTP406_NotAcceptable]
+                HTTP413_TooLarge, HTTP406_NotAcceptable, HTTP409_Conflict, HTTP410_Gone]
 
 CRED_CACHE_TIMEOUT = 600
 
@@ -172,7 +174,7 @@ class BasicHandler(webapp2.RequestHandler):
     def rendered(self, values, template_name):
         """Return the rendered content of a Jinja2 Template.
 
-        Pe default the template is provided with the `uri` and `credential` cariables plus everything
+        Per default the template is provided with the `uri` and `credential` variables plus everything
         which is given in `values`."""
         import jinja2
         env = jinja2.Environment(loader=jinja2.FileSystemLoader(config.template_dirs))
