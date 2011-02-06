@@ -51,6 +51,7 @@ class OpenIdLoginHandler(BasicHandler):
 
         See http://code.google.com/appengine/articles/openid.html"""
         
+        msg = ''
         continue_url = self.request.GET.get('continue', '/')
         openid_url = None
         session = get_current_session()
@@ -118,10 +119,11 @@ class OpenIdLoginHandler(BasicHandler):
                     self.redirect(continue_url)
                     return
                 else:
-                    logging.warning("Invalid Password %s:%s", username, password)
+                    logging.warning("Invalid Password for %s:%s", username, password)
+                    msg = 'Kann sie nicht anmelden'
 
             # Render Template with Login form
-            self.render({'continue': continue_url, 'domains': ALLOWED_DOMAINS}, 'login.html')
+            self.render({'continue': continue_url, 'domains': ALLOWED_DOMAINS, 'msg': msg}, 'login.html')
 
 
 class LogoutHandler(OpenIdLoginHandler):

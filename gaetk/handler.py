@@ -255,7 +255,8 @@ class BasicHandler(webapp2.RequestHandler):
         mydict2xml = partial(huTools.structured.dict2xml, roottag=xml_root, listnames=xml_lists, pretty=True)
         # The HTML Render integrates additional data via html_addon
         htmldata = data.copy()
-        htmldata.update(html_addon)
+        if html_addon:
+            htmldata.update(html_addon)
         htmlrender = lambda x: self.rendered(htmldata, html_template)
         mymappers = dict(xml=mydict2xml,
                          json=huTools.hujson.dumps,
