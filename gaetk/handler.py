@@ -246,7 +246,8 @@ class BasicHandler(webapp2.RequestHandler):
                               json="application/json; encoding=utf-8",
                               html="text/html; encoding=utf-8",
                               csv="text/csv; encoding=utf-8",
-                              invoic="application/edifact; encoding=iso-8859-1")
+                              invoic="application/edifact; encoding=iso-8859-1",
+                              desadv="application/edifact; encoding=iso-8859-1")
         if contenttypes:
             mycontenttypes.update(contenttypes)
 
@@ -266,9 +267,9 @@ class BasicHandler(webapp2.RequestHandler):
 
         # Check early if we have no corospondending configuration to provide more meaningful error messages.
         if fmt not in mycontenttypes:
-            raise ValueError('No content-type for format "%r"', contenttypes)
+            raise ValueError('No content-type for format "%r"' % contenttypes)
         if fmt not in mymappers:
-            raise ValueError('No mapper for format "%r"', fmt)
+            raise ValueError('No mapper for format "%r"' % fmt)
 
         # Disposition helps the browser to decide if something should be downloaded to disk or
         # if it should displayed in the browser window. It also can provide a filename.
