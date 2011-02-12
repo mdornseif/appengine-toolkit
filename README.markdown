@@ -22,6 +22,9 @@ Create a appengine Project, then:
     git submodule update --init lib/jinja2
 
 
+You might also want to install https://github.com/hudora/huTools for some additional functionality.
+
+
 Functionality
 =============
 
@@ -70,11 +73,110 @@ Now in your views/handlers you can easyly force authentication like this:
             user = self.login_required() # results in 401/403 if can't login
             ...
 
+Statistics
+
+Add the following to app.yaml:
+
+    - url: /gaetk/.*
+      script: lib/gaetk/gaetk/defaulthandlers.py
+
+Now you can get some Application statistics at http://EXAMPLE.appspot.com/gaetk/stats.json:
+
+    {"datastore": {"count": 174789,
+                   "kinds": 16,
+                   "bytes": 102391232},
+     "memcache": {"hits": 1665726,
+                  "items": 1171,
+                  "bytes": 4588130,
+                  "oldest_item_age": 2916,
+                  "misses": 50674,
+                  "byte_hits": 833839440}}
+
+
+JSONviews
+---------
+
+`gaetk.handler.JsonResponseHandler` helps to generate nice JSON and JSONP responses. A valid view will look like this:
+
+    class VersandauslastungHandler(gaetk.handler.JsonResponseHandler):
+        def get(self):
+            entity = BiStatistikZeile.get_by_key_name('versandauslastung_aktuell')
+            ret = dict(werte=hujson.loads(entity.jsonValue),
+                       ...)
+            return (ret, 200, 60)
+
+This will generate a JSON reply with 60 Second caching and a 200 status code. The reply will support [JSONP](http://en.wikipedia.org/wiki/JSONP#JSONP) via an optional `callback` parameter in the URL.
+
+
+Pre-Made Views
+--------------
+
+Add the following lines to your `app.yaml`:
+
+    - url: /gaetk/.*
+      script: lib/gaetk/gaetk/defaulthandlers.py
+
+This will allow you to get JSON encoded statistics at `/gaetk/stats.json`:
+
+    curl http://localhost:8080/gaetk/stats.json
+    {"datastore": {"count": 149608,
+                   "kinds": 16,
+                   "bytes": 95853319},
+     "memcache": {"hits": 0,
+                  "items": 0,
+                  "bytes": 0,
+                  "oldest_item_age": 0,
+                  "misses": 0,
+                  "byte_hits": 0}}
+
+You might want eo use Munin to graph these values.
+
+
+Tools
+-----
+
+Tools contians general helpers. It is independent of the rest of gaetk.
+
+`tools.split(s)` "Splits a string at space characters while respecting quoting.
+
+    >>> split('''A "B and C" D 'E or F' G " "''')
+    ['A',
+     'B and C',
+     'D',
+     'E or F',
+     'G',
+     '']
+
+
+Infrastructure
+--------------
+
+Infrastructure contians helpers for accessing the GAE infrastructure. It is independent of the rest of gaetk.
+
+
+`taskqueue_add_multi` batch adds jobs to a Taskqueue:
+
+    tasks = []
+    for kdnnr in kunden.get_changed():
+        tasks.append(dict(kundennr=kdnnr))
+    taskqueue_add_multi('softmq', '/some/path', tasks)
+
+
+client side functionality
+=========================
+
+In addition to the server side functionality gaetk also includes various javascript helper methods. They must be used in combination with ExtJS and provide methods for easy handling of often-used tasks. To use the javascript helpers you will have to link the `web` directory into the directory declared the `static_dir` directory in your `app.yaml`. Then include the `gaetk-extjs-helpers.js` and `gaetk-extjs-helpers.css` files into your HTML page template.
+
+Currently the helpers include two methods:
+
+ * `Hudora.Helpers.spinnerMessageBox(message)`: display a non-closable messagebox with a spinner indicating progress
+ * `Hudora.Helpers.errorMessageBox(title, message)`: display a error message box without having to write five lines of code every time you need an error messagebox.
+
 
 Thanks
 ======
 
-Axel Schlüter for suggestions on abstracting login.
+Axel Schlüter for suggestions on abstracting login and JsonResponseHandler.
 
 Contains [gaesession.py][1] by David Underhill - http://github.com/dound/gae-sessions
 Updated 2010-10-02 (v1.05), Licensed under the Apache License Version 2.0.

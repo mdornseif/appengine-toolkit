@@ -11,7 +11,7 @@ import re
 
 
 def split(s):
-    """Split a string at spae characters while respecting quoting.
+    """Split a string at space characters while respecting quoting.
 
     Unicode version of shlex.split().
     

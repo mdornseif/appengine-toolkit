@@ -15,17 +15,24 @@ Copyright (c) 2010 HUDORA. All rights reserved.
 import config
 config.imported = True
 
+
+from functools import partial
+
 from gaetk import webapp2
 from gaetk.gaesessions import get_current_session
 from google.appengine.api import memcache
+from google.appengine.api import users
 from google.appengine.ext import db
-from google.appengine.ext import webapp
 from webob.exc import HTTPBadRequest as HTTP400_BadRequest
 from webob.exc import HTTPForbidden as HTTP403_Forbidden
+from webob.exc import HTTPMovedPermanently as HTTP301_Moved
 from webob.exc import HTTPFound as HTTP302_Found
 from webob.exc import HTTPNotFound as HTTP404_NotFound
 from webob.exc import HTTPRequestEntityTooLarge as HTTP413_TooLarge
 from webob.exc import HTTPUnauthorized as HTTP401_Unauthorized
+from webob.exc import HTTPNotAcceptable as HTTP406_NotAcceptable
+from webob.exc import HTTPConflict as HTTP409_Conflict
+from webob.exc import HTTPGone as HTTP410_Gone
 import logging
 import urllib
 import urlparse
@@ -33,11 +40,19 @@ import uuid
 import base64
 import hashlib
 
-# for lazy loading
-jinja2 = None
-
+# to mark the exception as being used
+config.dummy = [HTTP301_Moved, HTTP400_BadRequest, HTTP403_Forbidden, HTTP404_NotFound,
+                HTTP413_TooLarge, HTTP406_NotAcceptable, HTTP409_Conflict, HTTP410_Gone]
 
 CRED_CACHE_TIMEOUT = 600
+
+
+def create_credential_from_federated_login(user, apps_domain):
+    """Create a new credential object for a newly logged in OpenID user."""
+    credential = Credential.create(tenant=apps_domain, user=user, uid=user.email(),
+        email=user.email(),
+        text="Automatically created via OpenID Provider %s" % user.federated_provider())
+    return credential
 
 
 class Credential(db.Expando):
@@ -81,7 +96,13 @@ class Credential(db.Expando):
 
 class BasicHandler(webapp2.RequestHandler):
     """Generische Handler Funktionalität."""
+    def __init__(self, *args, **kwargs):
+        """Initialize RequestHandler"""
+        self.credential = self.session = None
+        super(BasicHandler, self).__init__(*args, **kwargs)
+
     def abs_url(self, url):
+        """Converts an relative into an absolute URL."""
         return urlparse.urljoin(self.request.uri, url)
 
     def error(self, code):
@@ -97,7 +118,7 @@ class BasicHandler(webapp2.RequestHandler):
             self.response.out.write('Daten nicht gefunden.')
 
     def paginate(self, query, defaultcount=10, datanodename='objects', calctotal=True, formatter=None):
-        """Pagination a la  http://mdornseif.github.com/2010/10/02/appengine-paginierung.html
+        """Pagination a la http://mdornseif.github.com/2010/10/02/appengine-paginierung.html
 
         Returns something like
             {more_objects=True, prev_objects=True,
@@ -105,12 +126,28 @@ class BasicHandler(webapp2.RequestHandler):
              objects: [...], cursor='ABCDQWERY'}
 
         `formatter` is called for each object and can transfor it into something suitable.
+
+        if `calctotal == True` then the total number of matching rows is given as an integer value. This
+        is a ecpensive operation on the AppEngine and results might be capped at 1000.
+
+        `datanodename` is the key in the returned dict, where the Objects resulting form the query resides.
+
+        `defaultcount` is the default number of results returned. It can be overwritten with the
+        HTTP-parameter `limit`.
+
+        The `start` HTTP-parameter can skip records at the beginning of the result set.
+
+        If the `cursor` HTTP-parameter is given we assume this is a cursor returned from an earlier query.
+        See http://blog.notdot.net/2010/02/New-features-in-1-3-1-prerelease-Cursors and
+        http://code.google.com/appengine/docs/python/datastore/queryclass.html#Query_cursor for
+        further Information.
         """
         start = self.request.get_range('start', min_value=0, max_value=1000, default=0)
         limit = self.request.get_range('limit', min_value=1, max_value=100, default=defaultcount)
         if self.request.get('cursor'):
-            query.with_cursor(self.request.get('cursor'))
-        objects = query.fetch(limit + 1, start)
+            objects = query.with_cursor(self.request.get('cursor'))
+        else:
+            objects = query.fetch(limit + 1, start)
         more_objects = len(objects) > limit
         objects = objects[:limit]
         prev_objects = start > 0
@@ -128,22 +165,142 @@ class BasicHandler(webapp2.RequestHandler):
             ret[datanodename] = objects
         return ret
 
-    def render(self, values, template_name):
-        """Render a Jinja2 Template"""
-        global jinja2
-        if not jinja2:
-            import jinja2
+    def default_template_vars(self, values):
+        """Helper to provide additional values to HTML Templates. To be overwirtten in subclasses. E.g.
+
+            def default_template_vars(self, values):
+                myval = dict(credential_empfaenger=self.credential_empfaenger,
+                             navsection=None)
+                myval.update(values)
+                return myval
+        """
+        return values
+
+    def rendered(self, values, template_name):
+        """Return the rendered content of a Jinja2 Template.
+
+        Per default the template is provided with the `uri` and `credential` variables plus everything
+        which is given in `values`."""
+        import jinja2
         env = jinja2.Environment(loader=jinja2.FileSystemLoader(config.template_dirs))
         try:
             template = env.get_template(template_name)
         except jinja2.TemplateNotFound:
             raise jinja2.TemplateNotFound(template_name)
-        myval = dict(uri=self.request.url)
-        myval.update(values)
+        myval = dict(uri=self.request.url, credential=self.credential)
+        myval.update(self.default_template_vars(values))
         content = template.render(myval)
-        self.response.out.write(content)
+        return content
 
-    def login_required(self, deny_localhost=False):
+    def render(self, values, template_name):
+        """Render a Jinja2 Template and wite it to the client."""
+        self.response.out.write(self.rendered(values, template_name))
+
+    def multirender(self, fmt, data, mappers=None, contenttypes=None, filename='download',
+                    defaultfmt='html', html_template='data', html_addon=None,
+                    xml_root='data', xml_lists=None):
+        """Multirender is meant to provide rendering for a variety of formats with minimal code.
+        For the three major formats HTML, XML und JSON you can get away with virtually no code.
+        Some real-world view method might look like this:
+
+            # URL matches '/empfaenger/([A-Za-z0-9_-]+)/rechnungen\.?(json|xml|html)?',
+            def get(self, kundennr, fmt):
+                query = models.Rechnung.all().filter('kundennr = ', kundennr)
+                values = self.paginate(query, 25, datanodename='rechnungen')
+                self.multirender(fmt, values,
+                                 filename='rechnungen-%s' % kundennr,
+                                 template='rechnungen')
+
+        `/empfaenger/12345/rechnungen` and `/empfaenger/12345/rechnungen.html` will result in
+        `rechnungen.html` beeing rendered.
+        `/empfaenger/12345/rechnungen.json` results in JSON being returned with a
+        `Content-Disposition` header sending it to the file `rechnungen-12345.json`. Likewise for
+        `/empfaenger/12345/rechnungen.xml`.
+        If you add the Parameter `disposition=inline` no Content-Desposition header is generated.
+
+        If you use fmt=json with a `callback` parameter, JSONP is generated. See
+        http://en.wikipedia.org/wiki/JSONP#JSONP for details.
+
+        IF you give a dict in `html_addon` this dict is additionaly passed the the HTML rendering function
+        (but not to the rendering functions of other formats).
+
+        You can give the `xml_root` and `xml_lists` parameters to provide `huTools.structured.dict2xml()`
+        with defenitions on how to name elements. Dee the documentation of `roottag` and `listnames` in
+        dict2xml documentation.
+
+        For more sophisticated layout you can give customized mappers. Using functools.partial
+        is very helpfiull for thiss. E.g.
+
+            from functools import partial
+            multirender(fmt, values,
+                        mappers=dict(xml=partial(dict2xml, roottag='response',
+                                                 listnames={'rechnungen': 'rechnung', 'odlines': 'odline'},
+                                                  pretty=True),
+                                     html=lambda x: '<body><head><title>%s</title></head></body>' % x))
+        """
+
+        # We lazy import huTools to keep gaet usable without hutools
+        import huTools.hujson
+        import huTools.structured
+
+        # If no format is given, we assume HTML (or whatever is given in defaultfmt)
+        # We also provide a list of convinient default content types and encodings.
+        fmt = fmt or defaultfmt
+        mycontenttypes = dict(pdf='application/pdf',
+                              xml="application/xml; encoding=utf-8",
+                              json="application/json; encoding=utf-8",
+                              html="text/html; encoding=utf-8",
+                              csv="text/csv; encoding=utf-8",
+                              invoic="application/edifact; encoding=iso-8859-1",
+                              desadv="application/edifact; encoding=iso-8859-1")
+        if contenttypes:
+            mycontenttypes.update(contenttypes)
+
+        # Default mappers are there for XML and JSON (provided by huTools) and HTML provided by Jinja2
+        # we provide a default dict2xml renderer based on the xml_* parameters given
+        mydict2xml = partial(huTools.structured.dict2xml, roottag=xml_root, listnames=xml_lists, pretty=True)
+        # The HTML Render integrates additional data via html_addon
+        htmldata = data.copy()
+        if html_addon:
+            htmldata.update(html_addon)
+        htmlrender = lambda x: self.rendered(htmldata, html_template)
+        mymappers = dict(xml=mydict2xml,
+                         json=huTools.hujson.dumps,
+                         html=htmlrender)
+        if mappers:
+            mymappers.update(mappers)
+
+        # Check early if we have no corospondending configuration to provide more meaningful error messages.
+        if fmt not in mycontenttypes:
+            raise ValueError('No content-type for format "%r"' % contenttypes)
+        if fmt not in mymappers:
+            raise ValueError('No mapper for format "%r"' % fmt)
+
+        # Disposition helps the browser to decide if something should be downloaded to disk or
+        # if it should displayed in the browser window. It also can provide a filename.
+        # per default we provide downloadable files
+        if self.request.get('disposition') != 'inline' and fmt != 'html':
+            disposition = "attachment; filename=%s.%s" % (filename, fmt)
+            self.response.headers["Content-Disposition"] = disposition
+        # If we have gotten a `callback` parameter, we expect that this is a
+        # [JSONP](http://en.wikipedia.org/wiki/JSONP#JSONP) can and therefore add the padding
+        if self.request.get('callback', None) and fmt == 'json':
+            response = "%s (%s)" % (self.request.get('callback', None), mymappers[fmt](data))
+            self.response.headers['Content-Type'] = 'text/javascript'
+        else:
+            self.response.headers['Content-Type'] = mycontenttypes[fmt]
+            response = mymappers[fmt](data)
+        self.response.out.write(response)
+
+    def is_admin(self):
+        """Returns if the currently logged in user is admin"""
+        if not hasattr(self, 'credential'):
+            return False
+        elif self.credential is None:
+            return False
+        return self.credential.admin
+
+    def login_required(self, deny_localhost=True):
         """Returns the currently logged in user and forces login.
 
         Access from 127.0.0.1 is alowed without authentication if deny_localhost is false.
@@ -157,9 +314,28 @@ class BasicHandler(webapp2.RequestHandler):
                 self.credential = Credential.get_by_key_name(self.session['uid'])
                 memcache.add("cred_%s" % self.session['uid'], self.credential, CRED_CACHE_TIMEOUT)
 
-        # we don't have an active session
+        # we don't have an active session - check if we are logged in via OpenID at least
+        user = users.get_current_user()
+        logging.info('Google user = %s', user)
+        if user:
+            # yes, active OpenID session
+            # user.federated_provider() == 'https://www.google.com/a/hudora.de/o8/ud?be=o8'
+            if not user.federated_provider():
+                # development server
+                apps_domain = user.email().split('@')[-1].lower()
+            else:
+                apps_domain = user.federated_provider().split('/')[4].lower()
+            username = user.email()
+            self.credential = Credential.get_by_key_name(username)
+            if not self.credential or not self.credential.uid == username:
+                # So far we have no Credential entity for that user, create one
+                self.credential = create_credential_from_federated_login(user, apps_domain)
+            self.session['uid'] = self.credential.uid
+            # self.response.set_cookie('gaetk_opid', apps_domain, max_age=60*60*24*90)
+            self.response.headers['Set-Cookie'] = 'gaetk_opid=%s; Max-Age=7776000' % apps_domain
+
         if not self.credential:
-            # no session information - try HTTP - Auth
+            # still no session information - try HTTP - Auth
             uid, secret = None, None
             # see if we have HTTP-Basic Auth Data
             if self.request.headers.get('Authorization'):
@@ -206,3 +382,105 @@ class BasicHandler(webapp2.RequestHandler):
                     raise HTTP401_Unauthorized(headers={'WWW-Authenticate': 'Basic realm="API Login"'})
 
         return self.credential
+
+    def authchecker(self, method, *args, **kwargs):
+        """Function to allow implementing authentication for all subclasses. To be overwirtten."""
+        pass
+
+    def __call__(self, _method, *args, **kwargs):
+        """Dispatches the requested method.
+
+        :param _method:
+            The method to be dispatched: the request method in lower case
+            (e.g., 'get', 'post', 'head', 'put' etc).
+        :param args:
+            Positional arguments to be passed to the method, coming from the
+            matched :class:`Route`.
+        :param kwargs:
+            Keyword arguments to be passed to the method, coming from the
+            matched :class:`Route`.
+        :returns:
+            None.
+        """
+        method = getattr(self, _method, None)
+        if method is None:
+            # 405 Method Not Allowed.
+            # The response MUST include an Allow header containing a
+            # list of valid methods for the requested resource.
+            # http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.6
+            valid = ', '.join(webapp2.get_valid_methods(self))
+            self.abort(405, headers=[('Allow', valid)])
+
+        # Give authentication Hooks opportunity to do their thing
+        self.authchecker(method, *args, **kwargs)
+
+        # Execute the method.
+        method(*args, **kwargs)
+
+
+class JsonResponseHandler(BasicHandler):
+    """Handler which is specialized for returning JSON.
+
+    Excepts the method to return
+
+    * dict(), e.g. `{'foo': bar}`
+    * (dict(), int status), e.g. `({'foo': bar}, 200)`
+    * (dict(), int status, int cachingtime), e.g. `({'foo': bar}, 200, 86400)`
+
+    Dict is converted to JSON. `status` is used as HTTP status code. `cachingtime`
+    is used to generate a `Cache-Control` header. If `cachingtime is None`, no header
+    is generated. `cachingtime` defaults to two hours.
+    """
+    # Our default caching is 2 h
+    default_cachingtime = (60 * 60 * 2)
+
+    def __call__(self, _method, *args, **kwargs):
+        """Dispatches the requested method. """
+
+        # Lazily import hujson to allow using the other classes in this module to be used without
+        # huTools beinin installed.
+        import huTools.hujson
+
+        # Find Method to be called.
+        method = getattr(self, _method, None)
+        if method is None:
+            # No Mehtod is found.
+            # Answer will be `405 Method Not Allowed`.
+            # The response MUST include an Allow header containing a
+            # list of valid methods for the requested resource.
+            # http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.6
+            # so get a lsit of valid Methods and send them back.
+            valid = ', '.join(webapp2.get_valid_methods(self))
+            # `self.abort()` will raise an Exception thus exiting this function
+            self.abort(405, headers=[('Allow', valid)])
+
+        # Give authentication Hooks opportunity to do their thing
+        self.authchecker(method, *args, **kwargs)
+
+        # Execute the method.
+        reply = method(*args, **kwargs)
+
+        # find out which return convention was used - first set defaults ...
+        content = reply
+        statuscode = 200
+        cachingtime = self.default_cachingtime
+        # ... then check if we got a 2-tuple reply ...
+        if isinstance(reply, tuple) and len(reply) == 2:
+            content, statuscode = reply
+        # ... or a 3-tuple reply.
+        if isinstance(reply, tuple) and len(reply) == 3:
+            content, statuscode, cachingtime = reply
+        # Finally begin sending the response
+        response = huTools.hujson.dumps(content)
+        if cachingtime:
+            self.response.headers['Cache-Control'] = 'max-age=%d, public' % cachingtime
+        # If we have gotten a `callback` parameter, we expect that this is a
+        # [JSONP](http://en.wikipedia.org/wiki/JSONP#JSONP) cann and therefore add the padding
+        if self.request.get('callback', None):
+            response = "%s (%s)" % (self.request.get('callback', None), response)
+            self.response.headers['Content-Type'] = 'text/javascript'
+        else:
+            self.response.headers['Content-Type'] = 'application/json'
+        # Set status code and write JSON to output stream
+        self.response.set_status(statuscode)
+        self.response.out.write(response)
