@@ -47,4 +47,3 @@ def taskqueue_add_multi_payload(name, url, payloadlist, **kwargs):
             taskqueue.Queue(name=name).add(tasks)
             tasks = []
     taskqueue.Queue(name=name).add(tasks)
-

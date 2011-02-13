@@ -27,7 +27,7 @@ class Stats(gaetk.handler.BasicHandler):
             logging.info([stat.kind_name for stat in kind_stat])
             kind_list = [stat.kind_name for stat in kind_stat
                          if stat.kind_name and not stat.kind_name.startswith('__')]
-            kind_set = set(kind_list)
+            # kind_set = set(kind_list)
             ret['datastore']['kinds'] = len(kind_list)
         self.response.headers['Content-Type'] = 'application/json'
         self.response.out.write(simplejson.dumps(ret))
@@ -43,4 +43,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

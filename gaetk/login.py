@@ -26,9 +26,7 @@ from gaetk import webapp2
 from gaetk.gaesessions import get_current_session
 from gaetk.handler import BasicHandler
 from google.appengine.api import users
-from google.appengine.ext import webapp
 from google.appengine.ext.webapp import util
-from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 import logging
 
 try:
@@ -44,13 +42,14 @@ def create_credential_from_federated_login(user, apps_domain):
         text="Automatically created via OpenID Provider %s" % user.federated_provider())
     return credential
 
+
 class OpenIdLoginHandler(BasicHandler):
 
     def get(self):
         """Handler for Federated login consumer (OpenID) AND HTTP-Basic-Auth.
 
         See http://code.google.com/appengine/articles/openid.html"""
-        
+
         msg = ''
         continue_url = self.request.GET.get('continue', '/')
         openid_url = None
@@ -134,7 +133,7 @@ class LogoutHandler(OpenIdLoginHandler):
             session.terminate()
 
         # log out OpenID and either redirect to 'continue' or display
-        # the default logout confirmation page 
+        # the default logout confirmation page
         continue_url = self.request.get('continue')
         user = users.get_current_user()
         if user:

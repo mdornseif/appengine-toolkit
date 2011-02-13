@@ -29,14 +29,14 @@ Example::
 # balancing of the transactions. This wouldn't necessarily guarantee a lack of
 # gaps, but as long as enough small queries are received (e.g. for 1 numbers)
 # over time the gaps will be filled.
-# 
+#
 # To ensure correct allocation from one sequence to the next, sequences must be
 # in the same entity group. Practically, this means all sequences need to have
 # "parent" set. init_sequence() ensures this.
 #
 # See http://stackoverflow.com/questions/3985812 for a general discussion of the
 # problem space.
-# 
+#
 # Created 2010-11 by Sam Jansen for HUDORA
 
 # pylint: disable-msg=E1103
@@ -84,7 +84,7 @@ def init_sequence(typ, start, end):
 def _get_numbers_helper(keys, needed):
     """Transaction to allocate numbers from a sequence."""
     results = []
-    
+
     for key in keys:
         seq = db.get(key)
         start = seq.current or seq.start
