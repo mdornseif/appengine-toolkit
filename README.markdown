@@ -132,6 +132,27 @@ This will allow you to get JSON encoded statistics at `/gaetk/stats.json`:
 You might want eo use Munin to graph these values.
 
 
+LoggedModel
+------------
+
+In models.py you find a superclass `LoggedModel` for implementing audit logs for a model:
+All create, update and delete operations are logged via the `AuditLog` model.
+
+Example:
+
+    import gaetk.models
+    from google.appengine.ext import db
+
+    class MyModel(gaetk.models.LoggedModel):
+        name = db.StringProperty()
+
+    obj = MyModel(name=u'Alex')
+    print obj.logentries()
+
+
+Please note: Changes in (subclasses of) UnindexedProperty (hence TextProperty and BlobProperty) are not logged.
+
+
 Tools
 -----
 
@@ -146,7 +167,6 @@ Tools contians general helpers. It is independent of the rest of gaetk.
      'E or F',
      'G',
      '']
-
 
 Infrastructure
 --------------
