@@ -159,8 +159,8 @@ class BasicHandler(webapp2.RequestHandler):
 
         # we don't have an active session - check if we are logged in via OpenID at least
         user = users.get_current_user()
-        logging.info('Google user = %s', user)
         if user:
+            logging.info('Google user = %s', user)
             # yes, active OpenID session
             # user.federated_provider() == 'https://www.google.com/a/hudora.de/o8/ud?be=o8'
             if not user.federated_provider():
