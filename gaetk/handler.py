@@ -346,16 +346,23 @@ class BasicHandler(webapp2.RequestHandler):
             if self.request.headers.get('Authorization'):
                 auth_type, encoded = self.request.headers.get('Authorization').split(None, 1)
                 if auth_type.lower() == 'basic':
-                    uid, secret = encoded.decode('base64').split(':', 1)
+                    decoded = encoded.decode('base64')
+                    # If the Client send us invalid credentials, let him know , else parse into
+                    # username and password
+                    if ':' not in decoded:
+                        raise HTTP400_BadRequest("invalid credentials %r" % decoded)
+                    uid, secret = decoded.split(':', 1)
+                    # Pull credential out of memcache or datastore
                     credential = memcache.get("cred_%s" % uid)
                     if not credential:
                         credential = Credential.get_by_key_name(uid.strip() or ' *invalid* ')
                         memcache.add("cred_%s" % uid, credential, CRED_CACHE_TIMEOUT)
+
                     if credential and credential.secret == secret.strip():
                         # Successful login
                         self.credential = credential
                         self.session['uid'] = credential.uid
-                        # Log, but only once every 10h
+                        # Log successful login, but only once every 10h
                         data = memcache.get("login_%s_%s" % (uid, self.request.remote_addr))
                         if not data:
                             memcache.set("login_%s_%s" % (uid, self.request.remote_addr), True, 60 * 60 * 10)
