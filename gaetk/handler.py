@@ -24,27 +24,34 @@ from google.appengine.api import memcache
 from google.appengine.api import users
 from google.appengine.ext import db
 from webob.exc import HTTPBadRequest as HTTP400_BadRequest
+from webob.exc import HTTPConflict as HTTP409_Conflict
 from webob.exc import HTTPForbidden as HTTP403_Forbidden
-from webob.exc import HTTPMovedPermanently as HTTP301_Moved
 from webob.exc import HTTPFound as HTTP302_Found
+from webob.exc import HTTPGone as HTTP410_Gone
+from webob.exc import HTTPMovedPermanently as HTTP301_Moved
+from webob.exc import HTTPNotAcceptable as HTTP406_NotAcceptable
 from webob.exc import HTTPNotFound as HTTP404_NotFound
+from webob.exc import HTTPNotImplemented as HTTP501_NotImplemented
 from webob.exc import HTTPRequestEntityTooLarge as HTTP413_TooLarge
 from webob.exc import HTTPUnauthorized as HTTP401_Unauthorized
-from webob.exc import HTTPNotAcceptable as HTTP406_NotAcceptable
-from webob.exc import HTTPConflict as HTTP409_Conflict
-from webob.exc import HTTPGone as HTTP410_Gone
+from webob.exc import HTTPUnsupportedMediaType as HTTP415_UnsupportedMediaType
+import base64
+import google.appengine.ext.db
+import google.appengine.runtime.apiproxy_errors
+import hashlib
 import logging
 import urllib
 import urlparse
 import uuid
-import base64
-import hashlib
+
 
 # to mark the exception as being used
 config.dummy = [HTTP301_Moved, HTTP400_BadRequest, HTTP403_Forbidden, HTTP404_NotFound,
-                HTTP413_TooLarge, HTTP406_NotAcceptable, HTTP409_Conflict, HTTP410_Gone]
+                HTTP413_TooLarge, HTTP406_NotAcceptable, HTTP409_Conflict, HTTP410_Gone,
+                HTTP415_UnsupportedMediaType, HTTP501_NotImplemented]
 
-CRED_CACHE_TIMEOUT = 600
+
+CREDENTIAL_CACHE_TIMEOUT = 300
 
 
 class Credential(db.Expando):
@@ -297,10 +304,10 @@ class BasicHandler(webapp2.RequestHandler):
             return False
         return self.credential.admin
 
-    def login_required(self, deny_localhost=True):
+    def login_required(self, deny_localhost=False):
         """Returns the currently logged in user and forces login.
 
-        Access from 127.0.0.1 is alowed without authentication if deny_localhost is false.
+        Access from 127.0.0.1 is allowed without authentication if deny_localhost is false.
         """
 
         self.session = get_current_session()
@@ -309,7 +316,7 @@ class BasicHandler(webapp2.RequestHandler):
             self.credential = memcache.get("cred_%s" % self.session['uid'])
             if self.credential is None:
                 self.credential = Credential.get_by_key_name(self.session['uid'])
-                memcache.add("cred_%s" % self.session['uid'], self.credential, CRED_CACHE_TIMEOUT)
+                memcache.add("cred_%s" % self.session['uid'], self.credential, CREDENTIAL_CACHE_TIMEOUT)
 
         # we don't have an active session - check if we are logged in via OpenID at least
         user = users.get_current_user()
@@ -348,8 +355,7 @@ class BasicHandler(webapp2.RequestHandler):
                     credential = memcache.get("cred_%s" % uid)
                     if not credential:
                         credential = Credential.get_by_key_name(uid.strip() or ' *invalid* ')
-                        memcache.add("cred_%s" % uid, credential, CRED_CACHE_TIMEOUT)
-
+                        memcache.add("cred_%s" % uid, credential, CREDENTIAL_CACHE_TIMEOUT)
                     if credential and credential.secret == secret.strip():
                         # Successful login
                         self.credential = credential
@@ -369,8 +375,10 @@ class BasicHandler(webapp2.RequestHandler):
         # HTTP Basic Auth failed
         if not self.credential:
             if (self.request.remote_addr == '127.0.0.1') and not deny_localhost:
-                # for testing we allow unauthenticted access from localhost
-                pass
+                logging.info('for testing we allow unauthenticated access from localhost')
+                # create credential
+                self.credential = Credential.create(tenant='localhost.', uid='0x7f000001',
+                                                    text='Automatically created for testing')
             else:
                 # Login not successfull
                 if 'text/html' in self.request.headers.get('Accept', ''):
@@ -381,7 +389,7 @@ class BasicHandler(webapp2.RequestHandler):
                     raise HTTP302_Found(location=str(absolute_url))
                 else:
                     # We assume the access came via cURL et al, request Auth vie 401 Status code.
-                    logging.debug("requesting HTTP-Auth %s %s", self.request.remote_addr,
+                    logging.info("requesting HTTP-Auth %s %s %s", self.request.remote_addr,
                                   self.request.headers.get('Authorization'))
                     raise HTTP401_Unauthorized(headers={'WWW-Authenticate': 'Basic realm="API Login"'})
 
@@ -403,7 +411,7 @@ class BasicHandler(webapp2.RequestHandler):
         return credential
 
     def authchecker(self, method, *args, **kwargs):
-        """Function to allow implementing authentication for all subclasses. To be overwirtten."""
+        """Function to allow implementing authentication for all subclasses. To be overwritten."""
         pass
 
     def __call__(self, _method, *args, **kwargs):
@@ -435,6 +443,24 @@ class BasicHandler(webapp2.RequestHandler):
 
         # Execute the method.
         method(*args, **kwargs)
+
+    def handle_exception(self, exception, debug_mode):
+        # This code is based on http://code.google.com/appengine/articles/handling_datastore_errors.html
+        if (isinstance(exception, google.appengine.ext.db.Timeout)
+            or isinstance(exception, google.appengine.ext.db.TransactionFailedError)):
+            # TODO: Display "try again in a few seconds" message
+            super(BasicHandler, self).handle_exception(exception, debug_mode)
+        # This code is based on http://code.google.com/appengine/docs/python/howto/maintenance.html
+        elif isinstance(exception, google.appengine.runtime.apiproxy_errors.CapabilityDisabledError):
+            # Datastore is Read-Only
+            # TODO: Display "try again in a hour" message
+            super(BasicHandler, self).handle_exception(exception, debug_mode)
+        else:
+            if debug_mode:
+                super(BasicHandler, self).handle_exception(exception, debug_mode)
+            else:
+                # TODO: Display a generic 500 error page.
+                super(BasicHandler, self).handle_exception(exception, debug_mode)
 
 
 class JsonResponseHandler(BasicHandler):
@@ -503,3 +529,4 @@ class JsonResponseHandler(BasicHandler):
         # Set status code and write JSON to output stream
         self.response.set_status(statuscode)
         self.response.out.write(response)
+        self.response.out.write('\n')

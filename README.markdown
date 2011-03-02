@@ -73,7 +73,11 @@ Now in your views/handlers you can easyly force authentication like this:
             user = self.login_required() # results in 401/403 if can't login
             ...
 
+
+Unless you call `login_required(deny_localhost=False)` access from localhost is always considered authenticated.
+
 Statistics
+----------
 
 Add the following to app.yaml:
 
