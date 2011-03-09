@@ -389,7 +389,7 @@ class BasicHandler(webapp2.RequestHandler):
                     raise HTTP302_Found(location=str(absolute_url))
                 else:
                     # We assume the access came via cURL et al, request Auth vie 401 Status code.
-                    logging.info("requesting HTTP-Auth %s %s %s", self.request.remote_addr,
+                    logging.info("requesting HTTP-Auth %s %s", self.request.remote_addr,
                                   self.request.headers.get('Authorization'))
                     raise HTTP401_Unauthorized(headers={'WWW-Authenticate': 'Basic realm="API Login"'})
 
