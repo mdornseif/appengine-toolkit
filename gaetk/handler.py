@@ -476,8 +476,8 @@ class JsonResponseHandler(BasicHandler):
     is used to generate a `Cache-Control` header. If `cachingtime is None`, no header
     is generated. `cachingtime` defaults to two hours.
     """
-    # Our default caching is 2 h
-    default_cachingtime = (60 * 60 * 2)
+    # Our default caching is 60s
+    default_cachingtime = 60
 
     def __call__(self, _method, *args, **kwargs):
         """Dispatches the requested method. """
