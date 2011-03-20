@@ -143,8 +143,8 @@ class BasicHandler(webapp2.RequestHandler):
         http://code.google.com/appengine/docs/python/datastore/queryclass.html#Query_cursor for
         further Information.
         """
-        start = self.request.get_range('start', min_value=0, max_value=1000, default=0)
-        limit = self.request.get_range('limit', min_value=1, max_value=100, default=defaultcount)
+        start = self.request.get_range('start', min_value=0, max_value=10000, default=0)
+        limit = self.request.get_range('limit', min_value=1, max_value=1000, default=defaultcount)
         if self.request.get('cursor'):
             objects = query.with_cursor(self.request.get('cursor'))
         else:
@@ -153,13 +153,14 @@ class BasicHandler(webapp2.RequestHandler):
         objects = objects[:limit]
         prev_objects = start > 0
         prev_start = max(start - limit - 1, 0)
-        next_start = max(start + len(objects) - 1, 0)
+        next_start = max(start + len(objects), 0)
         ret = dict(more_objects=more_objects, prev_objects=prev_objects,
                    prev_start=prev_start, next_start=next_start)
         if more_objects:
             ret['cursor'] = query.cursor()
         if calctotal:
-            ret['total'] = query.count()
+            # We count up to maximum of 10000. Counting in a somewhat expensive operation on AppEngine
+            ret['total'] = query.count(10000)
         if formatter:
             ret[datanodename] = [formatter(x) for x in objects]
         else:
@@ -210,7 +211,7 @@ class BasicHandler(webapp2.RequestHandler):
                 values = self.paginate(query, 25, datanodename='rechnungen')
                 self.multirender(fmt, values,
                                  filename='rechnungen-%s' % kundennr,
-                                 template='rechnungen')
+                                 html_template='rechnungen')
 
         `/empfaenger/12345/rechnungen` and `/empfaenger/12345/rechnungen.html` will result in
         `rechnungen.html` beeing rendered.

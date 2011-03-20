@@ -8,6 +8,7 @@ Copyright (c) 2011 HUDORA. All rights reserved.
 """
 
 from google.appengine.api import taskqueue
+import logging
 import zlib
 
 
@@ -27,7 +28,9 @@ def taskqueue_add_multi(name, url, paramlist, **kwargs):
         if len(tasks) >= 100:
             taskqueue.Queue(name=name).add(tasks)
             tasks = []
-    taskqueue.Queue(name=name).add(tasks)
+    if tasks:
+        taskqueue.Queue(name=name).add(tasks)
+    logging.debug(u'%d tasks queued to %s', len(paramlist), url)
 
 
 def taskqueue_add_multi_payload(name, url, payloadlist, **kwargs):
@@ -46,4 +49,6 @@ def taskqueue_add_multi_payload(name, url, payloadlist, **kwargs):
         if len(tasks) >= 100:
             taskqueue.Queue(name=name).add(tasks)
             tasks = []
-    taskqueue.Queue(name=name).add(tasks)
+    if tasks:
+        taskqueue.Queue(name=name).add(tasks)
+    logging.debug(u'%d tasks queued to %s', len(payloadlist), url)
