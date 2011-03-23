@@ -34,7 +34,7 @@ class AuditLog(db.Model):
     def create(cls, obj, event, changelist):
         """Create an AuditLog Entry."""
 
-        instance = cls(object=obj, event=event, changelist=changelist)
+        instance = cls(parent=obj, object=obj, event=event, changelist=changelist)
         instance.initiator = users.get_current_user()
         instance.ip_address = os.getenv('REMOTE_ADDR')
         instance.put()
@@ -85,8 +85,8 @@ class LoggedModel(db.Model):
         changelist = []
         for prop in self.properties().values():
             changelist.append(u'%s: %r' % (prop.name, entity.get(prop.name)))
-        super(LoggedModel, self).put(**kwargs)
         AuditLog.create(self, 'DELETE', changelist)
+        super(LoggedModel, self).delete(**kwargs)
 
     @property
     def logentries(self, event=None):
