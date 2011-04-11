@@ -82,14 +82,8 @@ class Credential(db.Expando):
         if not uid:
             handmade_key = db.Key.from_path('Credential', 1)
             uid = "u%s" % (db.allocate_ids(handmade_key, 1)[0])
-        instance = cls.get_or_insert(key_name=uid, uid=uid, secret=secret, tenant=tenant,
-                                     user=user, text=text, email=email, admin=admin)
-        instance = cls.get_or_insert(key_name=uid, uid=uid, secret=secret, user=user, text=text,
-                                     email=email, admin=admin)
-        if tenant:
-            instance.tenant = tenant
-            instance.put()
-        return instance
+        return cls.get_or_insert(key_name=uid, uid=uid, secret=secret, tenant=tenant,
+                                 user=user, text=text, email=email, admin=admin)
 
     def __repr__(self):
         return "<gaetk.Credential %s>" % self.uid
