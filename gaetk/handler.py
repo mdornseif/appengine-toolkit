@@ -90,6 +90,24 @@ class Credential(db.Expando):
         return "<gaetk.Credential %s>" % self.uid
 
 
+def create_credential_from_federated_login(user, apps_domain):
+    """Create a new credential object for a newly logged in OpenID user.
+
+    This method provides a useful default implementation which should satisfy
+    most needs one might have for new OpenID credentials. If however an application
+    using the AppEngine toolkit does need to store more or different information
+    it should overwrite this method by settings the configuration variable
+    'LOGIN_OPENID_CREDENTIAL_CREATOR' in config.py to a custom method. The method
+    must accept the same two arguments this method received. For an example you
+    might want to look at HUDORA EDIhub, where an additional "receiver" gets written
+    to the credentials database model.
+    """
+    credential = Credential.create(tenant=apps_domain, user=user, uid=user.email(),
+        email=user.email(),
+        text="Automatically created via OpenID Provider %s" % user.federated_provider())
+    return credential
+
+
 class BasicHandler(webapp2.RequestHandler):
     """Generische Handler Funktionalität."""
     def __init__(self, *args, **kwargs):
@@ -303,7 +321,7 @@ class BasicHandler(webapp2.RequestHandler):
             return False
         return self.credential.admin
 
-    def login_required(self, deny_localhost=False):
+    def login_required(self, deny_localhost=True):
         """Returns the currently logged in user and forces login.
 
         Access from 127.0.0.1 is allowed without authentication if deny_localhost is false.
@@ -332,7 +350,10 @@ class BasicHandler(webapp2.RequestHandler):
             self.credential = Credential.get_by_key_name(username)
             if not self.credential or not self.credential.uid == username:
                 # So far we have no Credential entity for that user, create one
-                self.credential = self.create_credential_from_federated_login(user, apps_domain)
+                if getattr(config, 'LOGIN_OPENID_CREDENTIAL_CREATOR', None):
+                    self.credential = config.LOGIN_OPENID_CREDENTIAL_CREATOR(user, apps_domain)
+                if not self.credential:
+                    self.credential = create_credential_from_federated_login(user, apps_domain)
             self.session['uid'] = self.credential.uid
             # self.response.set_cookie('gaetk_opid', apps_domain, max_age=60*60*24*90)
             self.response.headers['Set-Cookie'] = 'gaetk_opid=%s; Max-Age=7776000' % apps_domain
@@ -379,7 +400,7 @@ class BasicHandler(webapp2.RequestHandler):
                 self.credential = Credential.create(tenant='localhost.', uid='0x7f000001',
                                                     text='Automatically created for testing')
             else:
-                # Login not successfull
+                # Login not successful
                 if 'text/html' in self.request.headers.get('Accept', ''):
                     # we assume the request came via a browser - redirect to the "nice" login page
                     self.response.set_status(302)
@@ -393,21 +414,6 @@ class BasicHandler(webapp2.RequestHandler):
                     raise HTTP401_Unauthorized(headers={'WWW-Authenticate': 'Basic realm="API Login"'})
 
         return self.credential
-
-    def create_credential_from_federated_login(self, user, apps_domain):
-        """Create a new credential object for a newly logged in OpenID user.
-
-        This method provides a useful default implementation which should satisfy
-        most needs one might have for new OpenID credentials. If however an application
-        using the AppEngine toolkit does need to store more or different information
-        it should overwrite this method in a subclass, as for example can be seen at
-        HUDORA EDIhub where an additional "receiver" parameter gets written to the
-        credentials database model.
-        """
-        credential = Credential.create(tenant=apps_domain, user=user, uid=user.email(),
-            email=user.email(),
-            text="Automatically created via OpenID Provider %s" % user.federated_provider())
-        return credential
 
     def authchecker(self, method, *args, **kwargs):
         """Function to allow implementing authentication for all subclasses. To be overwritten."""

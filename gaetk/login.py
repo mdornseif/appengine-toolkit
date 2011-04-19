@@ -21,7 +21,7 @@ Copyright (c) 2010 HUDORA. All rights reserved.
 import config
 config.imported = True
 
-from gaetk.handler import Credential
+from gaetk.handler import Credential, create_credential_from_federated_login
 from gaetk import webapp2
 from gaetk.gaesessions import get_current_session
 from gaetk.handler import BasicHandler
@@ -33,14 +33,6 @@ try:
     ALLOWED_DOMAINS = config.LOGIN_ALLOWED_DOMAINS
 except:
     ALLOWED_DOMAINS = []
-
-
-def create_credential_from_federated_login(user, apps_domain):
-    """Create a new credential object for a newly logged in OpenID user."""
-    credential = Credential.create(tenant=apps_domain, user=user, uid=user.email(),
-        email=user.email(),
-        text="Automatically created via OpenID Provider %s" % user.federated_provider())
-    return credential
 
 
 class OpenIdLoginHandler(BasicHandler):
@@ -73,7 +65,10 @@ class OpenIdLoginHandler(BasicHandler):
             credential = Credential.get_by_key_name(username)
             if not credential or not credential.uid == username:
                 # So far we have no Credential entity for that user, create one
-                credential = create_credential_from_federated_login(user, apps_domain)
+                if getattr(config, 'LOGIN_OPENID_CREDENTIAL_CREATOR', None):
+                    self.credential = config.LOGIN_OPENID_CREDENTIAL_CREATOR(user, apps_domain)
+                if not self.credential:
+                    self.credential = create_credential_from_federated_login(user, apps_domain)
             session['uid'] = credential.uid
             # self.response.set_cookie('gaetk_opid', apps_domain, max_age=60*60*24*90)
             self.response.headers['Set-Cookie'] = 'gaetk_opid=%s; Max-Age=7776000' % apps_domain
