@@ -17,6 +17,8 @@ Copyright (c) 2011 HUDORA. All rights reserved.
 
 from google.appengine.ext import db
 from google.appengine.api import users
+
+import decimal
 import os
 
 
@@ -99,3 +101,52 @@ class LoggedModel(db.Model):
         if not event is None:
             queryset.filter('event =', event)
         return queryset
+
+
+class DecimalProperty(db.Property):
+    """A decimal property"""
+
+    data_type = decimal.Decimal
+
+    def validate(self, value):
+        """Validate decimal property.
+
+        Returns:
+        A valid value.
+
+        Raises:
+        BadValueError if value is not an integer or long instance.
+        """
+
+        value = super(DecimalProperty, self).validate(value)
+        if value is None or isinstance(value, self.data_type):
+            return value
+        elif isinstance(value, basestring):
+            return self.data_type(value)
+        raise db.BadValueError("Property %s must be a Decimal or string." % self.name)
+
+    def empty(self, value):
+        """Is decimal property empty.
+
+        0 is not an empty value.
+
+        Returns:
+          True if value is None, else False.
+        """
+        return value is None
+
+    def get_value_for_datastore(self, model_instance):
+        """Get value from property to send to datastore.
+
+        Returns:
+            Value of string representtion of decimal value
+        """
+        return str(super(DecimalProperty, self).get_value_for_datastore(model_instance))
+
+    def make_value_from_datastore(self, value):
+        """Native representation of this property.
+
+        We receive a string representation retrieved from the entity and return
+        a decimal.Decimal instance.
+        """
+        return self.data_type(value)
