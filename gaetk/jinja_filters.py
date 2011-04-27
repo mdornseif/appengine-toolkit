@@ -19,6 +19,8 @@ def right_justify(value, width):
 
 def eurocent(value, spacer=''):
     """Format the given cents as Euro with spacer as delimiter, e.g. '1 234 456'"""
+    if not value:
+        return ''
     rev_value = (u"%.0f" % (int(value) / 100.0))[::-1]
     return spacer.join([rev_value[i:i + 3] for i in range(0, len(rev_value), 3)])[::-1]
 
