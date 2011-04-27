@@ -41,6 +41,7 @@ import base64
 import google.appengine.ext.db
 import google.appengine.runtime.apiproxy_errors
 import hashlib
+import jinja_filters
 import logging
 import urllib
 import urlparse
@@ -179,6 +180,7 @@ class BasicHandler(webapp2.RequestHandler):
         which is given in `values`."""
         import jinja2
         env = jinja2.Environment(loader=jinja2.FileSystemLoader(config.template_dirs))
+        jinja_filters.register_custom_filters(env)
         try:
             template = env.get_template(template_name)
         except jinja2.TemplateNotFound:
