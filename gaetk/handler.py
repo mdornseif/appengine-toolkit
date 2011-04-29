@@ -159,11 +159,12 @@ class BasicHandler(webapp2.RequestHandler):
         start = self.request.get_range('start', min_value=0, max_value=10000, default=0)
         limit = self.request.get_range('limit', min_value=1, max_value=1000, default=defaultcount)
         if self.request.get('cursor'):
-            objects = query.with_cursor(self.request.get('cursor'))
+            query.with_cursor(self.request.get('cursor'))
+            more_objects = query.count() > limit
+            objects = query.fetch(limit)
         else:
-            objects = query.fetch(limit + 1, start)
-        more_objects = len(objects) > limit
-        objects = objects[:limit]
+            more_objects = query.count() > limit
+            objects = query.fetch(limit, start)
         prev_objects = start > 0
         prev_start = max(start - limit - 1, 0)
         next_start = max(start + len(objects), 0)
