@@ -191,13 +191,32 @@ class BasicHandler(webapp2.RequestHandler):
         """
         return values
 
+    def create_jinja2env(self):
+        """Initialise and return a jinja2 Environment instance.
+
+        Overwrite this method to setup specific behaviour.
+        For example, to allow i18n:
+
+            class myHandler(BasicHandler):
+                def create_jinja2env(self):
+                    import gettext
+                    import jinja2
+                    env = jinja2.Environment(extensions=['jinja2.ext.i18n'],
+                                             loader=jinja2.FileSystemLoader(config.template_dirs))
+                    env.install_gettext_translations(gettext.NullTranslations())
+                    return env
+        """
+        import jinja2
+        env = jinja2.Environment(loader=jinja2.FileSystemLoader(config.template_dirs))
+        return env
+
     def rendered(self, values, template_name):
         """Return the rendered content of a Jinja2 Template.
 
         Per default the template is provided with the `uri` and `credential` variables plus everything
         which is given in `values`."""
         import jinja2
-        env = jinja2.Environment(loader=jinja2.FileSystemLoader(config.template_dirs))
+        env = self.create_jinja2env()
         jinja_filters.register_custom_filters(env)
         try:
             template = env.get_template(template_name)
