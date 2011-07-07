@@ -121,7 +121,7 @@ class DecimalProperty(db.Property):
         value = super(DecimalProperty, self).validate(value)
         if value is None or isinstance(value, self.data_type):
             return value
-        elif isinstance(value, basestring):
+        elif isinstance(value, (basestring, int, long)):
             return self.data_type(value)
         raise db.BadValueError("Property %s must be a Decimal or string." % self.name)
 
@@ -141,7 +141,10 @@ class DecimalProperty(db.Property):
         Returns:
             Value of string representtion of decimal value
         """
-        return str(super(DecimalProperty, self).get_value_for_datastore(model_instance))
+        tmp = super(DecimalProperty, self).get_value_for_datastore(model_instance)
+        if tmp is None:
+            return None
+        return str(tmp)
 
     def make_value_from_datastore(self, value):
         """Native representation of this property.
@@ -149,4 +152,6 @@ class DecimalProperty(db.Property):
         We receive a string representation retrieved from the entity and return
         a decimal.Decimal instance.
         """
+        if value is None:
+            return value
         return self.data_type(value)
