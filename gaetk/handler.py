@@ -15,7 +15,7 @@ Copyright (c) 2010 HUDORA. All rights reserved.
 import config
 config.imported = True
 
-
+import urllib
 from functools import partial
 
 from gaetk import webapp2
@@ -43,7 +43,6 @@ import google.appengine.runtime.apiproxy_errors
 import hashlib
 import jinja_filters
 import logging
-import urllib
 import urlparse
 import uuid
 
@@ -167,10 +166,21 @@ class BasicHandler(webapp2.RequestHandler):
         prev_objects = start > 0
         prev_start = max(start - limit - 1, 0)
         next_start = max(start + len(objects), 0)
+        clean_qs = dict([(k, self.request.get(k)) for k in self.request.arguments()
+                         if k not in ['start', 'cursor']])
         ret = dict(more_objects=more_objects, prev_objects=prev_objects,
                    prev_start=prev_start, next_start=next_start)
         if more_objects:
             ret['cursor'] = query.cursor()
+            # query string to get to the next page
+            qs = dict(cursor=ret['cursor'])
+            qs.update(clean_qs)
+            ret['next_qs'] = urllib.urlencode(qs)
+        if prev_objects:
+            # query string to get to the next previous page
+            qs = dict(start=ret['prev_start'])
+            qs.update(clean_qs)
+            ret['prev_qs'] = urllib.urlencode(qs)
         if calctotal:
             # We count up to maximum of 10000. Counting in a somewhat expensive operation on AppEngine
             ret['total'] = query.count(10000)
@@ -244,7 +254,7 @@ class BasicHandler(webapp2.RequestHandler):
                 values = self.paginate(query, 25, datanodename='rechnungen')
                 self.multirender(fmt, values,
                                  filename='rechnungen-%s' % kundennr,
-                                 html_template='rechnungen')
+                                 html_template='rechnungen.html')
 
         `/empfaenger/12345/rechnungen` and `/empfaenger/12345/rechnungen.html` will result in
         `rechnungen.html` beeing rendered.
@@ -260,7 +270,7 @@ class BasicHandler(webapp2.RequestHandler):
         (but not to the rendering functions of other formats).
 
         You can give the `xml_root` and `xml_lists` parameters to provide `huTools.structured.dict2xml()`
-        with defenitions on how to name elements. Dee the documentation of `roottag` and `listnames` in
+        with defenitions on how to name elements. See the documentation of `roottag` and `listnames` in
         dict2xml documentation.
 
         For more sophisticated layout you can give customized mappers. Using functools.partial
@@ -274,7 +284,7 @@ class BasicHandler(webapp2.RequestHandler):
                                      html=lambda x: '<body><head><title>%s</title></head></body>' % x))
         """
 
-        # We lazy import huTools to keep gaet usable without hutools
+        # We lazy import huTools to keep gaetk usable without hutools
         import huTools.hujson
         import huTools.structured
 
