@@ -15,11 +15,25 @@ Created by Christian Klein on 2011-01-22.
 Copyright (c) 2011 HUDORA. All rights reserved.
 """
 
+from gaetk.gaesessions import get_current_session
 from google.appengine.ext import db
 from google.appengine.api import users
 
 import decimal
 import os
+
+
+def get_current_user():
+    """Helper function to return a valid User instance.
+
+    For users logged in via OpenID, the result is equivalent to users.get_current_user.
+    If the user logged in via Basic Auth, the user id is taken from the related Credential object.
+    """
+    user = users.get_current_user()
+    if user is None:
+        session = get_current_session()
+        if 'uid' in session:
+            return users.User(_user_id=session['uid'], email=session['email'], _strict_mode=False)
 
 
 class AuditLog(db.Model):
@@ -37,7 +51,7 @@ class AuditLog(db.Model):
         """Create an AuditLog Entry."""
 
         instance = cls(parent=obj, object=obj, event=event, changelist=changelist)
-        instance.initiator = users.get_current_user()
+        instance.initiator = get_current_user()
         instance.ip_address = os.getenv('REMOTE_ADDR')
         instance.put()
         return instance
@@ -119,6 +133,11 @@ class DecimalProperty(db.Property):
         """
 
         value = super(DecimalProperty, self).validate(value)
+
+        # If value is the empty string, it's being converted to None
+        if value == u'':
+            value = None
+
         if value is None or isinstance(value, self.data_type):
             return value
         elif isinstance(value, (basestring, int, long)):

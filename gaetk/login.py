@@ -21,41 +21,64 @@ Copyright (c) 2010 HUDORA. All rights reserved.
 import config
 config.imported = True
 
+import logging
+
+import huTools.hujson
 from gaetk.handler import Credential, create_credential_from_federated_login
 from gaetk import webapp2
 from gaetk.gaesessions import get_current_session
 from gaetk.handler import BasicHandler
 from google.appengine.api import users
 from google.appengine.ext.webapp import util
-import logging
+
 
 try:
     ALLOWED_DOMAINS = config.LOGIN_ALLOWED_DOMAINS
-except:
+except AttributeError:
     ALLOWED_DOMAINS = []
 
 
+def get_verified_credential(username, password, session=None):
+    """Get a credential object
+
+    The credential object for the given username...
+    Otherwise, None is returned.
+    """
+    # TODO: Add memcache layer, like in gaetk.handler.BasicHandler.login_required
+    credential = Credential.get_by_key_name(username)
+    if credential and credential.secret == password:
+        if session:
+            session['uid'] = credential.uid
+            session['email'] = credential.email
+        return credential
+
+
 class OpenIdLoginHandler(BasicHandler):
+    """Handler for Login"""
+
+    def __init__(self, *args, **kwargs):
+        """Initialize handler instance"""
+
+        super(OpenIdLoginHandler, self).__init__(*args, **kwargs)
+
+        # clean previous session
+        self.session = get_current_session()
+        if self.session.is_active():
+            self.session.terminate()
 
     def get(self):
         """Handler for Federated login consumer (OpenID) AND HTTP-Basic-Auth.
 
-        See http://code.google.com/appengine/articles/openid.html"""
+        For information on OpenID, see http://code.google.com/appengine/articles/openid.html"""
 
-        msg = ''
         continue_url = self.request.GET.get('continue', '/')
-        openid_url = None
-        session = get_current_session()
-        # clean previous session
-        if session.is_active():
-            session.terminate()
 
         # check if we are logged in via OpenID
         user = users.get_current_user()
         if user:
-            logging.info('Google user = %s', user)
-            # yes, active OpenID session
+            # yes, there is an active OpenID session
             # user.federated_provider() == 'https://www.google.com/a/hudora.de/o8/ud?be=o8'
+            logging.info(u'User logged in via OpenID: %s', user)
             if not user.federated_provider():
                 # development server
                 apps_domain = user.email().split('@')[-1].lower()
@@ -64,64 +87,86 @@ class OpenIdLoginHandler(BasicHandler):
             username = user.email()
             credential = Credential.get_by_key_name(username)
             if not credential or not credential.uid == username:
-                # So far we have no Credential entity for that user, create one
-                if getattr(config, 'LOGIN_OPENID_CREDENTIAL_CREATOR', None):
-                    self.credential = config.LOGIN_OPENID_CREDENTIAL_CREATOR(user, apps_domain)
-                if not self.credential:
-                    self.credential = create_credential_from_federated_login(user, apps_domain)
-            session['uid'] = credential.uid
-            # self.response.set_cookie('gaetk_opid', apps_domain, max_age=60*60*24*90)
+                # So far we have no Credential entity for that user, create one by calling a factory function
+                fnc = getattr(config, 'LOGIN_OPENID_CREDENTIAL_CREATOR',
+                              create_credential_from_federated_login)
+                credential = fnc(user, apps_domain)
+
+            self.session['uid'] = credential.uid
             self.response.headers['Set-Cookie'] = 'gaetk_opid=%s; Max-Age=7776000' % apps_domain
             self.redirect(continue_url)
             return
 
-        # we returned from the login form - did the user request OpenID login?
+        # If the form data contains hints about an allowed (OpenID) domain, try to login the user via OpenID
         for domain in ALLOWED_DOMAINS:
             if self.request.GET.get('%s.x' % domain):
                 openid_url = 'https://www.google.com/accounts/o8/site-xrds?hd=%s' % domain
-        if openid_url:
-            logging.info("Openid login requested to %s", openid_url)
+                logging.info('OpenID login requested to %s', openid_url)
+                # Hand over Authentication Processing to Google/OpenID
+                self.redirect(users.create_login_url(continue_url, None, openid_url))
+                return
 
-        if openid_url:
-            # Hand over Authentication Processing to Google/OpenID
-            self.redirect(users.create_login_url(continue_url, None, openid_url))
-            return
+        # If it was impossible to authenticate via OpenID so far,
+        # the user is tried to be authenticated via a username-password based approach.
+        # The data is either taken from the HTTP header `Authorization` or the provided (form) data.
+
+        msg = ''
+        username, password = None, None
+        # First, try HTTP basic auth (see RFC 2617)
+        if self.request.headers.get('Authorization'):
+            auth_type, encoded = self.request.headers.get('Authorization').split(None, 1)
+            if auth_type.lower() == 'basic':
+                username, password = encoded.decode('base64').split(':', 1)
+        # Next, try to get data from the request parameters (form data)
         else:
-            # Try user:pass based Authentication
-            username, password = None, None
-            # see if we have HTTP-Basic Auth Data
-            if self.request.headers.get('Authorization'):
-                auth_type, encoded = self.request.headers.get('Authorization').split(None, 1)
-                if auth_type.lower() == 'basic':
-                    username, password = encoded.decode('base64').split(':', 1)
+            username = self.request.get('username', '').strip()
+            password = self.request.get('password', '').strip()
 
-            # see if we have gotten some Form Data instead
-            if not (username and password):
-                username = self.request.get('username').strip()
-                password = self.request.get('password').strip()
+        # Verify submitted username and password
+        if username:
+            credential = get_verified_credential(username, password, session=self.session)
+            if credential:
+                logging.info('Login by %s/%s, redirect to %s',
+                             username, self.request.remote_addr, continue_url)
+                self.redirect(continue_url)
+                return
+            else:
+                logging.warning(u'Invalid password for %s', username)
+                msg = u'Anmeldung fehlgeschlagen'
 
-            # verify user & password
-            if username:
-                logging.info("Login Attempt for %s", username)
-                credential = Credential.get_by_key_name(username)
-                if credential and credential.secret == password:
-                    # successfull login
-                    session['uid'] = credential.uid
-                    # redirect back where we came from
-                    logging.info("Login durch %s/%s, Umleitung zu %s", username, self.request.remote_addr,
-                                 continue_url)
-                    self.redirect(continue_url)
-                    return
-                else:
-                    logging.warning("Invalid Password for %s:%s", username, password)
-                    msg = 'Kann sie nicht anmelden'
+        # Render template with login form
+        self.render({'continue': continue_url, 'domains': ALLOWED_DOMAINS, 'msg': msg}, 'login.html')
 
-            # Render Template with Login form
-            self.render({'continue': continue_url, 'domains': ALLOWED_DOMAINS, 'msg': msg}, 'login.html')
+    def post(self):
+        """Login via Form POST
+
+        Unline the handler for the GET method, this handler only tries
+        to authenticate a 'user' by checking a username/password combination
+        that was submitted through a form.
+        Returns a JSON encoded object with the attribute 'success'.
+        """
+
+        if 'username' in self.request.params:
+            username = self.request.get('username', '').strip()
+            password = self.request.get('password', '').strip()
+            credential = get_verified_credential(username, password, self.session)
+            if credential:
+                logging.info("Login by %s/%s", username, self.request.remote_addr)
+                response = {'success': True}
+            else:
+                logging.warning("Invalid password for %s:%s", username, password)
+                response = {'success': False}
+        else:
+            response = {'success': False}
+        self.response.out.write(huTools.hujson.dumps(response))
 
 
 class LogoutHandler(OpenIdLoginHandler):
+    """Handler for Logout functionality"""
+
     def get(self):
+        """Logout user and terminate the current session"""
+
         session = get_current_session()
         session['uid'] = None
         if session.is_active():
@@ -129,25 +174,29 @@ class LogoutHandler(OpenIdLoginHandler):
 
         # log out OpenID and either redirect to 'continue' or display
         # the default logout confirmation page
-        continue_url = self.request.get('continue')
+        continue_url = self.request.get('continue', '/logout')
+
         user = users.get_current_user()
         if user:
-            self.redirect(users.create_logout_url(continue_url or '/logout'))
+            self.redirect(users.create_logout_url(continue_url))
         else:
-            # render template with logout confirmation
             if continue_url:
                 self.redirect(continue_url)
             else:
                 self.render({}, 'logout.html')
 
 
+def application():
+    """Create WSGI application"""
+    return webapp2.WSGIApplication([('logout', LogoutHandler),
+                                    ('/logout', LogoutHandler),
+                                    ('.*', OpenIdLoginHandler),
+                                   ])
+
+
 def main():
-    application = webapp2.WSGIApplication([
-        ('logout', LogoutHandler),
-        ('/logout', LogoutHandler),
-        ('.*', OpenIdLoginHandler),
-        ], debug=False)
-    util.run_wsgi_app(application)
+    """WSGI Main Entry Point"""
+    util.run_wsgi_app(application())
 
 
 if __name__ == '__main__':
