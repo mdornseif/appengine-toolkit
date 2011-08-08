@@ -399,6 +399,7 @@ class BasicHandler(webapp2.RequestHandler):
                         # Successful login
                         self.credential = credential
                         self.session['uid'] = credential.uid
+                        self.session['email'] = credential.email
                         # Log successful login, but only once every 10h
                         data = memcache.get("login_%s_%s" % (uid, self.request.remote_addr))
                         if not data:
