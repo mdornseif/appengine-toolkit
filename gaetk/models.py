@@ -30,7 +30,9 @@ def get_current_user():
     If the user logged in via Basic Auth, the user id is taken from the related Credential object.
     """
     user = users.get_current_user()
-    if user is None:
+    if user != None:
+        return user
+    else:
         session = get_current_session()
         if 'uid' in session:
             return users.User(_user_id=session['uid'], email=session['email'], _strict_mode=False)
