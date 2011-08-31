@@ -1,4 +1,4 @@
-GAE_VERSION=1.5.1
+GAE_VERSION=1.5.3
 
 check: google/__init__.py
 	pyflakes gaetk/
@@ -14,5 +14,12 @@ google/__init__.py:
 
 clean:
 	find . -name '*.pyc' -or -name '*.pyo' -delete
+
+test:
+	./pythonenv/bin/nosetests --with-gae --nologcapture --nocapture --gae-application=./examples tests/*.py
+
+pythonenv:
+	virtualenv --python=python2.5 --no-site-packages pythonenv
+	./pythonenv/bin/python pythonenv/bin/pip -q install --upgrade nose nosegae WebTest gaetestbed coverage mock fixture
 
 .PHONY: clean check

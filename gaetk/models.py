@@ -34,7 +34,7 @@ def get_current_user():
         return user
     else:
         session = get_current_session()
-        if 'uid' in session:
+        if session and 'uid' in session:
             return users.User(_user_id=session['uid'], email=session['email'], _strict_mode=False)
 
 
@@ -83,17 +83,25 @@ class LoggedModel(db.Model):
         # Compare the property values with the entity values and build a changelist
         changelist = []
         for prop in self.properties().values():
-            current_value = entity.get(prop.name)
-            new_value = getattr(self, prop.name, None)
+            # see http://code.google.com/intl/de-DE/appengine/docs/python/datastore/propertyclass.html for
+            # documentation of get_value_for_datastore() and make_value_from_datastore()
+            tmp = entity.get(prop.name)
+            current_value = prop.make_value_from_datastore(tmp)
+            tmp = prop.get_value_for_datastore(self)
+            new_value = prop.make_value_from_datastore(tmp)
             if current_value != new_value:
                 if isinstance(prop, db.UnindexedProperty):
-                    change = u'changed'
-                else:
-                    change = u'%r > %r' % (current_value, new_value)
+                    # Reduce logging output to 500 chars (max length for StringProperty)
+                    if current_value and len(current_value) > 245:
+                        current_value = "%s ..." % current_value[:244]
+                    if len(new_value) > 245:
+                        new_value = "%s ..." % new_value[:244]
+                change = u'%s \u21d2 %s' % (current_value, new_value)
                 changelist.append(u'%s: %s' % (prop.name, change))
 
         super(LoggedModel, self).put(**kwargs)
-        AuditLog.create(self, event, changelist)
+        if changelist:
+            AuditLog.create(self, event, changelist)
 
     def delete(self, **kwargs):
         """Deletes this entity from the datastore and creates an AuditLog entry"""
