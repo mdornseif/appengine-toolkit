@@ -22,7 +22,7 @@ def eurocent(value, spacer=''):
     if not value:
         return ''
     rev_value = (u"%.0f" % (int(value) / 100.0))[::-1]
-    return spacer.join([rev_value[i:i + 3] for i in range(0, len(rev_value), 3)])[::-1]
+    return spacer.join(reversed([rev_value[i:i + 3][::-1] for i in range(0, len(rev_value), 3)]))
 
 
 def register_custom_filters(jinjaenv):
