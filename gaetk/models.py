@@ -99,9 +99,10 @@ class LoggedModel(db.Model):
                 change = u'%s \u21d2 %s' % (current_value, new_value)
                 changelist.append(u'%s: %s' % (prop.name, change))
 
-        super(LoggedModel, self).put(**kwargs)
+        key = super(LoggedModel, self).put(**kwargs)
         if changelist:
             AuditLog.create(self, event, changelist)
+        return key
 
     def delete(self, **kwargs):
         """Deletes this entity from the datastore and creates an AuditLog entry"""
