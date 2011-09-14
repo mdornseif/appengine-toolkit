@@ -93,6 +93,7 @@ class OpenIdLoginHandler(BasicHandler):
                 credential = fnc(user, apps_domain)
 
             self.session['uid'] = credential.uid
+            self.session['email'] = username
             self.response.headers['Set-Cookie'] = 'gaetk_opid=%s; Max-Age=7776000' % apps_domain
             self.redirect(continue_url)
             return

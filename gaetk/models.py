@@ -35,7 +35,7 @@ def get_current_user():
     else:
         session = get_current_session()
         if session and 'uid' in session:
-            return users.User(_user_id=session['uid'], email=session['email'], _strict_mode=False)
+            return users.User(_user_id=session['uid'], email=session.get('email', ''), _strict_mode=False)
 
 
 class AuditLog(db.Model):
