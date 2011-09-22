@@ -141,6 +141,8 @@ class BasicHandler(webapp2.RequestHandler):
              objects: [...], cursor='ABCDQWERY'}
 
         `formatter` is called for each object and can transfor it into something suitable.
+        If no `formatter` is given and objects have a `as_dict()` method, this is used
+        for formating.
 
         if `calctotal == True` then the total number of matching rows is given as an integer value. This
         is a ecpensive operation on the AppEngine and results might be capped at 1000.
@@ -189,7 +191,12 @@ class BasicHandler(webapp2.RequestHandler):
         if formatter:
             ret[datanodename] = [formatter(x) for x in objects]
         else:
-            ret[datanodename] = objects
+            ret[datanodename] = []
+            for x in objects:
+                if hasattr(x, 'as_dict'):
+                    ret[datanodename].append(x.as_dict(self.abs_url))
+                else:
+                    ret[datanodename].append(x)
         return ret
 
     def default_template_vars(self, values):
@@ -331,7 +338,7 @@ class BasicHandler(webapp2.RequestHandler):
         else:
             disposition = "inline"
 
-        if fmt != 'html':
+        if fmt not in ['html', 'json']:
             self.response.headers["Content-Disposition"] = \
                                 "%s; filename=%s.%s" % (disposition, filename, fmt)
         # If we have gotten a `callback` parameter, we expect that this is a
