@@ -353,16 +353,20 @@ class BasicHandler(webapp2.RequestHandler):
 
     def is_admin(self):
         """Returns if the currently logged in user is admin"""
+        # Google App Engine Administrators
+        if users.is_current_user_admin():
+            return True
+        # User with Admin permissions via Credential entities
         if not hasattr(self, 'credential'):
             return False
         elif self.credential is None:
             return False
         return self.credential.admin
 
-    def login_required(self, deny_localhost=True):
+    def login_required(self, deny_localhost=False):
         """Returns the currently logged in user and forces login.
 
-        Access from 127.0.0.1 is allowed without authentication if deny_localhost is false.
+        Access from 127.0.0.1 is allowed without authentication unless deny_localhost is `True`.
         """
 
         self.session = get_current_session()
