@@ -141,8 +141,7 @@ class BasicHandler(webapp2.RequestHandler):
             self.response.headers['Content-Type'] = 'text/plain'
             self.response.out.write('Daten nicht gefunden.')
 
-    def paginate(self, query, defaultcount=10, datanodename='objects', calctotal=True, formatter=None,
-                 not_as_dict=False):
+    def paginate(self, query, defaultcount=10, datanodename='objects', calctotal=True, formatter=None):
         """Pagination a la http://mdornseif.github.com/2010/10/02/appengine-paginierung.html
 
         Returns something like
@@ -205,10 +204,7 @@ class BasicHandler(webapp2.RequestHandler):
         else:
             ret[datanodename] = []
             for x in objects:
-                if hasattr(x, 'as_dict') and not not_as_dict:
-                    ret[datanodename].append(x.as_dict(self.abs_url))
-                else:
-                    ret[datanodename].append(x)
+                ret[datanodename].append(x)
         return ret
 
     def default_template_vars(self, values):
