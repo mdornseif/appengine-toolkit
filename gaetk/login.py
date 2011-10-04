@@ -94,7 +94,7 @@ class OpenIdLoginHandler(BasicHandler):
 
             self.session['uid'] = credential.uid
             self.session['email'] = username
-            self.response.headers['Set-Cookie'] = 'gaetk_opid=%s; Max-Age=7776000' % apps_domain
+            self.response.headers.add_header('Set-Cookie', 'gaetkopid=%s; Max-Age=7776000' % apps_domain)
             self.redirect(continue_url)
             return
 

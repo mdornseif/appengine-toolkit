@@ -44,6 +44,7 @@ import google.appengine.runtime.apiproxy_errors
 import hashlib
 import jinja_filters
 import logging
+import time
 import urlparse
 import uuid
 
@@ -56,6 +57,7 @@ config.dummy = [HTTP301_Moved, HTTP302_Found, HTTP303_SeeOther,
 
 
 CREDENTIAL_CACHE_TIMEOUT = 300
+_jinja_env_cache = None
 
 
 class Credential(db.Expando):
@@ -110,10 +112,18 @@ def create_credential_from_federated_login(user, apps_domain):
 
 
 class BasicHandler(webapp2.RequestHandler):
-    """Generische Handler Funktionalität."""
+    """Generischc Handler functionality.
+
+    provides
+
+    * `self.session` which si based on https://github.com/dound/gae-sessions.
+    * `self.login_required(()` and `self.is_admin()` for Authentication
+    * `self.authchecker()` to be overwritten to fully customize authentication
+    """
     def __init__(self, *args, **kwargs):
         """Initialize RequestHandler"""
-        self.credential = self.session = None
+        self.credential = None
+        self.session = get_current_session()
         super(BasicHandler, self).__init__(*args, **kwargs)
 
     def abs_url(self, url):
@@ -123,7 +133,6 @@ class BasicHandler(webapp2.RequestHandler):
     def error(self, code):
         """Clears the response output stream and sets the given HTTP error code.
 
-        Args:
           code: the HTTP status error code (e.g., 501)
         """
         logging.info('Errorhandler')
@@ -132,7 +141,8 @@ class BasicHandler(webapp2.RequestHandler):
             self.response.headers['Content-Type'] = 'text/plain'
             self.response.out.write('Daten nicht gefunden.')
 
-    def paginate(self, query, defaultcount=10, datanodename='objects', calctotal=True, formatter=None):
+    def paginate(self, query, defaultcount=10, datanodename='objects', calctotal=True, formatter=None,
+                 not_as_dict=False):
         """Pagination a la http://mdornseif.github.com/2010/10/02/appengine-paginierung.html
 
         Returns something like
@@ -164,20 +174,22 @@ class BasicHandler(webapp2.RequestHandler):
         if self.request.get('cursor'):
             query.with_cursor(self.request.get('cursor'))
             objects = query.fetch(limit)
+            start = self.request.get_range('cursor_start', min_value=0, max_value=10000, default=0)
         else:
             objects = query.fetch(limit, start)
         more_objects = query.count(limit + 1) > limit
-        prev_objects = start > 0
+        prev_objects = (start > 0) or self.request.get('cursor')
         prev_start = max(start - limit - 1, 0)
         next_start = max(start + len(objects), 0)
         clean_qs = dict([(k, self.request.get(k)) for k in self.request.arguments()
-                         if k not in ['start', 'cursor']])
+                         if k not in ['start', 'cursor', 'cursor_start']])
         ret = dict(more_objects=more_objects, prev_objects=prev_objects,
                    prev_start=prev_start, next_start=next_start)
         if more_objects:
             ret['cursor'] = query.cursor()
+            ret['cursor_start'] = start + limit
             # query string to get to the next page
-            qs = dict(cursor=ret['cursor'])
+            qs = dict(cursor=ret['cursor'], cursor_start=ret['cursor_start'])
             qs.update(clean_qs)
             ret['next_qs'] = urllib.urlencode(qs)
         if prev_objects:
@@ -193,14 +205,14 @@ class BasicHandler(webapp2.RequestHandler):
         else:
             ret[datanodename] = []
             for x in objects:
-                if hasattr(x, 'as_dict'):
+                if hasattr(x, 'as_dict') and not not_as_dict:
                     ret[datanodename].append(x.as_dict(self.abs_url))
                 else:
                     ret[datanodename].append(x)
         return ret
 
     def default_template_vars(self, values):
-        """Helper to provide additional values to HTML Templates. To be overwirtten in subclasses. E.g.
+        """Helper to provide additional values to HTML Templates. To be overwritten in subclasses. E.g.
 
             def default_template_vars(self, values):
                 myval = dict(credential_empfaenger=self.credential_empfaenger,
@@ -210,7 +222,7 @@ class BasicHandler(webapp2.RequestHandler):
         """
         return values
 
-    def create_jinja2env(self):
+    def create_jinja2env(self, extensions=[]):
         """Initialise and return a jinja2 Environment instance.
 
         Overwrite this method to setup specific behaviour.
@@ -226,8 +238,26 @@ class BasicHandler(webapp2.RequestHandler):
                     return env
         """
         import jinja2
-        env = jinja2.Environment(loader=jinja2.FileSystemLoader(config.template_dirs))
-        return env
+
+        # Wir cachen das jinja2.Environment(). Dass ermögtlich es, dem intern Bytecode-Cache von
+        # jinja2 zu greifen. Ich bin mir nicht sicher, ob das nicht mit dem kommenden
+        # Mutlithreading-Support in GAE probleme machen wird - wir werden sehen.
+        # Es spart jedenfalls bei komplexen Seiten, wie
+        # http://hudora-de.appspot.com/shop/ersatzteil/95017 etwa 800 ms (!).
+        global _jinja_env_cache
+        if _jinja_env_cache is None:
+            env = jinja2.Environment(loader=jinja2.FileSystemLoader(config.template_dirs),
+                                     extensions=extensions,
+                                     auto_reload=False,  # do not check if the source changed
+                                     trim_blocks=True,  # first newline after a block is removed
+                                     # This does not work :-(
+                                     # <type 'exceptions.RuntimeError'>: disallowed bytecode
+                                     # bytecode_cache=jinja2.MemcachedBytecodeCache(memcache, timeout=600)
+                                     )
+            # Eigene Filter
+            #env.filters['dateformat'] = filter_dateformat
+            _jinja_env_cache = env
+        return _jinja_env_cache
 
     def rendered(self, values, template_name):
         """Return the rendered content of a Jinja2 Template.
@@ -243,12 +273,22 @@ class BasicHandler(webapp2.RequestHandler):
             raise jinja2.TemplateNotFound(template_name)
         myval = dict(uri=self.request.url, credential=self.credential)
         myval.update(self.default_template_vars(values))
+        self._expire_messages()
+        myval.update(dict(_gaetk_messages=self.session.get('_gaetk_messages', [])))
         content = template.render(myval)
         return content
 
     def render(self, values, template_name):
         """Render a Jinja2 Template and wite it to the client."""
         self.response.out.write(self.rendered(values, template_name))
+
+    def _expire_messages(self):
+        new = []
+        for message in self.session.get('_gaetk_messages', []):
+            if message.get('expires', 0) > time.time():
+                new.append(message)
+        if len(new) != len(self.session.get('_gaetk_messages', [])):
+            self.session['_gaetk_messages'] = new
 
     def multirender(self, fmt, data, mappers=None, contenttypes=None, filename='download',
                     defaultfmt='html', html_template='data', html_addon=None,
@@ -369,12 +409,12 @@ class BasicHandler(webapp2.RequestHandler):
         Access from 127.0.0.1 is allowed without authentication unless deny_localhost is `True`.
         """
 
-        self.session = get_current_session()
         self.credential = None
         if self.session.get('uid'):
             self.credential = memcache.get("cred_%s" % self.session['uid'])
             if self.credential is None:
                 self.credential = Credential.get_by_key_name(self.session['uid'])
+                # TODO: use protobufs
                 memcache.add("cred_%s" % self.session['uid'], self.credential, CREDENTIAL_CACHE_TIMEOUT)
 
         # we don't have an active session - check if we are logged in via OpenID at least
@@ -397,8 +437,7 @@ class BasicHandler(webapp2.RequestHandler):
                 if not self.credential:
                     self.credential = create_credential_from_federated_login(user, apps_domain)
             self.session['uid'] = self.credential.uid
-            # self.response.set_cookie('gaetk_opid', apps_domain, max_age=60*60*24*90)
-            self.response.headers['Set-Cookie'] = 'gaetk_opid=%s; Max-Age=7776000' % apps_domain
+            self.response.set_cookie('gaetkopid', apps_domain, max_age=7776000)
 
         if not self.credential:
             # still no session information - try HTTP - Auth
@@ -486,6 +525,10 @@ class BasicHandler(webapp2.RequestHandler):
             valid = ', '.join(webapp2.get_valid_methods(self))
             self.abort(405, headers=[('Allow', valid)])
 
+        # bind session
+        self.session = get_current_session()
+        # init messages array
+        self.session['_gaetk_messages'] = self.session.get('_gaetk_messages', [])
         # Give authentication Hooks opportunity to do their thing
         self.authchecker(method, *args, **kwargs)
 
@@ -509,6 +552,17 @@ class BasicHandler(webapp2.RequestHandler):
             else:
                 # TODO: Display a generic 500 error page.
                 super(BasicHandler, self).handle_exception(exception, debug_mode)
+
+    def add_message(self, typ, html, ttl=15):
+        """Sets a user specified message to be displayed to the currently logged in user.
+
+        `type` can be `error`, `success`, `info` or `warning`
+        `html` is the text do be displayed
+        `ttl` is the number of seconds after we should stop serving the message."""
+        messages = self.session.get('_gaetk_messages', [])
+        messages.append(dict(type=typ, html=html, expires=time.time() + ttl))
+        # We can't use `.append()` because this doesn't result in automatic session saving.
+        self.session['_gaetk_messages'] = messages
 
 
 class JsonResponseHandler(BasicHandler):

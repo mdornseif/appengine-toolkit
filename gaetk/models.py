@@ -67,7 +67,8 @@ class AuditLog(db.Model):
 
 
 class LoggedModel(db.Model):
-    """Subclass of db.Model that logs all changes"""
+    """Subclass of db.Model that logs all changes.
+       Does not work, if you use db.put(instance)."""
 
     def put(self, **kwargs):
         """Writes the model instance to the datastore and creates an AuditLog entry"""
