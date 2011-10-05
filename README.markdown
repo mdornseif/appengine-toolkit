@@ -9,14 +9,25 @@ gaetk tries to stay compatible with "plain appengine" so you don't have to code 
 
 Features:
 
-* Sessions via [gae-session][1], easy wraping of GET, POST et. al. via [webapp2][2].
+* Sessions via [gae-session][1], easy warping of GET, POST et. al. via [webapp2][2].
 * efficient pagination with cursors
 * Rendering via Jinja2
 * automatic multi-format views (HTML, JSON & XML out of the box)
 * hybrid Authentication via Google Apps and/or Username & Password
 * Form-Based and HTTP Authentication
+* transparent handling of HEAD requests
 * Sequence generation
 * Internal Memcache and Datastore Statistics (e.g. for graphing with munin)
+* intelligent handler for `robot.txt` and auditing of which version is deployed.
+* Handling of Long running tasks  with minimal effort
+* efficient caching of entities (TO BE MERGED)
+* profiler based on `gae_mini_profiler` (TO BE MERGED)
+* Django-Like Admin interface (TO BE MERGED)
+* un-deletion of deleted entities (TO BE MERGED)
+* Message Framework (TO BE MERGED)
+* groups / access controls (TO BE MERGED)
+* mini CMS like [Django flatpages][6] (TO BE MERGED)
+* in place editing (TO BE MERGED)
 
 
 Creating a Project / getting started
@@ -53,6 +64,7 @@ gaetk.handler.BasicHandler
 
 `BasicHandler` is the suggested base class for your WSGI handlers. It tries to encapsulate some best practices and can work with your models to provide automatic generation of HTML/XML/JSON/PDF from the same code, efficient pagination, usage of the jinja2 template engine, messages and authentication.
 
+BasicHandler handles HTTP `HEAD` requests by doing an internal `GET` request.
 
 ### Helpers & Conventions
 
@@ -218,9 +230,26 @@ Now in your views/handlers you can easyly force authentication like this:
 Unless you call `login_required(deny_localhost=False)` access from localhost is always considered authenticated.
 
 
+Long running tasks
+==================
+
+Many things take longer than a user is willing to wait. AppEngine with it's request deadline of 10s (later liftet to 30s and then to 60s) is also not willing to wait very long. `longtask.py` encapsulates a pattern to do the actual work in a taskqueue while providing users with updates (and finally the results) via self reloading webpages.
+It is currently experimental and limited to tasks running not more than 10 minutes.
+
+    class myTask(gaetk.longtask.LongRunningTaskHandler):
+        def execute_task(self, parameters):
+            self.log_progress("Starting", step=0, 5):
+            time.sleep(15)
+            for x in range(5):
+                self.log_progress("Step %d" % (x + 1), step=(x + 1), 5)
+                time.sleep(15)
+            return "<html><body>Done!</body></html>"
+
+Thats basically all you need.
+
 
 Sequence generation
--------------------
+===================
 
 Generation of sequential numbers ('autoincrement') on Google appengine is hard. See [Stackoverflow](http://stackoverflow.com/questions/3985812) for some discussion of the issues. `gaetk` implements a sequence number generation based on transactions. This will yield only a preformance of half a dozen or so requests per second but at least allows to alocate more than one number in a single request.
 
@@ -359,3 +388,4 @@ gaetk code is Copyright 2010, 2011 Dr. Maximillian Dornseif & Hudora GmbH and du
 [3]: http://jinja.pocoo.org/docs/
 [4]: https://github.com/hudora/huTools/blob/master/huTools/structured.py
 [5]: http://twitter.github.com/bootstrap/
+[6]: https://docs.djangoproject.com/en/dev/ref/contrib/flatpages/
