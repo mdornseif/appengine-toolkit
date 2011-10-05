@@ -10,7 +10,7 @@ Copyright (c) 2011 HUDORA. All rights reserved.
 import datetime
 import os
 
-import appengine.api.app_identity
+import google.appengine.api.app_identity
 import google.appengine.api.memcache
 
 import gaetk.handler
@@ -24,7 +24,7 @@ from google.appengine.ext.db import stats
 plugins = {}
 
 
-class Stats(gaetk.handler.BaseHandler):
+class Stats(gaetk.handler.BasicHandler):
     """Generic Statistics Handler."""
     # Example:
     # {"datastore": {"count": 380850,
@@ -64,7 +64,7 @@ class Stats(gaetk.handler.BaseHandler):
         self.response.out.write(simplejson.dumps(ret))
 
 
-class RobotTxtHandler(gaetk.handler.BaseHandler):
+class RobotTxtHandler(gaetk.handler.BasicHandler):
     """Handler for robots.txt
 
     Assumes that only the default version should be crawled. For the default version the contents of
@@ -74,7 +74,7 @@ class RobotTxtHandler(gaetk.handler.BaseHandler):
     def get(self):
         """Deliver robots.txt based on application version."""
 
-        if self.request.host.startswith(appengine.api.app_identity.get_default_version_hostname()):
+        if self.request.host.startswith(google.appengine.api.app_identity.get_default_version_hostname()):
             # we are running the default Version
             try:
                 # read robots.txt
@@ -85,13 +85,13 @@ class RobotTxtHandler(gaetk.handler.BaseHandler):
         else:
             # we are not running the default version - disable indexing
             response = ('# use http://%s/\nUser-agent: *\nDisallow: /\n'
-                        % appengine.api.app_identity.get_default_version_hostname())
+                        % google.appengine.api.app_identity.get_default_version_hostname())
 
         self.response.headers['Content-Type'] = 'text/plain'
         self.response.write(response)
 
 
-class VersionHandler(gaetk.handler.BaseHandler):
+class VersionHandler(gaetk.handler.BasicHandler):
     """Version Handler - allows clients to see the git revision currently running."""
 
     def get(self):
