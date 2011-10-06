@@ -35,6 +35,7 @@ from webob.exc import HTTPNotImplemented as HTTP501_NotImplemented
 from webob.exc import HTTPRequestEntityTooLarge as HTTP413_TooLarge
 from webob.exc import HTTPSeeOther as HTTP303_SeeOther
 from webob.exc import HTTPServiceUnavailable as HTTP503_ServiceUnavailable
+from webob.exc import HTTPTemporaryRedirect as HTTP307_TemporaryRedirect
 from webob.exc import HTTPUnauthorized as HTTP401_Unauthorized
 from webob.exc import HTTPUnsupportedMediaType as HTTP415_UnsupportedMediaType
 
@@ -50,7 +51,7 @@ import uuid
 
 
 # to mark the exception as being used
-config.dummy = [HTTP301_Moved, HTTP302_Found, HTTP303_SeeOther,
+config.dummy = [HTTP301_Moved, HTTP302_Found, HTTP303_SeeOther, HTTP307_TemporaryRedirect,
                 HTTP400_BadRequest, HTTP403_Forbidden, HTTP404_NotFound, HTTP413_TooLarge,
                 HTTP406_NotAcceptable, HTTP409_Conflict, HTTP410_Gone, HTTP415_UnsupportedMediaType,
                 HTTP501_NotImplemented, HTTP503_ServiceUnavailable]
