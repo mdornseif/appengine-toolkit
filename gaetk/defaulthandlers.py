@@ -74,8 +74,15 @@ class RobotTxtHandler(gaetk.handler.BasicHandler):
     def get(self):
         """Deliver robots.txt based on application version."""
 
-        if self.request.host.startswith(google.appengine.api.app_identity.get_default_version_hostname()):
-            # we are running the default Version
+        config = object()
+        try:
+            import config
+        except ImportError:
+            pass
+
+        canonical_hostname = getattr(config, 'CANONICAL_HOSTNAME', None)
+        if canonical_hostname is None or self.request.host == canonical_hostname:
+            # Serve robots.txt for the canonical hostname
             try:
                 # read robots.txt
                 response = open('robots.txt').read().strip()
@@ -83,7 +90,7 @@ class RobotTxtHandler(gaetk.handler.BasicHandler):
                 # robots.txt file not available - use somewhat simple-minded default
                 response = 'User-agent: *\nDisallow: /intern\nDisallow: /admin\n'
         else:
-            # we are not running the default version - disable indexing
+            # disable indexing if the request is handled by a non-default version
             response = ('# use http://%s/\nUser-agent: *\nDisallow: /\n'
                         % google.appengine.api.app_identity.get_default_version_hostname())
 
