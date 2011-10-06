@@ -1,4 +1,4 @@
-GAE_VERSION=1.5.3
+GAE_VERSION=1.5.4
 
 check: google/__init__.py
 	pyflakes gaetk/

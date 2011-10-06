@@ -58,7 +58,7 @@ config.dummy = [HTTP301_Moved, HTTP302_Found, HTTP303_SeeOther, HTTP307_Temporar
 
 
 CREDENTIAL_CACHE_TIMEOUT = 300
-_jinja_env_cache = None
+_jinja_env_cache = {}
 
 
 class Credential(db.Expando):
@@ -219,7 +219,7 @@ class BasicHandler(webapp2.RequestHandler):
         """
         return values
 
-    def create_jinja2env(self, extensions=[]):
+    def create_jinja2env(self, extensions=()):
         """Initialise and return a jinja2 Environment instance.
 
         Overwrite this method to setup specific behaviour.
@@ -236,25 +236,31 @@ class BasicHandler(webapp2.RequestHandler):
         """
         import jinja2
 
-        # Wir cachen das jinja2.Environment(). Dass ermögtlich es, dem intern Bytecode-Cache von
+        # Wir cachen das jinja2.Environment(). Dass ermögtlich es, dem internen Bytecode-Cache von
         # jinja2 zu greifen. Ich bin mir nicht sicher, ob das nicht mit dem kommenden
         # Mutlithreading-Support in GAE probleme machen wird - wir werden sehen.
         # Es spart jedenfalls bei komplexen Seiten, wie
         # http://hudora-de.appspot.com/shop/ersatzteil/95017 etwa 800 ms (!).
+        # Der Schlüssel für den Cache sind die angeforderten Extensions.
         global _jinja_env_cache
-        if _jinja_env_cache is None:
+
+        # Die Extensions müssen ein Tupel sein, eine Liste ist nicht hashable:
+        # TypeError: unhashable type: 'list'
+        key = tuple(extensions)
+        if not key in _jinja_env_cache:
             env = jinja2.Environment(loader=jinja2.FileSystemLoader(config.template_dirs),
                                      extensions=extensions,
                                      auto_reload=False,  # do not check if the source changed
                                      trim_blocks=True,  # first newline after a block is removed
-                                     # This does not work :-(
+                                     # This does not work (yet):
                                      # <type 'exceptions.RuntimeError'>: disallowed bytecode
                                      # bytecode_cache=jinja2.MemcachedBytecodeCache(memcache, timeout=600)
-                                     )
+                                    )
+
             # Eigene Filter
             #env.filters['dateformat'] = filter_dateformat
-            _jinja_env_cache = env
-        return _jinja_env_cache
+            _jinja_env_cache[key] = env
+        return _jinja_env_cache[key]
 
     def rendered(self, values, template_name):
         """Return the rendered content of a Jinja2 Template.
