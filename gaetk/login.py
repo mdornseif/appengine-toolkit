@@ -94,15 +94,23 @@ class OpenIdLoginHandler(BasicHandler):
 
             self.session['uid'] = credential.uid
             self.session['email'] = username
-            self.response.headers.add_header('Set-Cookie', 'gaetkopid=%s; Max-Age=7776000' % apps_domain)
+            self.response.set_cookie('gaetkopid', apps_domain, max_age=7776000)
             self.redirect(continue_url)
+            return
+
+        # If there's a cookie which contains the OpenID domain, try to login the user
+        domain = self.request.cookies.get('gaetkopid', '*invalid*')
+        if domain in ALLOWED_DOMAINS:
+            logging.info(u'Automatically logging in via Cookie')
+            openid_url = 'https://www.google.com/accounts/o8/site-xrds?hd=%s' % domain
+            self.redirect(users.create_login_url(continue_url, None, openid_url))
             return
 
         # If the form data contains hints about an allowed (OpenID) domain, try to login the user via OpenID
         for domain in ALLOWED_DOMAINS:
             if self.request.GET.get('%s.x' % domain):
                 openid_url = 'https://www.google.com/accounts/o8/site-xrds?hd=%s' % domain
-                logging.info('OpenID login requested to %s', openid_url)
+                logging.info(u'OpenID login requested to %s', openid_url)
                 # Hand over Authentication Processing to Google/OpenID
                 self.redirect(users.create_login_url(continue_url, None, openid_url))
                 return
@@ -127,7 +135,7 @@ class OpenIdLoginHandler(BasicHandler):
         if username:
             credential = get_verified_credential(username, password, session=self.session)
             if credential:
-                logging.info('Login by %s/%s, redirect to %s',
+                logging.info(u'Login by %s/%s, redirect to %s',
                              username, self.request.remote_addr, continue_url)
                 self.redirect(continue_url)
                 return
@@ -152,10 +160,10 @@ class OpenIdLoginHandler(BasicHandler):
             password = self.request.get('password', '').strip()
             credential = get_verified_credential(username, password, self.session)
             if credential:
-                logging.info("Login by %s/%s", username, self.request.remote_addr)
+                logging.info(u'Login by %s/%s', username, self.request.remote_addr)
                 response = {'success': True}
             else:
-                logging.warning("Invalid password for %s:%s", username, password)
+                logging.warning(u'Invalid password for %s:%s', username, password)
                 response = {'success': False}
         else:
             response = {'success': False}
@@ -175,11 +183,12 @@ class LogoutHandler(OpenIdLoginHandler):
 
         # log out OpenID and either redirect to 'continue' or display
         # the default logout confirmation page
-        continue_url = self.request.get('continue', '/logout')
+        continue_url = self.request.get('continue')
 
         user = users.get_current_user()
         if user:
-            self.redirect(users.create_logout_url(continue_url))
+            path = self.request.path
+            self.redirect(users.create_logout_url(path))
         else:
             if continue_url:
                 self.redirect(continue_url)
@@ -189,8 +198,7 @@ class LogoutHandler(OpenIdLoginHandler):
 
 def application():
     """Create WSGI application"""
-    return webapp2.WSGIApplication([('logout', LogoutHandler),
-                                    ('/logout', LogoutHandler),
+    return webapp2.WSGIApplication([('.*/logout', LogoutHandler),
                                     ('.*', OpenIdLoginHandler),
                                    ])
 
