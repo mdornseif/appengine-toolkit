@@ -15,6 +15,12 @@ Copyright (c) 2010 HUDORA. All rights reserved.
 import config
 config.imported = True
 
+try:
+    LOGIN_ALLOWED_DOMAINS = config.LOGIN_ALLOWED_DOMAINS
+except AttributeError:
+    LOGIN_ALLOWED_DOMAINS = []
+
+
 import urllib
 from functools import partial
 
@@ -108,7 +114,9 @@ def create_credential_from_federated_login(user, apps_domain):
     """
     credential = Credential.create(tenant=apps_domain, user=user, uid=user.email(),
         email=user.email(),
-        text="Automatically created via OpenID Provider %s" % user.federated_provider())
+        text="Automatically created via OpenID Provider %s" % user.federated_provider(),
+        # for accounts created via Google Apps domains we default to admin permissions
+        admin=True)
     return credential
 
 
@@ -217,6 +225,12 @@ class BasicHandler(webapp2.RequestHandler):
                 myval.update(values)
                 return myval
         """
+        values.update({'is_admin': self.is_admin()})
+        if self.is_admin():
+            # for admin requests we import and activate the profiler
+            import gae_mini_profiler.middleware
+            values.update({'is_admin': self.is_admin(),
+                           'profiler_request_id': gae_mini_profiler.middleware.request_id})
         return values
 
     def create_jinja2env(self, extensions=()):
@@ -250,7 +264,7 @@ class BasicHandler(webapp2.RequestHandler):
         if not key in _jinja_env_cache:
             env = jinja2.Environment(loader=jinja2.FileSystemLoader(config.template_dirs),
                                      extensions=extensions,
-                                     auto_reload=False,  # do not check if the source changed
+                                     auto_reload=True,  # do check if the source changed
                                      trim_blocks=True,  # first newline after a block is removed
                                      # This does not work (yet):
                                      # <type 'exceptions.RuntimeError'>: disallowed bytecode
@@ -399,6 +413,9 @@ class BasicHandler(webapp2.RequestHandler):
         # Google App Engine Administrators
         if users.is_current_user_admin():
             return True
+        # Requests from localhost (on dev_appserver) are always admin
+        if self.request.remote_addr == '127.0.0.1':
+            return True
         # User with Admin permissions via Credential entities
         if not hasattr(self, 'credential'):
             return False
@@ -414,11 +431,26 @@ class BasicHandler(webapp2.RequestHandler):
 
         self.credential = None
         if self.session.get('uid'):
-            self.credential = memcache.get("cred_%s" % self.session['uid'])
+            self.credential = memcache.get("gaetk_cred_%s" % self.session['uid'])
             if self.credential is None:
                 self.credential = Credential.get_by_key_name(self.session['uid'])
                 # TODO: use protobufs
-                memcache.add("cred_%s" % self.session['uid'], self.credential, CREDENTIAL_CACHE_TIMEOUT)
+                memcache.add("gaetk_cred_%s" % self.session['uid'], self.credential, CREDENTIAL_CACHE_TIMEOUT)
+            elif self.credential.user and not users.get_current_user():
+                # We have an active session and the credential is associated with an Federated/OpenID
+                # Account, but the user is not logged in via OpenID on the gAE Infrastructure anymore.
+                # If we are given tie desired domain via a coockit and this is a GET request
+                # without parameters we try automatic login
+                if (self.request.cookies.get('gaetkopid', '') and self.request.method == 'GET'
+                    and not self.request.query_string):
+                    domain = self.request.cookies.get('gaetkopid', '')
+                    if domain in LOGIN_ALLOWED_DOMAINS:
+                        openid_url = 'https://www.google.com/accounts/o8/site-xrds?hd=%s' % domain
+                        logging.info('login: automatically OpenID login to %s', openid_url)
+                        # Hand over Authentication Processing to Google/OpenID
+                        # TODO: save get parameters in session
+                        self.redirect(users.create_login_url(self.request.path_url, None, openid_url))
+                        return
 
         # we don't have an active session - check if we are logged in via OpenID at least
         user = users.get_current_user()
@@ -482,14 +514,15 @@ class BasicHandler(webapp2.RequestHandler):
             if (self.request.remote_addr == '127.0.0.1') and not deny_localhost:
                 logging.info('for testing we allow unauthenticated access from localhost')
                 # create credential
-                self.credential = Credential.create(tenant='localhost.', uid='0x7f000001',
+                self.credential = Credential.create(tenant='localhost.', uid='0x7f000001', admin=True,
                                                     text='Automatically created for testing')
             else:
                 # Login not successful
                 if 'text/html' in self.request.headers.get('Accept', ''):
                     # we assume the request came via a browser - redirect to the "nice" login page
                     self.response.set_status(302)
-                    absolute_url = self.abs_url("/_ah/login_required?continue=%s" % urllib.quote(self.request.url))
+                    absolute_url = self.abs_url("/_ah/login_required?continue=%s"
+                                                % urllib.quote(self.request.url))
                     self.response.headers['Location'] = str(absolute_url)
                     raise HTTP302_Found(location=str(absolute_url))
                 else:
@@ -604,7 +637,7 @@ class JsonResponseHandler(BasicHandler):
             # `self.abort()` will raise an Exception thus exiting this function
             self.abort(405, headers=[('Allow', valid)])
 
-        # Give authentication Hooks opportunity to do their thing
+        # Give authentication hooks opportunity to do their thing
         self.authchecker(method, *args, **kwargs)
 
         # Execute the method.

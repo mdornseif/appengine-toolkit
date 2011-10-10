@@ -155,6 +155,14 @@ This renders HTML without Jinja2 and uses `huTools.structured.dict2xml` to force
 
 See the `multirender()` Docstring for further Information.
 
+Per default templates have access to four additional jinja2 filters.
+
+* `ljustify(width)` and `rjustify(width)` Pr- Postefix the given string with spaces until it is width characters long
+* `nicenum` formats number with non breaking spaces between thousands. E.g. `<span class="currency">1&#8239;000</span>`.
+* `eurocent` is like nicenum but divides by 100 and uses only two decimal places. E.g. `<span class="currency">9&#8239;999.99</span>`
+
+See jinja_filters.py Docstrings for further documentation.
+
 
 ### Authentication
 
@@ -165,6 +173,17 @@ gaetk has some authentication functionality which is described in a chapter belo
     class AuthenitcatedHandler(gaetk.handler.BasicHandler):
         def authcecker(self, method, *args, **kwargs):
             self.login_required()
+
+### Profiler
+
+The handler automatically includes [gae_mini_profiler][6] and enables profiling for admin users. If your templates `{% extends "base_admin.html" %}` the profile results are automatically displayed. Eg.
+
+    {% extends "base_admin.html" %}
+    {% block content %}
+        <p>Super-fast page!</p>
+    {% endblock content %}
+
+![Profile data in Web-Page](http://static.23.nu/md/Pictures/ZZ5F480EE9.png)
 
 
 ### Messages
@@ -380,6 +399,9 @@ Licensed under the Apache License, Version 2.0
 Contains code from [bootstrap][5], Copyright 2011 Twitter, Inc.
 Licensed under the Apache License, Version 2.0
 
+Contains code from [gae_mini_profiler][7], Copyright 2011 Ben Kamens.
+Licensed under the MIT license
+
 gaetk code is Copyright 2010, 2011 Dr. Maximillian Dornseif & Hudora GmbH and dual licensed under GPLv3 and the Apache License Version 2.0.
 
 
@@ -389,3 +411,4 @@ gaetk code is Copyright 2010, 2011 Dr. Maximillian Dornseif & Hudora GmbH and du
 [4]: https://github.com/hudora/huTools/blob/master/huTools/structured.py
 [5]: http://twitter.github.com/bootstrap/
 [6]: https://docs.djangoproject.com/en/dev/ref/contrib/flatpages/
+[7]: https://github.com/kamens/gae_mini_profiler

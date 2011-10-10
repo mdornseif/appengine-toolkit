@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-login.py - login handler for appengine
+login.py - login handler for appengine. See handler.py and README.markdown/Authentication
+for further Information.
 
 In app.yaml add:
 
@@ -33,9 +34,9 @@ from google.appengine.ext.webapp import util
 
 
 try:
-    ALLOWED_DOMAINS = config.LOGIN_ALLOWED_DOMAINS
+    LOGIN_ALLOWED_DOMAINS = config.LOGIN_ALLOWED_DOMAINS
 except AttributeError:
-    ALLOWED_DOMAINS = []
+    LOGIN_ALLOWED_DOMAINS = []
 
 
 def get_verified_credential(username, password, session=None):
@@ -63,6 +64,7 @@ class OpenIdLoginHandler(BasicHandler):
 
         # clean previous session
         self.session = get_current_session()
+        self.session.regenerate_id()
         if self.session.is_active():
             self.session.terminate()
 
@@ -78,7 +80,7 @@ class OpenIdLoginHandler(BasicHandler):
         if user:
             # yes, there is an active OpenID session
             # user.federated_provider() == 'https://www.google.com/a/hudora.de/o8/ud?be=o8'
-            logging.info(u'User logged in via OpenID: %s', user)
+            logging.info(u'login: User logged in via OpenID: %s', user)
             if not user.federated_provider():
                 # development server
                 apps_domain = user.email().split('@')[-1].lower()
@@ -98,19 +100,11 @@ class OpenIdLoginHandler(BasicHandler):
             self.redirect(continue_url)
             return
 
-        # If there's a cookie which contains the OpenID domain, try to login the user
-        domain = self.request.cookies.get('gaetkopid', '*invalid*')
-        if domain in ALLOWED_DOMAINS:
-            logging.info(u'Automatically logging in via Cookie')
-            openid_url = 'https://www.google.com/accounts/o8/site-xrds?hd=%s' % domain
-            self.redirect(users.create_login_url(continue_url, None, openid_url))
-            return
-
         # If the form data contains hints about an allowed (OpenID) domain, try to login the user via OpenID
-        for domain in ALLOWED_DOMAINS:
+        for domain in LOGIN_ALLOWED_DOMAINS:
             if self.request.GET.get('%s.x' % domain):
                 openid_url = 'https://www.google.com/accounts/o8/site-xrds?hd=%s' % domain
-                logging.info(u'OpenID login requested to %s', openid_url)
+                logging.info(u'login: OpenID login requested to %s', openid_url)
                 # Hand over Authentication Processing to Google/OpenID
                 self.redirect(users.create_login_url(continue_url, None, openid_url))
                 return
@@ -135,16 +129,25 @@ class OpenIdLoginHandler(BasicHandler):
         if username:
             credential = get_verified_credential(username, password, session=self.session)
             if credential:
-                logging.info(u'Login by %s/%s, redirect to %s',
+                logging.info(u'login: Login by %s/%s, redirect to %s',
                              username, self.request.remote_addr, continue_url)
                 self.redirect(continue_url)
                 return
             else:
-                logging.warning(u'Invalid password for %s', username)
+                logging.warning(u'login: Invalid password for %s', username)
                 msg = u'Anmeldung fehlgeschlagen'
 
+        # Last attempt: If there's a cookie which contains the OpenID domain, try to login the user
+        domain = self.request.cookies.get('gaetkopid', '')
+        if domain in LOGIN_ALLOWED_DOMAINS:
+            logging.info(u'login: automatically OpenID login to %s', openid_url)
+            openid_url = 'https://www.google.com/accounts/o8/site-xrds?hd=%s' % domain
+            # Hand over Authentication Processing to Google/OpenID
+            self.redirect(users.create_login_url(continue_url, None, openid_url))
+            return
+
         # Render template with login form
-        self.render({'continue': continue_url, 'domains': ALLOWED_DOMAINS, 'msg': msg}, 'login.html')
+        self.render({'continue': continue_url, 'domains': LOGIN_ALLOWED_DOMAINS, 'msg': msg}, 'login.html')
 
     def post(self):
         """Login via Form POST
