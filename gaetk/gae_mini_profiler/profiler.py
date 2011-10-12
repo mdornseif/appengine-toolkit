@@ -1,5 +1,10 @@
 import os
-import simplejson
+try:
+    import json
+    json  # workaround for pyflakes issue #13
+except ImportError:
+    import simplejson as json
+
 
 from google.appengine.ext.webapp import RequestHandler
 
@@ -56,4 +61,4 @@ class RequestStatsHandler(RequestHandler):
                     request_stats.disabled = True
                     request_stats.store()
 
-        self.response.out.write(simplejson.dumps(list_request_stats))
+        self.response.out.write(json.dumps(list_request_stats))
