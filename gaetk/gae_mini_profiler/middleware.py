@@ -67,10 +67,12 @@ class ProfilerWSGIMiddleware(object):
 
             def wrapped_appstats_app(environ, start_response):
                 # Use this wrapper to grab the app stats recorder for RequestStats.save()
-                if hasattr(recording.recorder, "get_for_current_request"):
-                    self.recorder = recording.recorder.get_for_current_request()
+                # on python27 we have a recorder_proxy on older runtimes a recorder
+                recorder = getattr(recording, 'recorder', getattr(recording, 'recorder_proxy'))
+                if hasattr(recorder, "get_for_current_request"):
+                    self.recorder = recorder.get_for_current_request()
                 else:
-                    self.recorder = recording.recorder
+                    self.recorder = recorder
                 return old_app(environ, start_response)
             self.app = recording.appstats_wsgi_middleware(wrapped_appstats_app)
 
@@ -81,7 +83,8 @@ class ProfilerWSGIMiddleware(object):
             # Get profiled wsgi result
             result = self.prof.runcall(lambda *args, **kwargs: self.app(environ, profiled_start_response), None, None)
 
-            self.recorder = recording.recorder
+            # on python27 we have a recorder_proxy on older runtimes a recorder
+            self.recorder = getattr(recording, 'recorder', getattr(recording, 'recorder_proxy'))
 
             # If we're dealing w/ a generator, profile all of the .next calls as well
             if type(result) == GeneratorType:
