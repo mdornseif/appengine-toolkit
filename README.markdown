@@ -217,7 +217,7 @@ To use OpenID with Google Apps configure your Application to use "Federated Logi
 
 ![Federated Login](http://static.23.nu/md/Pictures/ZZ77D022D0.png)
 
-For us this allows our Staff to do Single Sign-On via Google Apps, while external users with credentials can can access the application by entering their credentials in the browser. Automated scrips can access the system via HTTP-Auth. 
+For us this allows our Staff to do Single Sign-On via Google Apps, while external users with credentials can can access the application by entering their credentials in the browser. Automated scrips can access the system via HTTP-Auth.
 
 Users are represented by `gaetk.handler.Credential` objects. For OpenID users a uid ("Username") and secret ("Password") are auto generated. For Session or HTTP-Auth based users uid and secret should also be auto generated but can also be given. I *strongly* advise against user  selectable passwords and suggest you might also consider avoiding user  selectable usernames. Use `Credential.create()` to create new Crdentials including auto-generated uid and secret. If you want to set the `uid` mannually, give the `uid` parameter.
 
@@ -369,20 +369,6 @@ Infrastructure contains helpers for accessing the GAE infrastructure. It is inde
     for kdnnr in kunden.get_changed():
         tasks.append(dict(kundennr=kdnnr))
     taskqueue_add_multi('softmq', '/some/path', tasks)
-
-
-client side functionality
-=========================
-
-ExtJS tools
------------
-
-In addition to the server side functionality gaetk also includes various javascript helper methods. They must be used in combination with ExtJS and provide methods for easy handling of often-used tasks. To use the javascript helpers you will have to link the `web` directory into the directory declared the `static_dir` directory in your `app.yaml`. Then include the `gaetk-extjs-helpers.js` and `gaetk-extjs-helpers.css` files into your HTML page template.
-
-Currently the helpers include two methods:
-
- * `Hudora.Helpers.spinnerMessageBox(message)`: display a non-closable messagebox with a spinner indicating progress
- * `Hudora.Helpers.errorMessageBox(title, message)`: display a error message box without having to write five lines of code every time you need an error messagebox.
 
 
 Thanks
