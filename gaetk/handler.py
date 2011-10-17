@@ -88,8 +88,9 @@ class Credential(db.Expando):
     def create(cls, tenant='_unknown', user=None, uid=None, text='', email=None, admin=False):
         """Creates a credential Object generating a random secret and a random uid if needed."""
         # secret hopfully contains about 64 bits of entropy - more than most passwords
-        data = "%s%s%s%s%s" % (user, uuid.uuid1(), uid, text, email)
-        secret = str(base64.b32encode(hashlib.md5(data).digest()).rstrip('='))[1:15]
+        data = u'%s%s%s%s%s' % (user, uuid.uuid1(), uid, text, email)
+        digest = hashlib.md5(data.encode('utf-8')).digest()
+        secret = str(base64.b32encode(digest).rstrip('='))[1:15]
         if not uid:
             handmade_key = db.Key.from_path('Credential', 1)
             uid = "u%s" % (db.allocate_ids(handmade_key, 1)[0])

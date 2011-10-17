@@ -6,7 +6,7 @@ check: google/__init__.py
 	-pylint -iy --max-line-length=110 gaetk/__init__.py gaetk/extjs.py gaetk/handler.py # -rn
 
 google/__init__.py:
-	curl -O http://googleappengine.googlecode.com/files/google_appengine_$(GAE_VERSION).zip
+	curl -s -O http://googleappengine.googlecode.com/files/google_appengine_$(GAE_VERSION).zip
 	unzip google_appengine_$(GAE_VERSION).zip
 	mv google_appengine/google .
 	rm -Rf google_appengine
