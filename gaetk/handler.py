@@ -190,10 +190,14 @@ class BasicHandler(webapp2.RequestHandler):
             query.with_cursor(self.request.get('cursor'))
             objects = query.fetch(limit)
             start = self.request.get_range('cursor_start', min_value=0, max_value=10000, default=0)
+            more_objects = (len(objects) == limit)
         else:
+            # Attention: the order of these statements matter, because query.cursor() is used later.
+            # If the order is reversed, the client gets a cursor to the query to test for more objects,
+            # not a cursor to the actual objects
+            more_objects = query.fetch(1, start + limit + 1) != []
             objects = query.fetch(limit, start)
 
-        more_objects = query.count(limit + 1) > limit
         prev_objects = (start > 0) or self.request.get('cursor')
         prev_start = max(start - limit - 1, 0)
         next_start = max(start + len(objects), 0)

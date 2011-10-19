@@ -8,6 +8,7 @@ Copyright (c) 2010 HUDORA. All rights reserved.
 """
 
 import lib  # this initiates the site_dirs
+import os
 
 template_dirs = []
 template_dirs.append(os.path.join(os.path.dirname(__file__), 'templates'))

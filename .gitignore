@@ -1,3 +1,4 @@
-google/
+google_appengine/
+pythonenv
 *.pyc
 *~
