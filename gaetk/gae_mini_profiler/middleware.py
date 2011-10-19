@@ -1,5 +1,5 @@
 import datetime
-import pickle
+import cPickle as pickle
 import re
 import StringIO
 from types import GeneratorType
@@ -68,11 +68,11 @@ class ProfilerWSGIMiddleware(object):
             def wrapped_appstats_app(environ, start_response):
                 # Use this wrapper to grab the app stats recorder for RequestStats.save()
                 # on python27 we have a recorder_proxy on older runtimes a recorder
-                recorder = getattr(recording, 'recorder', getattr(recording, 'recorder_proxy'))
-                if hasattr(recorder, "get_for_current_request"):
-                    self.recorder = recorder.get_for_current_request()
-                else:
-                    self.recorder = recorder
+                self.recorder = getattr(recording, 'recorder_proxy', None)
+                if not self.recorder:
+                    self.recorder = recording.recorder
+                if hasattr(self.recorder, "get_for_current_request"):
+                    self.recorder = self.recorder.get_for_current_request()
                 return old_app(environ, start_response)
             self.app = recording.appstats_wsgi_middleware(wrapped_appstats_app)
 
@@ -84,7 +84,9 @@ class ProfilerWSGIMiddleware(object):
             result = self.prof.runcall(lambda *args, **kwargs: self.app(environ, profiled_start_response), None, None)
 
             # on python27 we have a recorder_proxy on older runtimes a recorder
-            self.recorder = getattr(recording, 'recorder', getattr(recording, 'recorder_proxy'))
+            self.recorder = getattr(recording, 'recorder_proxy', None)
+            if not self.recorder:
+                self.recorder = recording.recorder
 
             # If we're dealing w/ a generator, profile all of the .next calls as well
             if type(result) == GeneratorType:
