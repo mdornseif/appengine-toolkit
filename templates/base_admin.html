@@ -19,10 +19,6 @@
       .container > footer p {
         text-align: center; /* center align it with the container */
       }
-      .container {
-        width: 820px; /* downsize our container to make the content feel a bit tighter and more cohesive. NOTE: this removes two full columns from the grid, meaning you only go to 14 columns and not 16. */
-      }
-
       /* The white background content wrapper */
       .container .content {
         background-color: #fff;
@@ -43,11 +39,6 @@
         margin: -20px -20px 20px;
       }
 
-      /* Styles you shouldn't keep as they are for displaying this base example only */
-      .container .content .span10,
-      .container .content .span4 {
-        min-height: 500px;
-      }
       /* Give a quick and non-cross-browser friendly divider */
       .container .content .span4 {
         margin-left: 0;
@@ -106,11 +97,11 @@
             </div>
           {%- endfor %}
           {%- endif %}
-          <h1>{% block firstheading %}{% if title is defined %}{{ title }}{% endif %}{% endblock %}
+          <h1>{% block firstheading %}{% if title is defined %}{{ title|e }}{% endif %}{% endblock %}
               {# <small>Supporting text or tagline</small> #}</h1> 
         </div>
         <div class="row">
-          <div class="span10">
+          <div class="span12">
               {% block maincontent -%}
                 {% if content is defined -%}{{ content }}{%- else -%}
                 {#<h3>Main content</h3>#}{%- endif %}
