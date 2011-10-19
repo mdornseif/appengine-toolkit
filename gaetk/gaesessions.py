@@ -5,7 +5,7 @@ import datetime
 import hashlib
 import hmac
 import logging
-import pickle
+import cPickle as pickle
 import os
 import threading
 import time
