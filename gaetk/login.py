@@ -140,8 +140,8 @@ class OpenIdLoginHandler(BasicHandler):
         # Last attempt: If there's a cookie which contains the OpenID domain, try to login the user
         domain = self.request.cookies.get('gaetkopid', '')
         if domain in LOGIN_ALLOWED_DOMAINS:
-            logging.info(u'login: automatically OpenID login to %s', openid_url)
             openid_url = 'https://www.google.com/accounts/o8/site-xrds?hd=%s' % domain
+            logging.info(u'login: automatically OpenID login to %s', openid_url)
             # Hand over Authentication Processing to Google/OpenID
             self.redirect(users.create_login_url(continue_url, None, openid_url))
             return
