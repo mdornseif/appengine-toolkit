@@ -151,7 +151,7 @@ class BasicHandler(webapp2.RequestHandler):
             self.response.headers['Content-Type'] = 'text/plain'
             self.response.out.write('Daten nicht gefunden.')
 
-    def paginate(self, query, defaultcount=10, datanodename='objects', calctotal=True, formatter=None):
+    def paginate(self, query, defaultcount=10, datanodename='objects', calctotal=False, formatter=None):
         """Pagination a la http://mdornseif.github.com/2010/10/02/appengine-paginierung.html
 
         Returns something like

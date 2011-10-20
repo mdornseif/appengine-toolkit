@@ -14,7 +14,4 @@ def should_profile(environ):
         return True
     if environ["HTTP_HOST"].split(':')[0] in ["127.0.0.1", "localhost"]:
         return True
-    import logging
-    logging.info(users.is_current_user_admin())
-    logging.info(users.get_current_user())
     return False
