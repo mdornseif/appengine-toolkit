@@ -21,6 +21,7 @@ except AttributeError:
     LOGIN_ALLOWED_DOMAINS = []
 
 
+import os
 import urllib
 from functools import partial
 
@@ -180,12 +181,14 @@ class BasicHandler(webapp2.RequestHandler):
         """
         start = self.request.get_range('start', min_value=0, max_value=10000, default=0)
         limit = self.request.get_range('limit', min_value=1, max_value=1000, default=defaultcount)
+
         if self.request.get('cursor'):
             query.with_cursor(self.request.get('cursor'))
             objects = query.fetch(limit)
             start = self.request.get_range('cursor_start', min_value=0, max_value=10000, default=0)
         else:
             objects = query.fetch(limit, start)
+
         more_objects = query.count(limit + 1) > limit
         prev_objects = (start > 0) or self.request.get('cursor')
         prev_start = max(start - limit - 1, 0)
@@ -432,7 +435,16 @@ class BasicHandler(webapp2.RequestHandler):
 
         self.credential = None
         if self.session.get('uid'):
-            self.credential = memcache.get("gaetk_cred_%s" % self.session['uid'])
+            try:
+                # try to read from memcache
+                # we salt the cache object with the current app version, so data-migrations get easier
+                self.credential = memcache.get("%s_gaetk_cred_%s"
+                                               % (os.environ.get('CURRENT_VERSION_ID', '?'),
+                                                  self.session['uid']))
+            except AttributeError:
+                # Unpickeling from memcache might fail becaus eof incompatible app versions etc.
+                self.credential = None
+
             if self.credential is None:
                 self.credential = Credential.get_by_key_name(self.session['uid'])
                 # TODO: use protobufs
