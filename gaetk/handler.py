@@ -447,8 +447,13 @@ class BasicHandler(webapp2.RequestHandler):
 
             if self.credential is None:
                 self.credential = Credential.get_by_key_name(self.session['uid'])
-                # TODO: use protobufs
-                memcache.add("gaetk_cred_%s" % self.session['uid'], self.credential, CREDENTIAL_CACHE_TIMEOUT)
+                if self.credential:
+                    # TODO: use protobufs
+                    memcache.set("gaetk_cred_%s" % self.session['uid'], self.credential, CREDENTIAL_CACHE_TIMEOUT)
+                else:
+                    # we have a session with userid but no fitting credential object - strange!
+                    logging.critical("No credential for %r", self.session['uid'])
+                    # session.terminate()
             elif self.credential.user and not users.get_current_user():
                 # We have an active session and the credential is associated with an Federated/OpenID
                 # Account, but the user is not logged in via OpenID on the gAE Infrastructure anymore.
