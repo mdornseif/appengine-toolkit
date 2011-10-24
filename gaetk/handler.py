@@ -455,28 +455,8 @@ class BasicHandler(webapp2.RequestHandler):
 
             if self.credential is None:
                 self.credential = Credential.get_by_key_name(self.session['uid'])
-                if self.credential:
-                    # TODO: use protobufs
-                    memcache.set("gaetk_cred_%s" % self.session['uid'], self.credential, CREDENTIAL_CACHE_TIMEOUT)
-                else:
-                    # we have a session with userid but no fitting credential object - strange!
-                    logging.critical("No credential for %r", self.session['uid'])
-                    # session.terminate()
-            elif self.credential.user and not users.get_current_user():
-                # We have an active session and the credential is associated with an Federated/OpenID
-                # Account, but the user is not logged in via OpenID on the gAE Infrastructure anymore.
-                # If we are given tie desired domain via a coockit and this is a GET request
-                # without parameters we try automatic login
-                if (self.request.cookies.get('gaetkopid', '') and self.request.method == 'GET'
-                    and not self.request.query_string):
-                    domain = self.request.cookies.get('gaetkopid', '')
-                    if domain in LOGIN_ALLOWED_DOMAINS:
-                        openid_url = 'https://www.google.com/accounts/o8/site-xrds?hd=%s' % domain
-                        logging.info('login: automatically OpenID login to %s', openid_url)
-                        # Hand over Authentication Processing to Google/OpenID
-                        # TODO: save get parameters in session
-                        self.redirect(users.create_login_url(self.request.path_url, None, openid_url))
-                        return
+                # TODO: use protobufs
+                memcache.add("gaetk_cred_%s" % self.session['uid'], self.credential, CREDENTIAL_CACHE_TIMEOUT)
 
         # we don't have an active session - check if we are logged in via OpenID at least
         user = users.get_current_user()
@@ -556,6 +536,23 @@ class BasicHandler(webapp2.RequestHandler):
                     logging.info("requesting HTTP-Auth %s %s", self.request.remote_addr,
                                   self.request.headers.get('Authorization'))
                     raise HTTP401_Unauthorized(headers={'WWW-Authenticate': 'Basic realm="API Login"'})
+
+        if self.credential.user and not users.get_current_user():
+            # We have an active session and the credential is associated with an Federated/OpenID
+            # Account, but the user is not logged in via OpenID on the gAE Infrastructure anymore.
+            # If we are given tie desired domain via a coockit and this is a GET request
+            # without parameters we try automatic login
+            logging.critical("Session without gae! %s", self.request.cookies)
+            if (self.request.cookies.get('gaetkopid', '') and self.request.method == 'GET'
+                and not self.request.query_string):
+                domain = self.request.cookies.get('gaetkopid', '')
+                if domain in LOGIN_ALLOWED_DOMAINS:
+                    openid_url = 'https://www.google.com/accounts/o8/site-xrds?hd=%s' % domain
+                    logging.info('login: automatically OpenID login to %s', openid_url)
+                    # Hand over Authentication Processing to Google/OpenID
+                    # TODO: save get parameters in session
+                    raise HTTP302_Found(location=users.create_login_url(self.request.path_url,
+                                                                            None, openid_url))
 
         return self.credential
 
