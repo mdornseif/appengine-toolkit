@@ -162,6 +162,12 @@ class BasicHandler(webapp2.RequestHandler):
 
     def __init__(self, *args, **kwargs):
         """Initialize RequestHandler"""
+        self.credential = None
+        try:
+            self.session = get_current_session()
+        except AttributeError:
+            # session middleware might not be enabled
+            self.session = {}
         super(BasicHandler, self).__init__(*args, **kwargs)
         self.credential = None
 
