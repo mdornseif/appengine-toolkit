@@ -134,7 +134,11 @@ class BasicHandler(webapp2.RequestHandler):
     def __init__(self, *args, **kwargs):
         """Initialize RequestHandler"""
         self.credential = None
-        self.session = get_current_session()
+        try:
+            self.session = get_current_session()
+        except AttributeError:
+            # session middleware might not be enabled
+            self.session = {}
         super(BasicHandler, self).__init__(*args, **kwargs)
 
     def abs_url(self, url):
@@ -579,10 +583,6 @@ class BasicHandler(webapp2.RequestHandler):
             valid = ', '.join(webapp2.get_valid_methods(self))
             self.abort(405, headers=[('Allow', valid)])
 
-        # bind session
-        self.session = get_current_session()
-        # init messages array
-        self.session['_gaetk_messages'] = self.session.get('_gaetk_messages', [])
         # Give authentication Hooks opportunity to do their thing
         self.authchecker(method, *args, **kwargs)
 
