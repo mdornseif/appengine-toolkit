@@ -8,17 +8,18 @@ check: lib/google_appengine/google/__init__.py
 
 # Appengine SDK lokal installieren, damit pyLint und pyFlakes das finden
 lib/google_appengine/google/__init__.py:
-	curl -O http://googleappengine.googlecode.com/files/google_appengine_1.3.8.zip
-	unzip google_appengine_1.3.8.zip
+	curl -O http://googleappengine.googlecode.com/files/google_appengine_1.5.5.zip
+	unzip google_appengine_1.5.5.zip
 	rm -Rf lib/google_appengine
 	mv google_appengine lib/
-	rm google_appengine_1.3.8.zip
+	rm google_appengine_1.5.5.zip
 
 dependencies: clean
-	git submodule update --init lib/gaetk
+	git submodule update --init lib/appengine-toolkit
 	git submodule update --init lib/jinja2
-	virtualenv --python=python2.5 --no-site-packages --unzip-setuptools pythonenv
-	pythonenv/bin/pip -q install -E pythonenv -r requirements.txt
+	git submodule update --init lib/huTools
+	rm -f lib/submodules.pth
+	git submodule foreach 'echo ./`basename ${path}` >> ../submodules.pth'
 
 clean:
 	rm -Rf pythonenv/

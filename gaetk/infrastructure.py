@@ -12,7 +12,7 @@ import logging
 import zlib
 
 
-def taskqueue_add_multi(name, url, paramlist, **kwargs):
+def taskqueue_add_multi(qname, url, paramlist, **kwargs):
     """Adds more than one Task to the same Taskqueue/URL.
 
     tasks = []
@@ -26,10 +26,10 @@ def taskqueue_add_multi(name, url, paramlist, **kwargs):
         tasks.append(taskqueue.Task(url=url, params=params, **kwargs))
         # Batch Addition to Taskqueue
         if len(tasks) >= 100:
-            taskqueue.Queue(name=name).add(tasks)
+            taskqueue.Queue(name=qname).add(tasks)
             tasks = []
     if tasks:
-        taskqueue.Queue(name=name).add(tasks)
+        taskqueue.Queue(name=qname).add(tasks)
     logging.debug(u'%d tasks queued to %s', len(paramlist), url)
 
 

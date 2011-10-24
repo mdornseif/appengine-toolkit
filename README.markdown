@@ -36,16 +36,18 @@ Creating a Project / getting started
 Create a appengine Project, then:
 
     mkdir lib
-    git submodule add git@github.com:mdornseif/appengine-toolkit.git lib/gaetk
-    git submodule update --init lib/gaetk
-    cp lib/gaetk/examples/Makefile .
-    cp lib/gaetk/examples/config.py .
-    cp lib/gaetk/examples/appengine_config.py .
+    echo "import site, os.path" > lib/__init__.py
+    echo "site.addsitedir(os.path.dirname(__file__))" >> lib/__init__.py
+    git submodule add git@github.com:hudora/appengine-toolkit.git lib/appengine-toolkit
+    cp lib/appengine-toolkit/examples/Makefile .
+    cp lib/appengine-toolkit/examples/config.py .
+    cp lib/appengine-toolkit/examples/appengine_config.py .
     sed -i -e "s/%%PUT_RANDOM_VALUE_HERE%%/`(date;md5 /etc/* 2&>/dev/null)|md5`-5a17/" appengine_config.py
     # If you want to use jinja2
     git submodule add https://github.com/mitsuhiko/jinja2.git lib/jinja2
-    git submodule update --init lib/jinja2
-
+    # You might also want to install https://github.com/hudora/huTools for some additional functionality.
+    git submodule add git@github.com:hudora/huTools.git lib/huTools
+    git submodule foreach 'echo ./`basename ${path}` >> ../submodules.pth'
 
 You might also want to install https://github.com/hudora/huTools for some additional functionality.
 

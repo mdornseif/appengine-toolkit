@@ -31,14 +31,14 @@ handlers:
   script: lib/gaetk/gaetk/login.py
 
 - url: /gaetk/static
-  static_dir: lib/gaetk/static
+  static_dir: lib/appengine-toolkit/static
   
 - url: /gae_mini_profiler/static
-  static_dir: lib/gaetk/gaetk/gae_mini_profiler/static
+  static_dir: lib/appengine-toolkit/gaetk/gae_mini_profiler/static
   secure: never
 
 - url: /gae_mini_profiler/.*
-  script: lib/gaetk/gaetk/gae_mini_profiler/main.py
+  script: lib/appengine-toolkit/gaetk/gae_mini_profiler/main.py
   secure: never
   
 - url: .*
