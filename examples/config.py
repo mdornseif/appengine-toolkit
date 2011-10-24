@@ -18,9 +18,10 @@ template_dirs.append(os.path.join(os.path.dirname(__file__), 'lib/gaetk/template
 LOGIN_ALLOWED_DOMAINS = ['hudora.de']
 
 ALLOWED_PERMISSIONS = [
-  'einkaufspreise', # Der Nutzer darf Einkaufspreise und den Materialeinsatz 1 & 4 sehen
-  'wertschoepfung', # Der Benutzer darf die Wertschöpfung für alle Kunden sehen
+  'einkaufspreise',  # Der Nutzer darf Einkaufspreise und den Materialeinsatz 1 & 4 sehen
+  'wertschoepfung',  # Der Benutzer darf die Wertschöpfung für alle Kunden sehen
 ]
+
 
 def main():
     """show path for usage in scripts"""
