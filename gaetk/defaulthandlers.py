@@ -120,9 +120,58 @@ class VersionHandler(gaetk.handler.BasicHandler):
         self.response.write(version + '\n')
 
 
+class CredentialsHandler(gaetk.handler.BasicHandler):
+    """Credentials - generate or update - Write only."""
+    def post(self):
+        """Use it like this
+
+            curl -u $uid:$secret -X POST -F admin=True \
+                -F text='fuer das Einspeisen von SoftM Daten' -F email='edv@shpuadmora.de' -F tenant='hudora.de' \
+                http://example.appspot.com/admin/credentials
+            {
+             "secret": "aJNKCDUZW5PIBT23LYX7XXVFENA",
+             "uid": "u66666o26ec4b"
+            }
+        """
+        # Lazily import hujson to allow using the other classes in this module to be used without
+        # huTools beinin installed.
+        import huTools.hujson
+
+        self.login_required()
+        if not self.credential.admin:
+            gaetk.handler.HTTP403_Forbidden()
+
+        admin = self.request.get('admin', '').lower() == 'true'
+        text = self.request.get('text', '')
+        email = self.request.get('email')
+        tenant = self.request.get('tenant')
+
+        credential = gaetk.handler.Credential.get_by_key_name(email)
+        if credential:
+            # if a credential already exists we only have to modify it
+            credential.admin = admin
+            credential.text = text
+            credential.tenant = tenant
+            credential.email = email
+            credential.put()
+        else:
+            # if not, we generate a new one
+            credential = gaetk.handler.Credential.create(admin=admin, text=text,
+                                                         tenant=tenant, email=email)
+
+        self.response.headers["Content-Type"] = "application/json"
+        self.response.set_status(201)
+        self.response.out.write(huTools.hujson.dumps(dict(uid=credential.uid, secret=credential.secret,
+                                                          admin=credential.admin, text=credential.text,
+                                                          tenant=credential.tenant, email=credential.email,
+                                                          created_at=credential.created_at,
+                                                          updated_at=credential.updated_at)))
+
+
 def main():
     app = gaetk.webapp2.WSGIApplication([
                                          ('/gaetk/stats.json', Stats),
+                                         ('/gaetk/credentials', CredentialsHandler),
                                          ('/robots.txt', RobotTxtHandler),
                                          ('/version.txt', VersionHandler),
                                          ])

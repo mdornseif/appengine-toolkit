@@ -89,7 +89,8 @@ class Credential(db.Expando):
     def create(cls, tenant='_unknown', user=None, uid=None, text='', email=None, admin=False):
         """Creates a credential Object generating a random secret and a random uid if needed."""
         # secret hopfully contains about 64 bits of entropy - more than most passwords
-        data = u'%s%s%s%s%s' % (user, uuid.uuid1(), uid, text, email)
+        data = u'%s%s%s%s%s%f%s' % (user, uuid.uuid1(), uid, text, email, time.time(),
+                                    os.environ.get('CURRENT_VERSION_ID', '?'))
         digest = hashlib.md5(data.encode('utf-8')).digest()
         secret = str(base64.b32encode(digest).rstrip('='))[1:15]
         if not uid:
@@ -442,6 +443,7 @@ class BasicHandler(webapp2.RequestHandler):
         """
 
         self.credential = None
+        self.logintype = None
         if self.session.get('uid'):
             try:
                 # try to read from memcache
@@ -457,6 +459,7 @@ class BasicHandler(webapp2.RequestHandler):
                 self.credential = Credential.get_by_key_name(self.session['uid'])
                 # TODO: use protobufs
                 memcache.add("gaetk_cred_%s" % self.session['uid'], self.credential, CREDENTIAL_CACHE_TIMEOUT)
+                self.logintype = 'session'
 
         # we don't have an active session - check if we are logged in via OpenID at least
         user = users.get_current_user()
@@ -478,6 +481,7 @@ class BasicHandler(webapp2.RequestHandler):
                 if not self.credential:
                     self.credential = create_credential_from_federated_login(user, apps_domain)
             self.session['uid'] = self.credential.uid
+            self.logintype = 'OAuth'
             self.response.set_cookie('gaetkopid', apps_domain, max_age=7776000)
 
         if not self.credential:
@@ -503,6 +507,7 @@ class BasicHandler(webapp2.RequestHandler):
                         self.credential = credential
                         self.session['uid'] = credential.uid
                         self.session['email'] = credential.email
+                        self.logintype = 'HTTP'
                         # Log successful login, but only once every 10h
                         data = memcache.get("login_%s_%s" % (uid, self.request.remote_addr))
                         if not data:
@@ -537,11 +542,12 @@ class BasicHandler(webapp2.RequestHandler):
                                   self.request.headers.get('Authorization'))
                     raise HTTP401_Unauthorized(headers={'WWW-Authenticate': 'Basic realm="API Login"'})
 
-        if self.credential.user and not users.get_current_user():
+        if self.credential.user and (not users.get_current_user()) and self.logintype != 'HTTP':
             # We have an active session and the credential is associated with an Federated/OpenID
             # Account, but the user is not logged in via OpenID on the gAE Infrastructure anymore.
             # If we are given tie desired domain via a coockit and this is a GET request
             # without parameters we try automatic login
+
             logging.critical("Session without gae! %s", self.request.cookies)
             if (self.request.cookies.get('gaetkopid', '') and self.request.method == 'GET'
                 and not self.request.query_string):

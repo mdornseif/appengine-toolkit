@@ -5,14 +5,12 @@ api_version: 1
 default_expiration: "6d"
 
 builtins:
+- remote_api: off
 - datastore_admin: on
 - appstats: on
+- deferred: on
 
 handlers:
-- url: /_ah/queue/deferred
-  script: $PYTHON_LIB/google/appengine/ext/deferred/handler.py
-  login: admin
-
 - url: /mapreduce(/.*)?
   script: mapreduce/main.py
   login: admin
@@ -40,7 +38,16 @@ handlers:
 - url: /gae_mini_profiler/.*
   script: lib/appengine-toolkit/gaetk/gae_mini_profiler/main.py
   secure: never
-  
+
+- url: /gaetk/.*
+  script: lib/gaetk/gaetk/defaulthandlers.py
+
+- url: /robots.txt
+  script: lib/gaetk/gaetk/defaulthandlers.py
+
+- url: /version.txt
+  script: lib/gaetk/gaetk/defaulthandlers.py
+
 - url: .*
   script: main.py
   secure: optional

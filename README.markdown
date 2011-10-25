@@ -322,6 +322,20 @@ You might want to use Munin to graph these values.
 
 `VersionHandler` allows clients to read the git revision. When deploying we do something like `git show-ref --hash=7 HEAD > version.txt` just before `appcfg.py update` and `VersionHandler lets you retive that information.
 
+`CredentialsHandler` at `/gaetk/credentials` allows you to create new access credentials:
+
+    $ curl -u $uid:$secret -X POST -F admin=True \
+        -F text='new user for API access' -F email='edv@ShPuAdMora.de' -F tenant='hudora.de' \
+        http://example.com/gaetk/credentials
+    {
+     "secret": "aJNKCDUZW5PIBT23LYX7XXVFENA",
+     "uid": "u66666o26ec4b"
+    }
+
+This generates a new user. UserID and Password are choosen by the system and are not user settable.
+To get an initial `$uid:$secret` to generate new credentials login via the browser and via OpenID and
+then check the "Credentials" Model in the App Engine Admin Console.
+
 
 LoggedModel
 ------------
