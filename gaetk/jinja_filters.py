@@ -35,7 +35,7 @@ def nicenum(value, spacer='&#8239;'):
 def eurocent(value, spacer='&#8239;', decimalplaces=2):
     """Format the given cents as Euro with spacer as delimiter, e.g. '1 234 456.23'
 
-    Obviously works also with US$ and other currnecies.
+    Obviously works also with US$ and other currencies.
     Wraps the result in `<span class="currency">`
 
     use `decimalplaces=0` to cut of cents
@@ -45,10 +45,11 @@ def eurocent(value, spacer='&#8239;', decimalplaces=2):
     """
     if not value and value != 0:
         return ''
-    formatstr = u"%%.%df" % decimalplaces
-    rev_value = (formatstr % (int(value) / 100.0))[::-1]
-    value = spacer.join(reversed([rev_value[i:i + 3][::-1] for i in range(0, len(rev_value), 3)]))
-    return '<span class="currency">%s</span>' % value
+    tmp = u"%.*f" % (decimalplaces, (int(value) / 100.0))
+    euro_value, cent_value = tmp.split('.')
+    rev_value = euro_value[::-1]
+    euro_value = spacer.join(reversed([rev_value[i:i + 3][::-1] for i in range(0, len(rev_value), 3)]))
+    return '<span class="currency">%s.%s</span>' % (euro_value, cent_value)
 
 
 def register_custom_filters(jinjaenv):
