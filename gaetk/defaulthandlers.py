@@ -6,6 +6,8 @@ defaulthandlers.py - handlers implementing common functionality for gaetk
 Created by Maximillian Dornseif on 2011-01-09.
 Copyright (c) 2011 HUDORA. All rights reserved.
 """
+import config
+config.imported = True
 
 import datetime
 import os
