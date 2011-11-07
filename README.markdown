@@ -326,10 +326,19 @@ You might want to use Munin to graph these values.
 
     $ curl -u $uid:$secret -X POST -F admin=True \
         -F text='new user for API access' -F email='edv@ShPuAdMora.de' -F tenant='hudora.de' \
-        http://example.com/gaetk/credentials
+        -F permissions='einkaufspreise,wertschoepfung' http://example.com/gaetk/credentials
     {
-     "secret": "aJNKCDUZW5PIBT23LYX7XXVFENA",
-     "uid": "u66666o26ec4b"
+        "admin": true,
+        "created_at": "2011-10-26 13:00:28.024000",
+        "email": "m.dornseif@hudora.de",
+        "permissions": [
+         "einkaufspreise",
+         "wertschoepfung"
+        ],
+        "secret": "GIFBOQCC123G",
+        "tenant": "hudora.de",
+        "text": "",
+        "uid": "edv@ShPuAdMora.de"
     }
 
 This generates a new user. UserID and Password are choosen by the system and are not user settable.

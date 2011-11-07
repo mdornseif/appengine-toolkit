@@ -6,8 +6,6 @@ defaulthandlers.py - handlers implementing common functionality for gaetk
 Created by Maximillian Dornseif on 2011-01-09.
 Copyright (c) 2011 HUDORA. All rights reserved.
 """
-import config
-config.imported = True
 
 import datetime
 import os
@@ -139,6 +137,12 @@ class CredentialsHandler(gaetk.handler.BasicHandler):
         # huTools beinin installed.
         import huTools.hujson
 
+        config = object()
+        try:
+            import config
+        except ImportError:
+            pass
+
         self.login_required()
         if not self.credential.admin:
             gaetk.handler.HTTP403_Forbidden()
@@ -147,6 +151,7 @@ class CredentialsHandler(gaetk.handler.BasicHandler):
         text = self.request.get('text', '')
         email = self.request.get('email')
         tenant = self.request.get('tenant')
+        permissions = self.request.get('permissions', [])
 
         credential = gaetk.handler.Credential.get_by_key_name(email)
         if credential:
@@ -155,6 +160,11 @@ class CredentialsHandler(gaetk.handler.BasicHandler):
             credential.text = text
             credential.tenant = tenant
             credential.email = email
+            credential.permissions = []
+            for permission in permissions.split(','):
+                if permission not in getattr(config, 'ALLOWED_PERMISSIONS', []):
+                    raise gaetk.handler.HTTP400_BadRequest("invalid permission %r" % permission)
+                credential.permissions.append(permission)
             credential.put()
         else:
             # if not, we generate a new one
@@ -166,6 +176,7 @@ class CredentialsHandler(gaetk.handler.BasicHandler):
         self.response.out.write(huTools.hujson.dumps(dict(uid=credential.uid, secret=credential.secret,
                                                           admin=credential.admin, text=credential.text,
                                                           tenant=credential.tenant, email=credential.email,
+                                                          permissions=credential.permissions,
                                                           created_at=credential.created_at,
                                                           updated_at=credential.updated_at)))
 

@@ -80,6 +80,7 @@ class Credential(db.Expando):
     secret = db.StringProperty(required=True)
     text = db.StringProperty(required=False)
     admin = db.BooleanProperty(default=False)
+    permissions = db.StringListProperty(default=['generic_permission'])
     created_at = db.DateTimeProperty(auto_now_add=True)
     updated_at = db.DateTimeProperty(auto_now=True)
     created_by = db.UserProperty(required=False, auto_current_user_add=True)
@@ -135,11 +136,7 @@ class BasicHandler(webapp2.RequestHandler):
     def __init__(self, *args, **kwargs):
         """Initialize RequestHandler"""
         self.credential = None
-        try:
-            self.session = get_current_session()
-        except AttributeError:
-            # session middleware might not be enabled
-            self.session = {}
+        self.session = get_current_session()
         super(BasicHandler, self).__init__(*args, **kwargs)
 
     def abs_url(self, url):
@@ -242,7 +239,8 @@ class BasicHandler(webapp2.RequestHandler):
         if self.is_admin():
             # for admin requests we import and activate the profiler
             import gae_mini_profiler.middleware
-            values.update({'is_admin': self.is_admin(),
+            values.update({'credential': self.credential,
+                           'is_admin': self.is_admin(),
                            'profiler_request_id': gae_mini_profiler.middleware.request_id})
         return values
 
@@ -590,6 +588,10 @@ class BasicHandler(webapp2.RequestHandler):
             valid = ', '.join(webapp2.get_valid_methods(self))
             self.abort(405, headers=[('Allow', valid)])
 
+        # bind session
+        self.session = get_current_session()
+        # init messages array
+        self.session['_gaetk_messages'] = self.session.get('_gaetk_messages', [])
         # Give authentication Hooks opportunity to do their thing
         self.authchecker(method, *args, **kwargs)
 
