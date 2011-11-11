@@ -443,20 +443,19 @@ class BasicHandler(webapp2.RequestHandler):
         self.credential = None
         self.logintype = None
         if self.session.get('uid'):
+            cachekey = "%s_gaetk_cred_%s" % (os.environ.get('CURRENT_VERSION_ID', '?'), self.session['uid'])
             try:
                 # try to read from memcache
                 # we salt the cache object with the current app version, so data-migrations get easier
-                self.credential = memcache.get("%s_gaetk_cred_%s"
-                                               % (os.environ.get('CURRENT_VERSION_ID', '?'),
-                                                  self.session['uid']))
+                self.credential = memcache.get(cachekey)
             except AttributeError:
-                # Unpickeling from memcache might fail becaus eof incompatible app versions etc.
+                # Unpickeling from memcache might fail because of incompatible app versions etc.
                 self.credential = None
 
             if self.credential is None:
                 self.credential = Credential.get_by_key_name(self.session['uid'])
                 # TODO: use protobufs
-                memcache.add("gaetk_cred_%s" % self.session['uid'], self.credential, CREDENTIAL_CACHE_TIMEOUT)
+                memcache.set(cachekey, self.credential, CREDENTIAL_CACHE_TIMEOUT)
                 self.logintype = 'session'
 
         # we don't have an active session - check if we are logged in via OpenID at least
