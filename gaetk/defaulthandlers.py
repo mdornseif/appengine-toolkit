@@ -126,8 +126,8 @@ class CredentialsHandler(gaetk.handler.BasicHandler):
         """Use it like this
 
             curl -u $uid:$secret -X POST -F admin=True \
-                -F text='fuer das Einspeisen von SoftM Daten' -F email='edv@shpuadmora.de' -F tenant='hudora.de' \
-                http://example.appspot.com/admin/credentials
+                -F text='fuer das Einspeisen von SoftM Daten' -F email='edv@shpuadmora.de' \
+                http://example.appspot.com/gaetk/credentials
             {
              "secret": "aJNKCDUZW5PIBT23LYX7XXVFENA",
              "uid": "u66666o26ec4b"
