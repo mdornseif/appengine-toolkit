@@ -28,6 +28,7 @@ Features:
 * groups / access controls (TO BE MERGED)
 * mini CMS like [Django flatpages][6] (TO BE MERGED)
 * in place editing (TO BE MERGED)
+* Generic Configuration objects
 
 
 Creating a Project / getting started
@@ -394,6 +395,24 @@ Infrastructure contains helpers for accessing the GAE infrastructure. It is inde
     for kdnnr in kunden.get_changed():
         tasks.append(dict(kundennr=kdnnr))
     taskqueue_add_multi('softmq', '/some/path', tasks)
+
+
+Generic Configuration objects
+-----------------------------
+
+The appengine toolkit provides a method for generic configuration objects.
+These configuration objects are stored in Datastore and can hold any string value.
+There are two convenience functions for getting and setting values, `get_config` and `set_config`.
+
+    >>> from gaetk import configuration
+    >>> configuration.get_config('MY-KEY-NAME')
+    None
+    >>> configuration.set_config('MY-KEY-NAME', u'5711')
+    >>> configuration.get_config('MY-KEY-NAME')
+    u'5711'
+
+Configuration values are cached infinitely. The module provides a HTTP handler
+as a mean to flush all cached values.
 
 
 Thanks
