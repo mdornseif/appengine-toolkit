@@ -199,16 +199,14 @@ class LogoutHandler(OpenIdLoginHandler):
                 self.render({}, 'logout.html')
 
 
-def application():
-    """Create WSGI application"""
-    return webapp2.WSGIApplication([('.*/logout', LogoutHandler),
+application = webapp2.WSGIApplication([('.*/logout', LogoutHandler),
                                     ('.*', OpenIdLoginHandler),
                                    ])
 
 
 def main():
     """WSGI Main Entry Point"""
-    util.run_wsgi_app(application())
+    util.run_wsgi_app(application)
 
 
 if __name__ == '__main__':

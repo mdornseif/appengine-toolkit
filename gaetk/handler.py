@@ -20,12 +20,23 @@ try:
 except AttributeError:
     LOGIN_ALLOWED_DOMAINS = []
 
-
+import base64
+import hashlib
+import logging
 import os
+import time
 import urllib
+import urlparse
+import uuid
+import warnings
+
 from functools import partial
 
-from gaetk import webapp2
+try:
+    import mywebapp2 as webapp2  # on AppEngine python27
+except ImportError:
+    from gaetk import webapp2
+
 from gaetk.gaesessions import get_current_session
 from google.appengine.api import memcache
 from google.appengine.api import users
@@ -46,16 +57,12 @@ from webob.exc import HTTPTemporaryRedirect as HTTP307_TemporaryRedirect
 from webob.exc import HTTPUnauthorized as HTTP401_Unauthorized
 from webob.exc import HTTPUnsupportedMediaType as HTTP415_UnsupportedMediaType
 
-import base64
 import google.appengine.ext.db
 import google.appengine.runtime.apiproxy_errors
-import hashlib
-import jinja_filters
-import logging
-import time
-import urlparse
-import uuid
 
+
+warnings.filterwarnings('ignore',
+    'decode_param_names is deprecated and will not be supported starting with WebOb 1.2')
 
 # to mark the exception as being used
 config.dummy = [HTTP301_Moved, HTTP302_Found, HTTP303_SeeOther, HTTP307_TemporaryRedirect,
@@ -135,9 +142,8 @@ class BasicHandler(webapp2.RequestHandler):
     """
     def __init__(self, *args, **kwargs):
         """Initialize RequestHandler"""
-        self.credential = None
-        self.session = get_current_session()
         super(BasicHandler, self).__init__(*args, **kwargs)
+        self.credential = None
 
     def abs_url(self, url):
         """Converts an relative into an absolute URL."""
@@ -293,6 +299,8 @@ class BasicHandler(webapp2.RequestHandler):
         Per default the template is provided with the `uri` and `credential` variables plus everything
         which is given in `values`."""
         import jinja2
+        import jinja_filters
+
         env = self.create_jinja2env()
         jinja_filters.register_custom_filters(env)
         try:
@@ -563,57 +571,35 @@ class BasicHandler(webapp2.RequestHandler):
         """Function to allow implementing authentication for all subclasses. To be overwritten."""
         pass
 
-    def __call__(self, _method, *args, **kwargs):
-        """Dispatches the requested method.
+    def dispatch(self):
+        """Dispatches the requested method."""
+        request = self.request
+        method_name = request.route.handler_method
+        if not method_name:
+            method_name = webapp2._normalize_handler_method(request.method)
 
-        :param _method:
-            The method to be dispatched: the request method in lower case
-            (e.g., 'get', 'post', 'head', 'put' etc).
-        :param args:
-            Positional arguments to be passed to the method, coming from the
-            matched :class:`Route`.
-        :param kwargs:
-            Keyword arguments to be passed to the method, coming from the
-            matched :class:`Route`.
-        :returns:
-            None.
-        """
-        method = getattr(self, _method, None)
+        method = getattr(self, method_name, None)
         if method is None:
             # 405 Method Not Allowed.
             # The response MUST include an Allow header containing a
             # list of valid methods for the requested resource.
             # http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.6
-            valid = ', '.join(webapp2.get_valid_methods(self))
+            valid = ', '.join(webapp2._get_handler_methods(self))
             self.abort(405, headers=[('Allow', valid)])
 
-        # bind session
+        # The handler only receives *args if no named variables are set.
+        args, kwargs = request.route_args, request.route_kwargs
+        if kwargs:
+            args = ()
+
+        # bind session on dispatch (not in __init__)
         self.session = get_current_session()
-        # init messages array
+        # init messages array based on session
         self.session['_gaetk_messages'] = self.session.get('_gaetk_messages', [])
         # Give authentication Hooks opportunity to do their thing
         self.authchecker(method, *args, **kwargs)
 
-        # Execute the method.
-        method(*args, **kwargs)
-
-    def handle_exception(self, exception, debug_mode):
-        # This code is based on http://code.google.com/appengine/articles/handling_datastore_errors.html
-        if (isinstance(exception, google.appengine.ext.db.Timeout)
-            or isinstance(exception, google.appengine.ext.db.TransactionFailedError)):
-            # TODO: Display "try again in a few seconds" message
-            super(BasicHandler, self).handle_exception(exception, debug_mode)
-        # This code is based on http://code.google.com/appengine/docs/python/howto/maintenance.html
-        elif isinstance(exception, google.appengine.runtime.apiproxy_errors.CapabilityDisabledError):
-            # Datastore is Read-Only
-            # TODO: Display "try again in a hour" message
-            super(BasicHandler, self).handle_exception(exception, debug_mode)
-        else:
-            if debug_mode:
-                super(BasicHandler, self).handle_exception(exception, debug_mode)
-            else:
-                # TODO: Display a generic 500 error page.
-                super(BasicHandler, self).handle_exception(exception, debug_mode)
+        return method(*args, **kwargs)
 
     def add_message(self, typ, html, ttl=15):
         """Sets a user specified message to be displayed to the currently logged in user.
@@ -643,27 +629,37 @@ class JsonResponseHandler(BasicHandler):
     # Our default caching is 60s
     default_cachingtime = 60
 
-    def __call__(self, _method, *args, **kwargs):
-        """Dispatches the requested method. """
+    def dispatch(self):
+        """Dispatches the requested method."""
 
         # Lazily import hujson to allow using the other classes in this module to be used without
         # huTools beinin installed.
         import huTools.hujson
 
-        # Find Method to be called.
-        method = getattr(self, _method, None)
+        request = self.request
+        method_name = request.route.handler_method
+        if not method_name:
+            method_name = webapp2._normalize_handler_method(request.method)
+
+        method = getattr(self, method_name, None)
         if method is None:
-            # No Mehtod is found.
-            # Answer will be `405 Method Not Allowed`.
+            # 405 Method Not Allowed.
             # The response MUST include an Allow header containing a
             # list of valid methods for the requested resource.
             # http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.6
-            # so get a lsit of valid Methods and send them back.
-            valid = ', '.join(webapp2.get_valid_methods(self))
-            # `self.abort()` will raise an Exception thus exiting this function
+            valid = ', '.join(webapp2._get_handler_methods(self))
             self.abort(405, headers=[('Allow', valid)])
 
-        # Give authentication hooks opportunity to do their thing
+        # The handler only receives *args if no named variables are set.
+        args, kwargs = request.route_args, request.route_kwargs
+        if kwargs:
+            args = ()
+
+        # bind session on dispatch (not in __init__)
+        self.session = get_current_session()
+        # init messages array based on session
+        self.session['_gaetk_messages'] = self.session.get('_gaetk_messages', [])
+        # Give authentication Hooks opportunity to do their thing
         self.authchecker(method, *args, **kwargs)
 
         # Execute the method.

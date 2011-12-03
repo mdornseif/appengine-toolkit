@@ -181,14 +181,14 @@ class CredentialsHandler(gaetk.handler.BasicHandler):
                                                           updated_at=credential.updated_at)))
 
 
-def main():
-    app = gaetk.webapp2.WSGIApplication([
+application = gaetk.webapp2.WSGIApplication([
                                          ('/gaetk/stats.json', Stats),
                                          ('/gaetk/credentials', CredentialsHandler),
                                          ('/robots.txt', RobotTxtHandler),
                                          ('/version.txt', VersionHandler),
                                          ])
-    app.run()
+def main():
+    application.run()
 
 
 if __name__ == '__main__':

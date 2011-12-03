@@ -33,4 +33,3 @@ application = gaetk.webapp2.WSGIApplication([
         ('/version.txt', gaetk.defaulthandlers.VersionHandler),
         ('/robots.txt', gaetk.defaulthandlers.RobotTxtHandler),
     ], debug=True)
-application.run()
