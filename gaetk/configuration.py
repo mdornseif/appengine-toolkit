@@ -28,8 +28,8 @@ Copyright (c) 2011 HUDORA. All rights reserved.
 import config
 config.imported = True
 
+import gaetk
 import gaetk.handler
-import gaetk.webapp2
 from google.appengine.ext import db
 
 CONFIG_CACHE = {}

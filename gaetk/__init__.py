@@ -6,3 +6,8 @@ gaetk/__init__.py
 Created by Maximillian Dornseif on 2010-10-31.
 Copyright (c) 2010 HUDORA. All rights reserved.
 """
+
+try:
+    import mywebapp2 as webapp2  # on AppEngine python27
+except ImportError:
+    from gaetk import webapp2

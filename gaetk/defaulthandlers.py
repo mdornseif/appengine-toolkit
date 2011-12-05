@@ -13,8 +13,8 @@ import os
 import google.appengine.api.app_identity
 import google.appengine.api.memcache
 
+import gaetk
 import gaetk.handler
-import gaetk.webapp2
 from django.utils import simplejson
 from google.appengine.ext.db import stats
 

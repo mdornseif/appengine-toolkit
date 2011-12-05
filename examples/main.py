@@ -12,7 +12,7 @@ import config
 import logging, sys
 logging.info(sys.path)
 import gaetk.handler
-import gaetk.webapp2
+import gaetk
 import gaetk.defaulthandlers
 
 
@@ -33,3 +33,4 @@ application = gaetk.webapp2.WSGIApplication([
         ('/version.txt', gaetk.defaulthandlers.VersionHandler),
         ('/robots.txt', gaetk.defaulthandlers.RobotTxtHandler),
     ], debug=True)
+application.run()

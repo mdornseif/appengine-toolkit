@@ -1,6 +1,7 @@
 import datetime
 import cPickle as pickle
 import re
+import threading
 import StringIO
 from types import GeneratorType
 import zlib
@@ -10,7 +11,8 @@ from google.appengine.api import memcache
 from gaetk.gae_mini_profiler import config
 
 # request_id is a per-request identifier accessed by a couple other pieces of gae_mini_profiler
-request_id = None
+_tls = threading.local()
+_tls.request_id = None
 
 
 class ProfilerWSGIMiddleware(object):
@@ -27,8 +29,8 @@ class ProfilerWSGIMiddleware(object):
 
     def __call__(self, environ, start_response):
 
-        global request_id
-        request_id = None
+        global _tls
+        _tls.request_id = None
         # Start w/ a non-profiled app at the beginning of each request
         self.app = self.app_clean
         self.prof = None
@@ -39,7 +41,7 @@ class ProfilerWSGIMiddleware(object):
             # Set a random ID for this request so we can look up stats later
             import base64
             import os
-            request_id = base64.urlsafe_b64encode(os.urandom(5))
+            _tls.request_id = base64.urlsafe_b64encode(os.urandom(5))
 
             # Send request id in headers so jQuery ajax calls can pick
             # up profiles.
@@ -52,8 +54,8 @@ class ProfilerWSGIMiddleware(object):
                     self.temporary_redirect = True
 
                 # Append headers used when displaying profiler results from ajax requests
-                headers.append(("X-MiniProfiler-Id", request_id))
-                headers.append(("X-MiniProfiler-QS", environ.get("QUERY_STRING")))
+                headers.append(("X-MiniProfiler-Id", str(_tls.request_id)))
+                headers.append(("X-MiniProfiler-QS", str(environ.get("QUERY_STRING"))))
 
                 return start_response(status, headers, exc_info)
 
@@ -102,12 +104,12 @@ class ProfilerWSGIMiddleware(object):
                     yield value
 
             # Store stats for later access
-            RequestStats(request_id, environ, self).store()
+            RequestStats(_tls.request_id, environ, self).store()
 
             # Just in case we're using up memory in the recorder and profiler
             self.recorder = None
             self.prof = None
-            request_id = None
+            _tls.request_id = None
 
         else:
             result = self.app(environ, start_response)
@@ -123,10 +125,10 @@ class ProfilerWSGIMiddleware(object):
                 reg = re.compile("mp-r-id=([^&]+)")
 
                 # Keep any chain of redirects around
-                request_id_chain = request_id
+                request_id_chain = _tls.request_id
                 match = reg.search(environ.get("QUERY_STRING"))
                 if match:
-                    request_id_chain = ",".join([match.groups()[0], request_id])
+                    request_id_chain = ",".join([match.groups()[0], _tls.request_id])
 
                 # Remove any pre-existing miniprofiler redirect id
                 location = header[1]

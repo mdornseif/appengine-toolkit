@@ -75,6 +75,10 @@ CREDENTIAL_CACHE_TIMEOUT = 300
 _jinja_env_cache = {}
 
 
+# for import by clients
+WSGIApplication = webapp2.WSGIApplication
+
+
 class Credential(db.Expando):
     """Represents an access token and somebody who is allowed to use it.
 
@@ -247,7 +251,7 @@ class BasicHandler(webapp2.RequestHandler):
             import gae_mini_profiler.middleware
             values.update({'credential': self.credential,
                            'is_admin': self.is_admin(),
-                           'profiler_request_id': gae_mini_profiler.middleware.request_id})
+                           'profiler_request_id': gae_mini_profiler.middleware._tls.request_id})
         return values
 
     def create_jinja2env(self, extensions=()):
