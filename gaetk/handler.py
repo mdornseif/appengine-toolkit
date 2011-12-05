@@ -629,6 +629,9 @@ class JsonResponseHandler(BasicHandler):
     # Our default caching is 60s
     default_cachingtime = 60
 
+    def serialize(self, content):
+        return huTools.hujson.dumps(content, sort_keys=True, indent=1)
+
     def dispatch(self):
         """Dispatches the requested method."""
 
@@ -676,7 +679,7 @@ class JsonResponseHandler(BasicHandler):
         if isinstance(reply, tuple) and len(reply) == 3:
             content, statuscode, cachingtime = reply
         # Finally begin sending the response
-        response = huTools.hujson.dumps(content)
+        response = self.serialize(content)
         if cachingtime:
             self.response.headers['Cache-Control'] = 'max-age=%d, public' % cachingtime
         # If we have gotten a `callback` parameter, we expect that this is a
