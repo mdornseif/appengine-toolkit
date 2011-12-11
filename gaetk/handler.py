@@ -454,23 +454,8 @@ class BasicHandler(webapp2.RequestHandler):
 
         self.credential = None
         self.logintype = None
-        if self.session.get('uid'):
-            cachekey = "%s_gaetk_cred_%s" % (os.environ.get('CURRENT_VERSION_ID', '?'), self.session['uid'])
-            try:
-                # try to read from memcache
-                # we salt the cache object with the current app version, so data-migrations get easier
-                self.credential = memcache.get(cachekey)
-            except AttributeError:
-                # Unpickeling from memcache might fail because of incompatible app versions etc.
-                self.credential = None
 
-            if self.credential is None:
-                self.credential = Credential.get_by_key_name(self.session['uid'])
-                # TODO: use protobufs
-                memcache.set(cachekey, self.credential, CREDENTIAL_CACHE_TIMEOUT)
-                self.logintype = 'session'
-
-        # we don't have an active session - check if we are logged in via OpenID at least
+        # check if we are logged in via OpenID
         user = users.get_current_user()
         if user:
             logging.info('Google user = %s', user)
@@ -492,6 +477,23 @@ class BasicHandler(webapp2.RequestHandler):
             self.session['uid'] = self.credential.uid
             self.logintype = 'OAuth'
             self.response.set_cookie('gaetkopid', apps_domain, max_age=7776000)
+
+        # try if we have a session based login
+        if self.session.get('uid'):
+            cachekey = "%s_gaetk_cred_%s" % (os.environ.get('CURRENT_VERSION_ID', '?'), self.session['uid'])
+            try:
+                # try to read from memcache
+                # we salt the cache object with the current app version, so data-migrations gets easier
+                self.credential = memcache.get(cachekey)
+            except AttributeError:
+                # Unpickeling from memcache might fail because of incompatible app versions etc.
+                self.credential = None
+
+            if self.credential is None:
+                self.credential = Credential.get_by_key_name(self.session['uid'])
+                # TODO: use protobufs
+                memcache.set(cachekey, self.credential, CREDENTIAL_CACHE_TIMEOUT)
+                self.logintype = 'session'
 
         if not self.credential:
             # still no session information - try HTTP - Auth
@@ -517,11 +519,7 @@ class BasicHandler(webapp2.RequestHandler):
                         self.session['uid'] = credential.uid
                         self.session['email'] = credential.email
                         self.logintype = 'HTTP'
-                        # Log successful login, but only once every 10h
-                        data = memcache.get("login_%s_%s" % (uid, self.request.remote_addr))
-                        if not data:
-                            memcache.set("login_%s_%s" % (uid, self.request.remote_addr), True, 60 * 60 * 10)
-                            logging.info("HTTP-Login from %s/%s", uid, self.request.remote_addr)
+                        logging.info("HTTP-Login from %s/%s", uid, self.request.remote_addr)
                     else:
                         logging.error("failed HTTP-Login from %s/%s %s", uid, self.request.remote_addr,
                                        self.request.headers.get('Authorization'))
@@ -538,7 +536,8 @@ class BasicHandler(webapp2.RequestHandler):
                                                     text='Automatically created for testing')
             else:
                 # Login not successful
-                if 'text/html' in self.request.headers.get('Accept', ''):
+                if ('text/' in self.request.headers.get('Accept', '')
+                    or 'image/' in self.request.headers.get('Accept', '')):
                     # we assume the request came via a browser - redirect to the "nice" login page
                     self.response.set_status(302)
                     absolute_url = self.abs_url("/_ah/login_required?continue=%s"
@@ -546,6 +545,7 @@ class BasicHandler(webapp2.RequestHandler):
                     self.response.headers['Location'] = str(absolute_url)
                     raise HTTP302_Found(location=str(absolute_url))
                 else:
+                    logging.debug('Accept: %s', self.request.headers.get('Accept', ''))
                     # We assume the access came via cURL et al, request Auth vie 401 Status code.
                     logging.info("requesting HTTP-Auth %s %s", self.request.remote_addr,
                                   self.request.headers.get('Authorization'))
@@ -554,10 +554,10 @@ class BasicHandler(webapp2.RequestHandler):
         if self.credential.user and (not users.get_current_user()) and self.logintype != 'HTTP':
             # We have an active session and the credential is associated with an Federated/OpenID
             # Account, but the user is not logged in via OpenID on the gAE Infrastructure anymore.
-            # If we are given tie desired domain via a coockit and this is a GET request
+            # If we are given tie desired domain via a coocky and this is a GET request
             # without parameters we try automatic login
 
-            logging.critical("Session without gae! %s", self.request.cookies)
+            logging.info("Session without gae! %s:%s", self.credential.user, self.request.cookies)
             if (self.request.cookies.get('gaetkopid', '') and self.request.method == 'GET'
                 and not self.request.query_string):
                 domain = self.request.cookies.get('gaetkopid', '')
