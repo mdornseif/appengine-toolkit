@@ -1525,7 +1525,7 @@ class WSGIApplication(object):
 
     def _internal_error(self, exception):
         """Last resource error for :meth:`__call__`."""
-        logging.exception(exception)
+        logging.exception(unicode(exception).encode('ascii', 'replace'))
         if self.debug:
             raise
 

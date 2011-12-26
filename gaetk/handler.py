@@ -40,6 +40,7 @@ except ImportError:
 from gaetk.gaesessions import get_current_session
 from google.appengine.api import memcache
 from google.appengine.api import users
+from google.appengine.datastore import entity_pb
 from google.appengine.ext import db
 from webob.exc import HTTPBadRequest as HTTP400_BadRequest
 from webob.exc import HTTPConflict as HTTP409_Conflict
@@ -480,19 +481,21 @@ class BasicHandler(webapp2.RequestHandler):
 
         # try if we have a session based login
         if self.session.get('uid'):
+            # we salt the cache object with the current app version, so data-migrations gets easier
             cachekey = "%s_gaetk_cred_%s" % (os.environ.get('CURRENT_VERSION_ID', '?'), self.session['uid'])
             try:
                 # try to read from memcache
-                # we salt the cache object with the current app version, so data-migrations gets easier
                 self.credential = memcache.get(cachekey)
             except AttributeError:
                 # Unpickeling from memcache might fail because of incompatible app versions etc.
                 self.credential = None
+            if self.credential:
+                self.credential = db.model_from_protobuf(entity_pb.EntityProto(self.credential))
 
             if self.credential is None:
                 self.credential = Credential.get_by_key_name(self.session['uid'])
                 # TODO: use protobufs
-                memcache.set(cachekey, self.credential, CREDENTIAL_CACHE_TIMEOUT)
+                memcache.set(cachekey, db.model_to_protobuf(self.credential).Encode(), CREDENTIAL_CACHE_TIMEOUT)
                 self.logintype = 'session'
 
         if not self.credential:
