@@ -65,6 +65,11 @@ class AuditLog(db.Model):
         """
         raise NotImplementedError
 
+    @classmethod
+    def kind(cls):
+      """Returns entity kind."""
+      return "_gaetk_AuditLog"
+
 
 class LoggedModel(db.Model):
     """Subclass of db.Model that logs all changes.
