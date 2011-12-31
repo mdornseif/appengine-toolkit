@@ -109,8 +109,12 @@ class Credential(db.Expando):
         if not uid:
             handmade_key = db.Key.from_path('Credential', 1)
             uid = "u%s" % (db.allocate_ids(handmade_key, 1)[0])
-        return cls.get_or_insert(key_name=uid, uid=uid, secret=secret, tenant=tenant,
-                                 user=user, text=text, email=email, admin=admin)
+        if email:
+            return cls.get_or_insert(key_name=uid, uid=uid, secret=secret, tenant=tenant,
+                                     user=user, text=text, email=email, admin=admin)
+        else:
+            return cls.get_or_insert(key_name=uid, uid=uid, secret=secret, tenant=tenant,
+                                     user=user, text=text, admin=admin)
 
     def __repr__(self):
         return "<gaetk.Credential %s>" % self.uid
@@ -128,7 +132,12 @@ def create_credential_from_federated_login(user, apps_domain):
     might want to look at HUDORA EDIhub, where an additional "receiver" gets written
     to the credentials database model.
     """
-    credential = Credential.create(tenant=apps_domain, user=user, uid=user.email(),
+    logging.info("Creating: %r %r %r %r", user, user.email(), user.nickname(), user.user_id())
+    uid = user.email() or user.nickname() or user.user_id()
+    # No insane user names
+    if len(str(uid)) > 35:
+        uid = hex(hash(str(uid)))
+    credential = Credential.create(tenant=apps_domain, user=user, uid=uid,
         email=user.email(),
         text="Automatically created via OpenID Provider %s" % user.federated_provider(),
         # for accounts created via Google Apps domains we default to admin permissions
@@ -467,7 +476,8 @@ class BasicHandler(webapp2.RequestHandler):
                 apps_domain = user.email().split('@')[-1].lower()
             else:
                 apps_domain = user.federated_provider().split('/')[4].lower()
-            username = user.email()
+            username = user.email() or user.nickname()
+            
             self.credential = Credential.get_by_key_name(username)
             if not self.credential or not self.credential.uid == username:
                 # So far we have no Credential entity for that user, create one
@@ -494,8 +504,8 @@ class BasicHandler(webapp2.RequestHandler):
 
             if self.credential is None:
                 self.credential = Credential.get_by_key_name(self.session['uid'])
-                # TODO: use protobufs
-                memcache.set(cachekey, db.model_to_protobuf(self.credential).Encode(), CREDENTIAL_CACHE_TIMEOUT)
+                if self.credential:
+                    memcache.set(cachekey, db.model_to_protobuf(self.credential).Encode(), CREDENTIAL_CACHE_TIMEOUT)
                 self.logintype = 'session'
 
         if not self.credential:
