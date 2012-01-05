@@ -260,8 +260,14 @@ class BasicHandler(webapp2.RequestHandler):
             # for admin requests we import and activate the profiler
             import gae_mini_profiler.middleware
             values.update({'credential': self.credential,
-                           'is_admin': self.is_admin(),
-                           'profiler_request_id': gae_mini_profiler.middleware._tls.request_id})
+                           'is_admin': self.is_admin()})
+            try:
+                values.update({'profiler_request_id': gae_mini_profiler.middleware._tls.request_id})
+            except AttributeError, msg:
+                # We see a lot of
+                # AttributeError: 'thread._local' object has no attribute 'request_id'
+                # that is bad but should not keep us from rendering
+                logging.critical(msg)
         return values
 
     def create_jinja2env(self, extensions=()):
