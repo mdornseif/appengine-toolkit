@@ -267,7 +267,8 @@ class BasicHandler(webapp2.RequestHandler):
                 # We see a lot of
                 # AttributeError: 'thread._local' object has no attribute 'request_id'
                 # that is bad but should not keep us from rendering
-                logging.critical(msg)
+                # usually happens during coockieless HTTP-Auth
+                logging.info(msg)
         return values
 
     def create_jinja2env(self, extensions=()):
