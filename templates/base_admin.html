@@ -7,7 +7,8 @@
     <!--[if lt IE 9]>
       <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
-    <link href="/gaetk/static/bootstrap/1.4.0/bootstrap.css" rel="stylesheet">
+    <link href="/gaetk/static/bootstrap/1.4.x/bootstrap.css" rel="stylesheet">
+    {% block gaetkstyle %}
     <style type="text/css">
       /* Override some defaults */
       html, body {
@@ -49,8 +50,8 @@
       .topbar .btn {
         border: 0;
       }
-
     </style>
+    {% endblock gaetkstyle %}
 <!-- is_admin = "{{ is_admin }}" -->
 <!-- profiler_request_id = "{{ profiler_request_id }}" -->
 {% if is_admin and profiler_request_id -%}<link rel="stylesheet" type="text/css" href="/gae_mini_profiler/static/css/profiler.css" />{%- endif %}
@@ -119,7 +120,7 @@
       </div>
 
       <footer>
-        <p>{% block footer %}{% if footer is defined %}{{ footer }}{% else %}made with gaetk{% endif %}{% endblock %}</p>
+        {% block footer %}{% if footer is defined %}{{ footer }}{% else %}made with gaetk{% endif %}{% endblock %}
       </footer>
     {%- endblock %}
     </div> <!-- /container -->
