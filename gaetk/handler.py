@@ -141,7 +141,7 @@ def create_credential_from_federated_login(user, apps_domain):
         email=user.email(),
         text="Automatically created via OpenID Provider %s" % user.federated_provider(),
         # for accounts created via Google Apps domains we default to admin permissions
-        admin=True)
+        admin=False)
     return credential
 
 
@@ -213,8 +213,9 @@ class BasicHandler(webapp2.RequestHandler):
             # Attention: the order of these statements matter, because query.cursor() is used later.
             # If the order is reversed, the client gets a cursor to the query to test for more objects,
             # not a cursor to the actual objects
-            more_objects = query.fetch(1, start + limit + 1) != []
             objects = query.fetch(limit, start)
+            cursor = query.cursor()
+            more_objects = query.with_cursor(cursor).fetch(1) != []
 
         prev_objects = (start > 0) or self.request.get('cursor')
         prev_start = max(start - limit - 1, 0)
@@ -530,7 +531,7 @@ class BasicHandler(webapp2.RequestHandler):
                         self.session['uid'] = credential.uid
                         self.session['email'] = credential.email
                         self.logintype = 'HTTP'
-                        logging.info("HTTP-Login from %s/%s", uid, self.request.remote_addr)
+                        # logging.info("HTTP-Login from %s/%s", uid, self.request.remote_addr)
                     else:
                         logging.error("failed HTTP-Login from %s/%s %s", uid, self.request.remote_addr,
                                        self.request.headers.get('Authorization'))
