@@ -52,11 +52,12 @@ def get_config(key, default=None):
 
     if key in CONFIG_CACHE:
         if CONFIG_CACHE.get(key[0]) > time.time() + 10:
-            return CONFIG_CACHE.get(json.loads(key[1]))
+            return CONFIG_CACHE.get(key)[1]
 
     obj = Configuration.get_by_key_name(key)
     if obj:
-        CONFIG_CACHE[key] = (time.time(), obj.value)
+        CONFIG_CACHE[key] = (time.time(), json.loads(obj.value))
+        return CONFIG_CACHE.get(key)[1]
     else:
         return set_config(key, default)
 
@@ -66,7 +67,7 @@ def set_config(key, value):
 
     obj = Configuration.get_or_insert(key_name=key)
     obj.value = json.dumps(value)
-    CONFIG_CACHE[key] = (time.time(), obj.value)
+    CONFIG_CACHE[key] = (time.time(), value)
     obj.put()
     return value
 
