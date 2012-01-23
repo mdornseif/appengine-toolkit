@@ -45,6 +45,7 @@ CONFIG_CACHE = {}
 class Configuration(db.Model):
     """Generic configuration object"""
     value = db.StringProperty(default=u'')
+    updated_at = db.DateTimeProperty(auto_now_add=True, auto_now=True)
 
 
 def get_config(key, default=None):

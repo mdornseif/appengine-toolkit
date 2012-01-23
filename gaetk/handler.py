@@ -4,7 +4,7 @@
 handler.py - default Request Handler
 
 Created by Maximillian Dornseif on 2010-10-03.
-Copyright (c) 2010 HUDORA. All rights reserved.
+Copyright (c) 2010-2012 HUDORA. All rights reserved.
 """
 
 # pylint can't handle db.Model.get()
