@@ -49,7 +49,7 @@ class gaetk_LongTask(db.Model):
     parameters_blob = db.BlobProperty()
     result_blob = db.BlobProperty()
     status = db.StringProperty(required=True, default='ready',
-                               choices=['ready', 'started', 'error' 'done', 'finished'])
+                               choices=['ready', 'started', 'error', 'done', 'finished'])
     starttime = db.FloatProperty()  # Unix timestamp
     endtime = db.FloatProperty()  # Unix timestamp
     # When was the result last accessed
@@ -132,7 +132,7 @@ class LongRunningTaskHandler(gaetk.handler.BasicHandler):
 
         # Start a new task
         self.login_required()
-        paramters = self.prepare_task()
+        paramters = self.prepare_task(*args, **kwargs)
         task = gaetk_LongTask(parameters_blob=pickle.dumps(paramters), path=self.request.path, status='ready')
         task.put()
         logging.info("starting %s", task)
