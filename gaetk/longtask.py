@@ -61,6 +61,9 @@ class gaetk_LongTask(db.Model):
     created_at = db.DateTimeProperty(auto_now_add=True)
     created_by = db.UserProperty(required=False, auto_current_user_add=True)
 
+    def __repr__(self):
+        return '<LongTask status=%r>' % self.status
+
 
 class LongRunningTaskHandler(gaetk.handler.BasicHandler):
     """Handles Tasks which need to be computed offline.
@@ -219,6 +222,11 @@ class LongRunningTaskHandler(gaetk.handler.BasicHandler):
         parameters = pickle.loads(task.parameters_blob)
         try:
             result = self.execute_task(parameters)
+            task = gaetk_LongTask.get(self.request.get('_longtaskid'))
+            task.result_blob = pickle.dumps(result)
+            task.status = 'done'
+            task.endtime = time.time()
+            task.put()
         except Exception, msg:
             # If an exception occured, note htat in the Datastore an re raise an error.
             # We could probably add one day some fancy error logging.
@@ -228,15 +236,10 @@ class LongRunningTaskHandler(gaetk.handler.BasicHandler):
             task.put()
             raise
 
-        task = gaetk_LongTask.get(self.request.get('_longtaskid'))
-        task.result_blob = pickle.dumps(result)
-        task.status = 'done'
-        task.endtime = time.time()
-        task.put()
         logging.info("finishing %s", task)
 
     def prepare_task(self):
-        """Prepares a task to be startet. Returnes a Dict of Data to be given to the Task."""
+        """Prepares a task to be started. Returnes a Dict of Data to be given to the Task."""
         # move all HTTP-parameters not starting with `_` in the parameters dict.
         # This dict will be used to call `execute_task()`.
         # Overwreite `prepare_task()` if you need fancier preprocessing.
