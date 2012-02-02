@@ -47,6 +47,7 @@ from webob.exc import HTTPConflict as HTTP409_Conflict
 from webob.exc import HTTPForbidden as HTTP403_Forbidden
 from webob.exc import HTTPFound as HTTP302_Found
 from webob.exc import HTTPGone as HTTP410_Gone
+from webob.exc import HTTPMethodNotAllowed as HTTP405_HTTPMethodNotAllowed
 from webob.exc import HTTPMovedPermanently as HTTP301_Moved
 from webob.exc import HTTPNotAcceptable as HTTP406_NotAcceptable
 from webob.exc import HTTPNotFound as HTTP404_NotFound
