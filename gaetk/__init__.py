@@ -8,6 +8,6 @@ Copyright (c) 2010 HUDORA. All rights reserved.
 """
 
 try:
-    import mywebapp2 as webapp2  # on AppEngine python27
+    import webapp2  # on AppEngine python27
 except ImportError:
-    from gaetk import webapp2
+    import mywebapp2 as webapp2  # on AppEngine python25
