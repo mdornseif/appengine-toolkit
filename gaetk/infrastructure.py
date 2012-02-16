@@ -4,7 +4,7 @@
 infrastructure.py
 
 Created by Maximillian Dornseif on 2011-01-07.
-Copyright (c) 2011 HUDORA. All rights reserved.
+Copyright (c) 2011, 2012 HUDORA. All rights reserved.
 """
 
 from google.appengine.api import taskqueue
@@ -52,3 +52,17 @@ def taskqueue_add_multi_payload(name, url, payloadlist, **kwargs):
     if tasks:
         taskqueue.Queue(name=name).add(tasks)
     logging.debug(u'%d tasks queued to %s', len(payloadlist), url)
+
+
+def query_iterator(query, limit=50):
+    """Iterates over a datastore query while avoiding timeouts via a cursor."""
+    cursor = None
+    while True:
+        if cursor:
+            query.with_cursor(cursor)
+        bucket = query.fetch(limit=limit)
+        if not bucket:
+            break
+        for entity in bucket:
+            yield entity
+        cursor = query.cursor()

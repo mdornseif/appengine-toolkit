@@ -4,7 +4,7 @@
 handler.py - default Request Handler
 
 Created by Maximillian Dornseif on 2010-10-03.
-Copyright (c) 2010 HUDORA. All rights reserved.
+Copyright (c) 2010-2012 HUDORA. All rights reserved.
 """
 
 # pylint can't handle db.Model.get()
@@ -47,6 +47,7 @@ from webob.exc import HTTPConflict as HTTP409_Conflict
 from webob.exc import HTTPForbidden as HTTP403_Forbidden
 from webob.exc import HTTPFound as HTTP302_Found
 from webob.exc import HTTPGone as HTTP410_Gone
+from webob.exc import HTTPMethodNotAllowed as HTTP405_HTTPMethodNotAllowed
 from webob.exc import HTTPMovedPermanently as HTTP301_Moved
 from webob.exc import HTTPNotAcceptable as HTTP406_NotAcceptable
 from webob.exc import HTTPNotFound as HTTP404_NotFound
@@ -141,7 +142,7 @@ def create_credential_from_federated_login(user, apps_domain):
         email=user.email(),
         text="Automatically created via OpenID Provider %s" % user.federated_provider(),
         # for accounts created via Google Apps domains we default to admin permissions
-        admin=True)
+        admin=False)
     return credential
 
 
@@ -213,8 +214,9 @@ class BasicHandler(webapp2.RequestHandler):
             # Attention: the order of these statements matter, because query.cursor() is used later.
             # If the order is reversed, the client gets a cursor to the query to test for more objects,
             # not a cursor to the actual objects
-            more_objects = query.fetch(1, start + limit + 1) != []
             objects = query.fetch(limit, start)
+            cursor = query.cursor()
+            more_objects = query.with_cursor(cursor).fetch(1) != []
 
         prev_objects = (start > 0) or self.request.get('cursor')
         prev_start = max(start - limit - 1, 0)
@@ -258,17 +260,8 @@ class BasicHandler(webapp2.RequestHandler):
         values.update({'is_admin': self.is_admin()})
         if self.is_admin():
             # for admin requests we import and activate the profiler
-            import gae_mini_profiler.middleware
             values.update({'credential': self.credential,
                            'is_admin': self.is_admin()})
-            try:
-                values.update({'profiler_request_id': gae_mini_profiler.middleware._tls.request_id})
-            except AttributeError, msg:
-                # We see a lot of
-                # AttributeError: 'thread._local' object has no attribute 'request_id'
-                # that is bad but should not keep us from rendering
-                # usually happens during coockieless HTTP-Auth
-                logging.info(msg)
         return values
 
     def create_jinja2env(self, extensions=()):
@@ -539,7 +532,7 @@ class BasicHandler(webapp2.RequestHandler):
                         self.session['uid'] = credential.uid
                         self.session['email'] = credential.email
                         self.logintype = 'HTTP'
-                        logging.info("HTTP-Login from %s/%s", uid, self.request.remote_addr)
+                        # logging.info("HTTP-Login from %s/%s", uid, self.request.remote_addr)
                     else:
                         logging.error("failed HTTP-Login from %s/%s %s", uid, self.request.remote_addr,
                                        self.request.headers.get('Authorization'))
@@ -655,7 +648,8 @@ class JsonResponseHandler(BasicHandler):
 
     def serialize(self, content):
         import huTools.hujson
-        return huTools.hujson.dumps(content, sort_keys=True, indent=1)
+        return huTools.hujson.dumps(content)
+        # return huTools.hujson.dumps(content, sort_keys=True, indent=1)
 
     def dispatch(self):
         """Dispatches the requested method."""

@@ -49,7 +49,7 @@ class gaetk_LongTask(db.Model):
     parameters_blob = db.BlobProperty()
     result_blob = db.BlobProperty()
     status = db.StringProperty(required=True, default='ready',
-                               choices=['ready', 'started', 'error' 'done', 'finished'])
+                               choices=['ready', 'started', 'error', 'done', 'finished'])
     starttime = db.FloatProperty()  # Unix timestamp
     endtime = db.FloatProperty()  # Unix timestamp
     # When was the result last accessed
@@ -60,6 +60,9 @@ class gaetk_LongTask(db.Model):
     updated_by = db.UserProperty(required=False, auto_current_user=True)
     created_at = db.DateTimeProperty(auto_now_add=True)
     created_by = db.UserProperty(required=False, auto_current_user_add=True)
+
+    def __repr__(self):
+        return '<LongTask status=%r>' % self.status
 
 
 class LongRunningTaskHandler(gaetk.handler.BasicHandler):
@@ -132,7 +135,7 @@ class LongRunningTaskHandler(gaetk.handler.BasicHandler):
 
         # Start a new task
         self.login_required()
-        paramters = self.prepare_task()
+        paramters = self.prepare_task(*args, **kwargs)
         task = gaetk_LongTask(parameters_blob=pickle.dumps(paramters), path=self.request.path, status='ready')
         task.put()
         logging.info("starting %s", task)
@@ -219,6 +222,11 @@ class LongRunningTaskHandler(gaetk.handler.BasicHandler):
         parameters = pickle.loads(task.parameters_blob)
         try:
             result = self.execute_task(parameters)
+            task = gaetk_LongTask.get(self.request.get('_longtaskid'))
+            task.result_blob = pickle.dumps(result)
+            task.status = 'done'
+            task.endtime = time.time()
+            task.put()
         except Exception, msg:
             # If an exception occured, note htat in the Datastore an re raise an error.
             # We could probably add one day some fancy error logging.
@@ -228,15 +236,10 @@ class LongRunningTaskHandler(gaetk.handler.BasicHandler):
             task.put()
             raise
 
-        task = gaetk_LongTask.get(self.request.get('_longtaskid'))
-        task.result_blob = pickle.dumps(result)
-        task.status = 'done'
-        task.endtime = time.time()
-        task.put()
         logging.info("finishing %s", task)
 
     def prepare_task(self):
-        """Prepares a task to be startet. Returnes a Dict of Data to be given to the Task."""
+        """Prepares a task to be started. Returnes a Dict of Data to be given to the Task."""
         # move all HTTP-parameters not starting with `_` in the parameters dict.
         # This dict will be used to call `execute_task()`.
         # Overwreite `prepare_task()` if you need fancier preprocessing.
