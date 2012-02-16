@@ -654,6 +654,7 @@ class JsonResponseHandler(BasicHandler):
     default_cachingtime = 60
 
     def serialize(self, content):
+        import huTools.hujson
         return huTools.hujson.dumps(content, sort_keys=True, indent=1)
 
     def dispatch(self):
