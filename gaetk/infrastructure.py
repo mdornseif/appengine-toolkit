@@ -25,7 +25,7 @@ def taskqueue_add_multi(qname, url, paramlist, **kwargs):
     for params in paramlist:
         tasks.append(taskqueue.Task(url=url, params=params, **kwargs))
         # Batch Addition to Taskqueue
-        if len(tasks) >= 100:
+        if len(tasks) >= 50:
             taskqueue.Queue(name=qname).add(tasks)
             tasks = []
     if tasks:
@@ -46,7 +46,7 @@ def taskqueue_add_multi_payload(name, url, payloadlist, **kwargs):
         payload = zlib.compress(payload)
         tasks.append(taskqueue.Task(url=url, payload=payload, **kwargs))
         # Patch Addition to Taskqueue
-        if len(tasks) >= 100:
+        if len(tasks) >= 50:
             taskqueue.Queue(name=name).add(tasks)
             tasks = []
     if tasks:

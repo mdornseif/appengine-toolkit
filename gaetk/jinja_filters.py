@@ -25,7 +25,7 @@ def nicenum(value, spacer='&#8239;'):
     default spacer is NARROW NO-BREAK SPACE U+202F
     probably `style="white-space:nowrap; word-spacing:0.5em;"` would be an CSS based alternative.
     """
-    if not value and value != 0:
+    if not (value and value != 0):
         return ''
     rev_value = ("%d" % int(value))[::-1]
     value = spacer.join(reversed([rev_value[i:i + 3][::-1] for i in range(0, len(rev_value), 3)]))
