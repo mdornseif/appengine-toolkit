@@ -588,6 +588,11 @@ class BasicHandler(webapp2.RequestHandler):
         """Function to allow implementing authentication for all subclasses. To be overwritten."""
         pass
 
+    def finished_hook(self, ret, method, *args, **kwargs):
+        """Function to allow logging etc. To be overwritten."""
+        # not called when exceptions are raised
+        pass
+
     def dispatch(self):
         """Dispatches the requested method."""
         request = self.request
@@ -616,7 +621,9 @@ class BasicHandler(webapp2.RequestHandler):
         # Give authentication Hooks opportunity to do their thing
         self.authchecker(method, *args, **kwargs)
 
-        return method(*args, **kwargs)
+        ret = method(*args, **kwargs)
+        self.finished_hook(ret, method, *args, **kwargs)
+        return ret
 
     def add_message(self, typ, html, ttl=15):
         """Sets a user specified message to be displayed to the currently logged in user.
