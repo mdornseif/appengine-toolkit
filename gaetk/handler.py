@@ -155,6 +155,10 @@ class BasicHandler(webapp2.RequestHandler):
     * `self.login_required(()` and `self.is_admin()` for Authentication
     * `self.authchecker()` to be overwritten to fully customize authentication
     """
+
+    # disable session based authentication on demand
+    enableSessionAuth = True
+
     def __init__(self, *args, **kwargs):
         """Initialize RequestHandler"""
         super(BasicHandler, self).__init__(*args, **kwargs)
@@ -477,7 +481,7 @@ class BasicHandler(webapp2.RequestHandler):
             else:
                 apps_domain = user.federated_provider().split('/')[4].lower()
             username = user.email() or user.nickname()
-            
+
             self.credential = Credential.get_by_key_name(username)
             if not self.credential or not self.credential.uid == username:
                 # So far we have no Credential entity for that user, create one
@@ -490,7 +494,7 @@ class BasicHandler(webapp2.RequestHandler):
             self.response.set_cookie('gaetkopid', apps_domain, max_age=7776000)
 
         # try if we have a session based login
-        if self.session.get('uid'):
+        if self.enableSessionAuth and self.session.get('uid'):
             # we salt the cache object with the current app version, so data-migrations gets easier
             cachekey = "%s_gaetk_cred_%s" % (os.environ.get('CURRENT_VERSION_ID', '?'), self.session['uid'])
             try:
@@ -505,7 +509,9 @@ class BasicHandler(webapp2.RequestHandler):
             if self.credential is None:
                 self.credential = Credential.get_by_key_name(self.session['uid'])
                 if self.credential:
-                    memcache.set(cachekey, db.model_to_protobuf(self.credential).Encode(), CREDENTIAL_CACHE_TIMEOUT)
+                    memcache.set(cachekey,
+                                 db.model_to_protobuf(self.credential).Encode(),
+                                 CREDENTIAL_CACHE_TIMEOUT)
                 self.logintype = 'session'
 
         if not self.credential:
@@ -550,7 +556,9 @@ class BasicHandler(webapp2.RequestHandler):
             else:
                 # Login not successful
                 if ('text/' in self.request.headers.get('Accept', '')
-                    or 'image/' in self.request.headers.get('Accept', '')):
+                    or 'image/' in self.request.headers.get('Accept', '')
+                    or self.request.is_xhr
+                    or (self.request.referer is not None)):
                     # we assume the request came via a browser - redirect to the "nice" login page
                     self.response.set_status(302)
                     absolute_url = self.abs_url("/_ah/login_required?continue=%s"
