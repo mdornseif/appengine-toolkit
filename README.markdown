@@ -19,9 +19,7 @@ Features:
 * Sequence generation
 * Internal Memcache and Datastore Statistics (e.g. for graphing with munin)
 * intelligent handler for `robot.txt` and auditing of which version is deployed.
-* Handling of Long running tasks  with minimal effort
 * efficient caching of entities (TO BE MERGED)
-* profiler based on `gae_mini_profiler` (TO BE MERGED)
 * Django-Like Admin interface (TO BE MERGED)
 * un-deletion of deleted entities (TO BE MERGED)
 * Message Framework (TO BE MERGED)
@@ -29,6 +27,12 @@ Features:
 * mini CMS like [Django flatpages][6] (TO BE MERGED)
 * in place editing (TO BE MERGED)
 * Generic Configuration objects
+
+### Now distributed seperately
+* Handling of Long running tasks with minimal effort via [`gaetk_longtask`](https://github.com/mdornseif/gaetk_longtask)
+* Profiling with [`gae_mini_profiler`](https://github.com/kamens/gae_mini_profiler)
+* Nice Error-Reports with [`my_ereporter`](https://github.com/mdornseif/my_ereporter)
+* Syncronisation with MySQL via [`approcket_industrial`](https://github.com/mdornseif/approcket_industrial) 
 
 
 Creating a Project / getting started
@@ -177,17 +181,6 @@ gaetk has some authentication functionality which is described in a chapter belo
         def authcecker(self, method, *args, **kwargs):
             self.login_required()
 
-### Profiler
-
-The handler automatically includes [gae_mini_profiler][6] and enables profiling for admin users. If your templates `{% extends "base_admin.html" %}` the profile results are automatically displayed. Eg.
-
-    {% extends "base_admin.html" %}
-    {% block content %}
-        <p>Super-fast page!</p>
-    {% endblock content %}
-
-![Profile data in Web-Page](http://static.23.nu/md/Pictures/ZZ5F480EE9.png)
-
 
 ### Messages
 
@@ -252,24 +245,6 @@ Now in your views/handlers you can easyly force authentication like this:
 Unless you call `login_required(deny_localhost=False)` access from localhost is always considered authenticated.
 
 
-Long running tasks
-==================
-
-Many things take longer than a user is willing to wait. AppEngine with it's request deadline of 10s (later liftet to 30s and then to 60s) is also not willing to wait very long. `longtask.py` encapsulates a pattern to do the actual work in a taskqueue while providing users with updates (and finally the results) via self reloading webpages.
-It is currently experimental and limited to tasks running not more than 10 minutes.
-
-    class myTask(gaetk.longtask.LongRunningTaskHandler):
-        def execute_task(self, parameters):
-            self.log_progress("Starting", step=0, total_steps=5):
-            time.sleep(15)
-            for x in range(5):
-                self.log_progress("Step %d" % (x + 1), step=(x + 1), total_steps=5)
-                time.sleep(15)
-            return "<html><body>Done!</body></html>"
-
-Thats basically all you need.
-
-
 Sequence generation
 ===================
 
@@ -301,7 +276,7 @@ Add the following lines to your `app.yaml`:
 
 
 
-This will make [bootstrap][5] available at `/gaetk/static/bootstrap/1.3.0/`
+This will make [bootstrap][5] available at `/gaetk/static/bootstrap/1.4.x/`
 
 
 It will also allow you to get JSON encoded statistics at `/gaetk/stats.json`:

@@ -1,19 +1,26 @@
 application: example
 version: dev
-runtime: python
+runtime: python27
 api_version: 1
 default_expiration: "6d"
 
 builtins:
 - remote_api: off
-- datastore_admin: on
 - appstats: on
 - deferred: on
 
 handlers:
-- url: /mapreduce(/.*)?
-  script: mapreduce/main.py
-  login: admin
+- url: /gaetk/static
+  static_dir: lib/appengine-toolkit/static
+
+- url: /gaetk/.*
+  script: lib/appengine-toolkit/gaetk/defaulthandlers.py
+
+- url: /robots.txt
+  script: lib/appengine-toolkit/gaetk/defaulthandlers.py
+
+- url: /version.txt
+  script: lib/appengine-toolkit/gaetk/defaulthandlers.py
 
 - url: /favicon\.ico
   static_files: static/favicon.ico
@@ -23,30 +30,10 @@ handlers:
   static_dir: static
 
 - url: /_ah/login_required
-  script: lib/gaetk/gaetk/login.py
+  script: lib/appengine-toolkit/gaetk/login.py
 
 - url: /logout
-  script: lib/gaetk/gaetk/login.py
-
-- url: /gaetk/static
-  static_dir: lib/appengine-toolkit/static
-  
-- url: /gae_mini_profiler/static
-  static_dir: lib/appengine-toolkit/gaetk/gae_mini_profiler/static
-  secure: never
-
-- url: /gae_mini_profiler/.*
-  script: lib/appengine-toolkit/gaetk/gae_mini_profiler/main.py
-  secure: never
-
-- url: /gaetk/.*
-  script: lib/gaetk/gaetk/defaulthandlers.py
-
-- url: /robots.txt
-  script: lib/gaetk/gaetk/defaulthandlers.py
-
-- url: /version.txt
-  script: lib/gaetk/gaetk/defaulthandlers.py
+  script: lib/appengine-toolkit/gaetk/login.py
 
 - url: .*
   script: main.py

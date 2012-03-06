@@ -12,12 +12,12 @@ Copyright (c) 2010-2012 HUDORA. All rights reserved.
 # pylint can't handle google.appengine.api.memcache
 # pylint: disable=E1101
 
-import config
-config.imported = True
+
 
 try:
+    import config
     LOGIN_ALLOWED_DOMAINS = config.LOGIN_ALLOWED_DOMAINS
-except AttributeError:
+except (AttributeError, NameError, ImportError):
     LOGIN_ALLOWED_DOMAINS = []
 
 import base64
@@ -67,10 +67,10 @@ warnings.filterwarnings('ignore',
     'decode_param_names is deprecated and will not be supported starting with WebOb 1.2')
 
 # to mark the exception as being used
-config.dummy = [HTTP301_Moved, HTTP302_Found, HTTP303_SeeOther, HTTP307_TemporaryRedirect,
-                HTTP400_BadRequest, HTTP403_Forbidden, HTTP404_NotFound, HTTP413_TooLarge,
-                HTTP406_NotAcceptable, HTTP409_Conflict, HTTP410_Gone, HTTP415_UnsupportedMediaType,
-                HTTP501_NotImplemented, HTTP503_ServiceUnavailable]
+_dummy = [HTTP301_Moved, HTTP302_Found, HTTP303_SeeOther, HTTP307_TemporaryRedirect,
+          HTTP400_BadRequest, HTTP403_Forbidden, HTTP404_NotFound, HTTP413_TooLarge,
+          HTTP406_NotAcceptable, HTTP409_Conflict, HTTP410_Gone, HTTP415_UnsupportedMediaType,
+          HTTP501_NotImplemented, HTTP503_ServiceUnavailable]
 
 
 CREDENTIAL_CACHE_TIMEOUT = 300

@@ -20,7 +20,7 @@ from modules.planet.p_models import PlanetFeed, PlanetEntry
 
 
 class Homepage(gaetk.handler.BasicHandler):
-    """Strt/Übersichtsseite"""
+    """Startpage"""
 
     def get(self):
         """No parameters are accepted."""
