@@ -24,13 +24,12 @@ config.imported = True
 
 import logging
 
+import gaetk
 import huTools.hujson
 from gaetk.handler import Credential, create_credential_from_federated_login
-from gaetk import webapp2
 from gaetk.gaesessions import get_current_session
 from gaetk.handler import BasicHandler
 from google.appengine.api import users
-from google.appengine.ext.webapp import util
 
 
 try:
@@ -199,14 +198,14 @@ class LogoutHandler(OpenIdLoginHandler):
                 self.render({}, 'logout.html')
 
 
-application = webapp2.WSGIApplication([('.*/logout', LogoutHandler),
-                                    ('.*', OpenIdLoginHandler),
-                                   ])
+application = gaetk.webapp2.WSGIApplication([('.*/logout', LogoutHandler),
+                                             ('.*', OpenIdLoginHandler),
+                                            ])
 
 
 def main():
     """WSGI Main Entry Point"""
-    util.run_wsgi_app(application)
+    app.run()
 
 
 if __name__ == '__main__':
