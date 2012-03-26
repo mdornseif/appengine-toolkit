@@ -209,6 +209,11 @@ class BasicHandler(webapp2.RequestHandler):
         start = self.request.get_range('start', min_value=0, max_value=10000, default=0)
         limit = self.request.get_range('limit', min_value=1, max_value=1000, default=defaultcount)
 
+        total = None
+        if calctotal:
+            # We count up to maximum of 10000. Counting in a somewhat expensive operation on AppEngine
+            total = query.count(10000)
+
         if self.request.get('cursor'):
             query.with_cursor(self.request.get('cursor'))
             objects = query.fetch(limit)
@@ -228,7 +233,8 @@ class BasicHandler(webapp2.RequestHandler):
         clean_qs = dict([(k, self.request.get(k)) for k in self.request.arguments()
                          if k not in ['start', 'cursor', 'cursor_start']])
         ret = dict(more_objects=more_objects, prev_objects=prev_objects,
-                   prev_start=prev_start, next_start=next_start)
+                   prev_start=prev_start, next_start=next_start,
+                   total=total)
         if more_objects:
             ret['cursor'] = query.cursor()
             ret['cursor_start'] = start + limit
@@ -241,9 +247,6 @@ class BasicHandler(webapp2.RequestHandler):
             qs = dict(start=ret['prev_start'])
             qs.update(clean_qs)
             ret['prev_qs'] = urllib.urlencode(qs)
-        if calctotal:
-            # We count up to maximum of 10000. Counting in a somewhat expensive operation on AppEngine
-            ret['total'] = query.count(10000)
         if formatter:
             ret[datanodename] = [formatter(x) for x in objects]
         else:
