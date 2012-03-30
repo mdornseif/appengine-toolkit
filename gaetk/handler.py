@@ -561,7 +561,7 @@ class BasicHandler(webapp2.RequestHandler):
                 if ('text/' in self.request.headers.get('Accept', '')
                     or 'image/' in self.request.headers.get('Accept', '')
                     or self.request.is_xhr
-                    or (self.request.referer is not None)):
+                    or self.request.referer):
                     # we assume the request came via a browser - redirect to the "nice" login page
                     self.response.set_status(302)
                     absolute_url = self.abs_url("/_ah/login_required?continue=%s"
