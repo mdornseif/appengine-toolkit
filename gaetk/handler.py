@@ -155,6 +155,10 @@ class BasicHandler(webapp2.RequestHandler):
     * `self.login_required(()` and `self.is_admin()` for Authentication
     * `self.authchecker()` to be overwritten to fully customize authentication
     """
+
+    # disable session based authentication on demand
+    enableSessionAuth = True
+
     def __init__(self, *args, **kwargs):
         """Initialize RequestHandler"""
         super(BasicHandler, self).__init__(*args, **kwargs)
@@ -205,6 +209,11 @@ class BasicHandler(webapp2.RequestHandler):
         start = self.request.get_range('start', min_value=0, max_value=10000, default=0)
         limit = self.request.get_range('limit', min_value=1, max_value=1000, default=defaultcount)
 
+        total = None
+        if calctotal:
+            # We count up to maximum of 10000. Counting in a somewhat expensive operation on AppEngine
+            total = query.count(10000)
+
         if self.request.get('cursor'):
             query.with_cursor(self.request.get('cursor'))
             objects = query.fetch(limit)
@@ -224,7 +233,8 @@ class BasicHandler(webapp2.RequestHandler):
         clean_qs = dict([(k, self.request.get(k)) for k in self.request.arguments()
                          if k not in ['start', 'cursor', 'cursor_start']])
         ret = dict(more_objects=more_objects, prev_objects=prev_objects,
-                   prev_start=prev_start, next_start=next_start)
+                   prev_start=prev_start, next_start=next_start,
+                   total=total)
         if more_objects:
             ret['cursor'] = query.cursor()
             ret['cursor_start'] = start + limit
@@ -237,9 +247,6 @@ class BasicHandler(webapp2.RequestHandler):
             qs = dict(start=ret['prev_start'])
             qs.update(clean_qs)
             ret['prev_qs'] = urllib.urlencode(qs)
-        if calctotal:
-            # We count up to maximum of 10000. Counting in a somewhat expensive operation on AppEngine
-            ret['total'] = query.count(10000)
         if formatter:
             ret[datanodename] = [formatter(x) for x in objects]
         else:
@@ -477,7 +484,7 @@ class BasicHandler(webapp2.RequestHandler):
             else:
                 apps_domain = user.federated_provider().split('/')[4].lower()
             username = user.email() or user.nickname()
-            
+
             self.credential = Credential.get_by_key_name(username)
             if not self.credential or not self.credential.uid == username:
                 # So far we have no Credential entity for that user, create one
@@ -490,7 +497,7 @@ class BasicHandler(webapp2.RequestHandler):
             self.response.set_cookie('gaetkopid', apps_domain, max_age=7776000)
 
         # try if we have a session based login
-        if self.session.get('uid'):
+        if self.enableSessionAuth and self.session.get('uid'):
             # we salt the cache object with the current app version, so data-migrations gets easier
             cachekey = "%s_gaetk_cred_%s" % (os.environ.get('CURRENT_VERSION_ID', '?'), self.session['uid'])
             try:
@@ -505,7 +512,9 @@ class BasicHandler(webapp2.RequestHandler):
             if self.credential is None:
                 self.credential = Credential.get_by_key_name(self.session['uid'])
                 if self.credential:
-                    memcache.set(cachekey, db.model_to_protobuf(self.credential).Encode(), CREDENTIAL_CACHE_TIMEOUT)
+                    memcache.set(cachekey,
+                                 db.model_to_protobuf(self.credential).Encode(),
+                                 CREDENTIAL_CACHE_TIMEOUT)
                 self.logintype = 'session'
 
         if not self.credential:
@@ -550,7 +559,9 @@ class BasicHandler(webapp2.RequestHandler):
             else:
                 # Login not successful
                 if ('text/' in self.request.headers.get('Accept', '')
-                    or 'image/' in self.request.headers.get('Accept', '')):
+                    or 'image/' in self.request.headers.get('Accept', '')
+                    or self.request.is_xhr
+                    or self.request.referer):
                     # we assume the request came via a browser - redirect to the "nice" login page
                     self.response.set_status(302)
                     absolute_url = self.abs_url("/_ah/login_required?continue=%s"
@@ -588,6 +599,11 @@ class BasicHandler(webapp2.RequestHandler):
         """Function to allow implementing authentication for all subclasses. To be overwritten."""
         pass
 
+    def finished_hook(self, ret, method, *args, **kwargs):
+        """Function to allow logging etc. To be overwritten."""
+        # not called when exceptions are raised
+        pass
+
     def dispatch(self):
         """Dispatches the requested method."""
         request = self.request
@@ -616,7 +632,9 @@ class BasicHandler(webapp2.RequestHandler):
         # Give authentication Hooks opportunity to do their thing
         self.authchecker(method, *args, **kwargs)
 
-        return method(*args, **kwargs)
+        ret = method(*args, **kwargs)
+        self.finished_hook(ret, method, *args, **kwargs)
+        return ret
 
     def add_message(self, typ, html, ttl=15):
         """Sets a user specified message to be displayed to the currently logged in user.
