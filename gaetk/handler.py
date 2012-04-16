@@ -18,6 +18,7 @@ try:
     import config
     LOGIN_ALLOWED_DOMAINS = config.LOGIN_ALLOWED_DOMAINS
 except (AttributeError, NameError, ImportError):
+    config = object()
     LOGIN_ALLOWED_DOMAINS = []
 
 import base64
@@ -300,7 +301,13 @@ class BasicHandler(webapp2.RequestHandler):
         # TypeError: unhashable type: 'list'
         key = tuple(extensions)
         if not key in _jinja_env_cache:
-            env = jinja2.Environment(loader=jinja2.FileSystemLoader(config.template_dirs),
+            # Wenn es ein `config` Modul gibt, verwenden wir es, wenn nicht haben wir ein default.
+            try:
+                template_dirs = config.template_dirs
+            except AttributeError:
+                template_dirs = ['./templates']
+
+            env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dirs),
                                      extensions=extensions,
                                      auto_reload=True,  # do check if the source changed
                                      trim_blocks=True,  # first newline after a block is removed
@@ -626,7 +633,11 @@ class BasicHandler(webapp2.RequestHandler):
             args = ()
 
         # bind session on dispatch (not in __init__)
-        self.session = get_current_session()
+        try:
+            self.session = get_current_session()
+        except AttributeError:
+            # session handling not activated
+            self.session = {}
         # init messages array based on session
         self.session['_gaetk_messages'] = self.session.get('_gaetk_messages', [])
         # Give authentication Hooks opportunity to do their thing
