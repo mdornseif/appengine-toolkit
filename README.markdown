@@ -317,7 +317,7 @@ It will also allow you to get JSON encoded statistics at `/gaetk/stats.json`:
                   "misses": 50674,
                   "byte_hits": 833839440}}
 
-You might want to use Munin to graph these values.
+You might want to use Munin to graph these values. In addition the statistics are stored in the Datastore as `gaetk_Stats for later inspection.
 
 `RobotTxtHandler` allows serving a robots.txt file that disables crawler access to all app versions except the default version.
 

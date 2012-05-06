@@ -16,12 +16,26 @@ import google.appengine.api.memcache
 import gaetk
 import gaetk.handler
 from django.utils import simplejson
+from google.appengine.ext import db
 from google.appengine.ext.db import stats
 
 
 # you can add to plugins to extend the stat handler
 # e.g. plugins['rueckmeldungen'] = Rueckmeldung.all().count()
 plugins = {}
+
+
+class gaetk_Stats(db.Expando):
+    """Stores some Statistics about AppEngine"""
+    d_count = db.IntegerProperty(indexed=False)
+    d_bytes = db.IntegerProperty(indexed=False)
+    m_count = db.IntegerProperty(indexed=False)
+    m_bytes = db.IntegerProperty(indexed=False)
+    m_hits = db.IntegerProperty(indexed=False)
+    m_hits_bytes = db.IntegerProperty(indexed=False)
+    m_misses = db.IntegerProperty(indexed=False)
+    m_oldest_item_age = db.IntegerProperty(indexed=False)
+    created_at = db.DateTimeProperty(auto_now_add=True)
 
 
 class Stats(gaetk.handler.BasicHandler):
@@ -38,7 +52,6 @@ class Stats(gaetk.handler.BasicHandler):
     #               "byte_hits": 176865465}
     # }
     def get(self):
-
         # memcache statistics are straightforward
         ret = dict(memcache=google.appengine.api.memcache.get_stats())
 
@@ -59,7 +72,34 @@ class Stats(gaetk.handler.BasicHandler):
 
         for name, func in plugins.items():
             ret[name] = func()
-
+        # Example Data:
+        #  ret = {'datastore': {'count': 526975L, 
+        #                       'timestamp': '2012-05-05 11:13:01', 
+        #                       'bytes': 9349778801L, 
+        #                       'kinds': {u'Credential': {'count': 11L, 'bytes': 39973L}, 
+        #                                 u'_AE_MR_ShardState': {'count': 8L, 'bytes': 9675L}, 
+        #                                 u'Akte': {'count': 167630L, 'bytes': 1212085803L}, 
+        #                                 u'StrConfig': {'count': 2L, 'bytes': 1096L}, 
+        #                                 u'Dokument': {'count': 179660L, 'bytes': 2134737862L}, 
+        #                                 u'DokumentFile': {'count': 179661L, 'bytes': 6002900376L}, 
+        #                                 u'DateTimeConfig': {'count': 2L, 'bytes': 1266L}, 
+        #                                 u'_AE_MR_MapreduceState': {'count': 1L, 'bytes': 2750L}}}, 
+        #         'memcache': {'hits': 5064L, 
+        #                      'items': 396L, 
+        #                      'bytes': 4049589L, 
+        #                      'oldest_item_age': 5409L, 
+        #                      'misses': 40L, 
+        #                      'byte_hits': 2665806L}}
+        gaetk_Stats(key_name=datetime.datetime.now().strftime('%Y-%m-%dT%H'),  # no minutes
+                    d_count=ret['datastore']['count'],
+                    d_bytes=ret['datastore']['bytes'],
+                    m_count=ret['memcache']['items'],
+                    m_bytes=ret['memcache']['bytes'],
+                    m_hits=ret['memcache']['hits'],
+                    m_hits_bytes=ret['memcache']['byte_hits'],
+                    m_misses=ret['memcache']['misses'],
+                    m_oldest_item_age=ret['memcache']['oldest_item_age'],
+                   ).put()
         self.response.headers['Content-Type'] = 'application/json'
         self.response.out.write(simplejson.dumps(ret))
 
