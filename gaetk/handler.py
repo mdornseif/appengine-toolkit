@@ -461,7 +461,7 @@ class BasicHandler(webapp2.RequestHandler):
             return False
         elif self.credential is None:
             return False
-        return self.credential.admin
+        return getattr(self.credential, 'admin', False)
 
     def login_required(self, deny_localhost=False):
         """Returns the currently logged in user and forces login.
