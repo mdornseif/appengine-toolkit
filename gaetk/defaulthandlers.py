@@ -178,7 +178,7 @@ class CredentialsHandler(gaetk.handler.BasicHandler):
             }
         """
         # Lazily import hujson to allow using the other classes in this module to be used without
-        # huTools beinin installed.
+        # huTools beinig installed.
         import huTools.hujson
 
         config = object()

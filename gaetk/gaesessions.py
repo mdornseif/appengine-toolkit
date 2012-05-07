@@ -5,7 +5,7 @@ import datetime
 import hashlib
 import hmac
 import logging
-import cPickle as pickle
+import pickle
 import os
 import threading
 import time
@@ -35,6 +35,9 @@ _tls = threading.local()
 
 def get_current_session():
     """Returns the session associated with the current request."""
+    if not hasattr(_tls, 'current_session'):
+        logging.debug('no current Session for this thread - your setup might be broken')
+        set_current_session(Session())
     return _tls.current_session
 
 
