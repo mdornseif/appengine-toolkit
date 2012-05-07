@@ -15,9 +15,13 @@ import google.appengine.api.memcache
 
 import gaetk
 import gaetk.handler
-from django.utils import simplejson
 from google.appengine.ext import db
 from google.appengine.ext.db import stats
+
+try:
+    import json
+except ImportError:
+    from django.utils import json
 
 
 # you can add to plugins to extend the stat handler
@@ -101,7 +105,7 @@ class Stats(gaetk.handler.BasicHandler):
                     m_oldest_item_age=ret['memcache']['oldest_item_age'],
                    ).put()
         self.response.headers['Content-Type'] = 'application/json'
-        self.response.out.write(simplejson.dumps(ret))
+        self.response.out.write(json.dumps(ret))
 
 
 class RobotTxtHandler(gaetk.handler.BasicHandler):
