@@ -25,6 +25,7 @@ import hashlib
 import logging
 import os
 import time
+import types
 import urllib
 import urlparse
 import uuid
@@ -602,7 +603,11 @@ class BasicHandler(webapp2.RequestHandler):
     def finished_hook(self, ret, method, *args, **kwargs):
         """Function to allow logging etc. To be overwritten."""
         # not called when exceptions are raised
-        pass
+
+        # simple sample implementation: check compliance for headers/wsgiref
+        for name, val in self.response.headers.items():
+            if not ((type(name) is types.StringType) and (type(val) is types.StringType)):
+                logging.error("Header names and values must be strings: {%r: %r}", name, val)
 
     def dispatch(self):
         """Dispatches the requested method."""
