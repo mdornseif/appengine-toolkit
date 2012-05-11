@@ -205,7 +205,7 @@ application = gaetk.webapp2.WSGIApplication([('.*/logout', LogoutHandler),
 
 def main():
     """WSGI Main Entry Point"""
-    app.run()
+    application.run()
 
 
 if __name__ == '__main__':
