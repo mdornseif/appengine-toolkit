@@ -165,7 +165,30 @@ class VersionHandler(gaetk.handler.BasicHandler):
 
 
 class CredentialsHandler(gaetk.handler.BasicHandler):
-    """Credentials - generate or update - Write only."""
+    """Credentials - generate or update"""
+
+    def get(self):
+        """Returns information about the credential"""
+
+        # Lazily import hujson to allow using the other classes in this module to be used without
+        # huTools beinin installed.
+        import huTools.hujson
+
+        email = self.request.get('email')
+
+        credential = gaetk.handler.Credential.get_by_key_name(email)
+        if credential is None:
+            raise gaetk.handler.HTTP404_NotFound
+
+        self.response.headers["Content-Type"] = "application/json"
+        self.response.out.write(huTools.hujson.dumps(dict(uid=credential.uid,
+                                                          admin=credential.admin, text=credential.text,
+                                                          tenant=credential.tenant, email=credential.email,
+                                                          permissions=credential.permissions,
+                                                          created_at=credential.created_at,
+                                                          updated_at=credential.updated_at)))
+        
+
     def post(self):
         """Use it like this
 
@@ -191,11 +214,19 @@ class CredentialsHandler(gaetk.handler.BasicHandler):
         if not self.credential.admin:
             gaetk.handler.HTTP403_Forbidden()
 
-        admin = self.request.get('admin', '').lower() == 'true'
-        text = self.request.get('text', '')
-        email = self.request.get('email')
-        tenant = self.request.get('tenant')
-        permissions = self.request.get('permissions', [])
+        # The data can be submitted either as a json encoded body or form encoded
+        if self.request.headers.get('Content-Type', '').startswith('application/json'):
+            data = huTools.hujson.loads(self.request.body)
+        else:
+            data = self.request
+
+        admin = str(data.get('admin', '')).lower() == 'true'
+        text = data.get('text', '')
+        email = data.get('email')
+        tenant = data.get('tenant')
+        permissions = data.get('permissions', '')
+        if isinstance(permissions, basestring):
+            permissions = permissions.split(',')
 
         credential = gaetk.handler.Credential.get_by_key_name(email)
         if credential:
@@ -205,7 +236,7 @@ class CredentialsHandler(gaetk.handler.BasicHandler):
             credential.tenant = tenant
             credential.email = email
             credential.permissions = []
-            for permission in permissions.split(','):
+            for permission in permissions:
                 if permission not in getattr(config, 'ALLOWED_PERMISSIONS', []):
                     raise gaetk.handler.HTTP400_BadRequest("invalid permission %r" % permission)
                 credential.permissions.append(permission)
