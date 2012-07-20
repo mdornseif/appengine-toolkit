@@ -167,6 +167,12 @@ class VersionHandler(gaetk.handler.BasicHandler):
 class CredentialsHandler(gaetk.handler.BasicHandler):
     """Credentials - generate or update"""
 
+    def authchecker(self, *args, **kwargs):
+        """Only admin users are allowed to access credentials"""
+        self.login_required()
+        if not self.credential.admin:
+            gaetk.handler.HTTP403_Forbidden()
+
     def get(self):
         """Returns information about the credential"""
 
@@ -188,7 +194,6 @@ class CredentialsHandler(gaetk.handler.BasicHandler):
                                                           created_at=credential.created_at,
                                                           updated_at=credential.updated_at)))
         
-
     def post(self):
         """Use it like this
 
@@ -209,10 +214,6 @@ class CredentialsHandler(gaetk.handler.BasicHandler):
             import config
         except ImportError:
             pass
-
-        self.login_required()
-        if not self.credential.admin:
-            gaetk.handler.HTTP403_Forbidden()
 
         # The data can be submitted either as a json encoded body or form encoded
         if self.request.headers.get('Content-Type', '').startswith('application/json'):
