@@ -628,7 +628,11 @@ class BasicHandler(webapp2.RequestHandler):
             # The response MUST include an Allow header containing a
             # list of valid methods for the requested resource.
             # http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.6
-            valid = ', '.join(webapp2._get_handler_methods(self))
+            methods = []
+            for method in ('GET', 'POST', 'HEAD', 'OPTIONS', 'PUT', 'DELETE', 'TRACE'):
+                if getattr(self, webapp2._normalize_handler_method(method), None):
+                    methods.append(method)
+            valid = ', '.join(methods)
             self.abort(405, headers=[('Allow', valid)])
 
         # The handler only receives *args if no named variables are set.
