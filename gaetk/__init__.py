@@ -12,7 +12,7 @@ try:
 except ImportError:
     import mywebapp2 as webapp2  # on AppEngine python25
 
-import configuratione
+import configuration
 import handler
 import infrastructure
 import tools
