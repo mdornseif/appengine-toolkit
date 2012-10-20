@@ -2,8 +2,10 @@
 # encoding: utf-8
 """
 jinja_filters.py - custom jinja2 filters
-Copyright (c) 2010 HUDORA. All rights reserved.
+Copyright (c) 2010, 2012 HUDORA. All rights reserved.
 """
+
+import json
 
 
 def left_justify(value, width):
@@ -52,9 +54,17 @@ def eurocent(value, spacer='&#8239;', decimalplaces=2):
     return '<span class="currency">%s.%s</span>' % (euro_value, cent_value)
 
 
+def to_json(value):
+    """Convert the given Value to JSON.
+
+    Very helpful to use in Javascript."""
+    return json.dumps(value)
+
+
 def register_custom_filters(jinjaenv):
     """Register the filters to the given Jinja environment."""
     jinjaenv.filters['ljustify'] = left_justify
     jinjaenv.filters['rjustify'] = right_justify
     jinjaenv.filters['nicenum'] = nicenum
     jinjaenv.filters['eurocent'] = eurocent
+    jinjaenv.filters['to_json'] = to_json
