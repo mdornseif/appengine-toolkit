@@ -12,8 +12,7 @@ import unittest
 
 from google.appengine.ext import db
 import unittest
-import gaetk.handler
-import gaetk.webapp2
+import gaetk
 from mock import Mock
 import webtest
 from huTools.hujson import loads
