@@ -444,7 +444,7 @@ class BasicHandler(webapp2.RequestHandler):
 
         if fmt not in ['html', 'json']:
             self.response.headers["Content-Disposition"] = \
-                                "%s; filename=%s.%s" % (disposition, filename, fmt)
+                                str("%s; filename=%s.%s" % (disposition, filename, fmt))
         # If we have gotten a `callback` parameter, we expect that this is a
         # [JSONP](http://en.wikipedia.org/wiki/JSONP#JSONP) can and therefore add the padding
         if self.request.get('callback', None) and fmt == 'json':
