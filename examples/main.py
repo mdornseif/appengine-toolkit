@@ -9,14 +9,11 @@ Copyright (c) 2011 HUDORA. All rights reserved.
 
 
 import config
-import logging, sys
+
 logging.info(sys.path)
 import gaetk.handler
 import gaetk
 import gaetk.defaulthandlers
-
-
-from modules.planet.p_models import PlanetFeed, PlanetEntry
 
 
 class Homepage(gaetk.handler.BasicHandler):

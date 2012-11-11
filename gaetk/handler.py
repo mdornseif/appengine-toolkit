@@ -26,6 +26,7 @@ import hashlib
 import logging
 import os
 import time
+import types
 import urllib
 import urlparse
 import uuid
@@ -162,6 +163,12 @@ class BasicHandler(webapp2.RequestHandler):
 
     def __init__(self, *args, **kwargs):
         """Initialize RequestHandler"""
+        self.credential = None
+        try:
+            self.session = get_current_session()
+        except AttributeError:
+            # session middleware might not be enabled
+            self.session = {}
         super(BasicHandler, self).__init__(*args, **kwargs)
         self.credential = None
 
@@ -444,7 +451,7 @@ class BasicHandler(webapp2.RequestHandler):
 
         if fmt not in ['html', 'json']:
             self.response.headers["Content-Disposition"] = \
-                                "%s; filename=%s.%s" % (disposition, filename, fmt)
+                                str("%s; filename=%s.%s" % (disposition, filename, fmt))
         # If we have gotten a `callback` parameter, we expect that this is a
         # [JSONP](http://en.wikipedia.org/wiki/JSONP#JSONP) can and therefore add the padding
         if self.request.get('callback', None) and fmt == 'json':
@@ -468,7 +475,7 @@ class BasicHandler(webapp2.RequestHandler):
             return False
         elif self.credential is None:
             return False
-        return self.credential.admin
+        return getattr(self.credential, 'admin', False)
 
     def login_required(self, deny_localhost=False):
         """Returns the currently logged in user and forces login.
@@ -571,8 +578,9 @@ class BasicHandler(webapp2.RequestHandler):
                     or self.request.referer):
                     # we assume the request came via a browser - redirect to the "nice" login page
                     self.response.set_status(302)
-                    absolute_url = self.abs_url("/_ah/login_required?continue=%s"
-                                                % urllib.quote(self.request.url))
+                    absolute_url = users.create_login_url(self.abs_url(self.request.url))
+                    #absolute_url = self.abs_url("/_ah/login_required?continue=%s"
+                    #                            % urllib.quote(self.request.url))
                     self.response.headers['Location'] = str(absolute_url)
                     raise HTTP302_Found(location=str(absolute_url))
                 else:
@@ -609,7 +617,11 @@ class BasicHandler(webapp2.RequestHandler):
     def finished_hook(self, ret, method, *args, **kwargs):
         """Function to allow logging etc. To be overwritten."""
         # not called when exceptions are raised
-        pass
+
+        # simple sample implementation: check compliance for headers/wsgiref
+        for name, val in self.response.headers.items():
+            if not ((type(name) is types.StringType) and (type(val) is types.StringType)):
+                logging.error("Header names and values must be strings: {%r: %r}", name, val)
 
     def dispatch(self):
         """Dispatches the requested method."""
@@ -624,7 +636,11 @@ class BasicHandler(webapp2.RequestHandler):
             # The response MUST include an Allow header containing a
             # list of valid methods for the requested resource.
             # http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.6
-            valid = ', '.join(webapp2._get_handler_methods(self))
+            methods = []
+            for method in ('GET', 'POST', 'HEAD', 'OPTIONS', 'PUT', 'DELETE', 'TRACE'):
+                if getattr(self, webapp2._normalize_handler_method(method), None):
+                    methods.append(method)
+            valid = ', '.join(methods)
             self.abort(405, headers=[('Allow', valid)])
 
         # The handler only receives *args if no named variables are set.

@@ -15,13 +15,31 @@ import google.appengine.api.memcache
 
 import gaetk
 import gaetk.handler
-from django.utils import simplejson
+from google.appengine.ext import db
 from google.appengine.ext.db import stats
+
+try:
+    import json
+except ImportError:
+    from django.utils import json
 
 
 # you can add to plugins to extend the stat handler
 # e.g. plugins['rueckmeldungen'] = Rueckmeldung.all().count()
 plugins = {}
+
+
+class gaetk_Stats(db.Expando):
+    """Stores some Statistics about AppEngine"""
+    d_count = db.IntegerProperty(indexed=False)
+    d_bytes = db.IntegerProperty(indexed=False)
+    m_count = db.IntegerProperty(indexed=False)
+    m_bytes = db.IntegerProperty(indexed=False)
+    m_hits = db.IntegerProperty(indexed=False)
+    m_hits_bytes = db.IntegerProperty(indexed=False)
+    m_misses = db.IntegerProperty(indexed=False)
+    m_oldest_item_age = db.IntegerProperty(indexed=False)
+    created_at = db.DateTimeProperty(auto_now_add=True)
 
 
 class Stats(gaetk.handler.BasicHandler):
@@ -38,7 +56,6 @@ class Stats(gaetk.handler.BasicHandler):
     #               "byte_hits": 176865465}
     # }
     def get(self):
-
         # memcache statistics are straightforward
         ret = dict(memcache=google.appengine.api.memcache.get_stats())
 
@@ -59,9 +76,36 @@ class Stats(gaetk.handler.BasicHandler):
 
         for name, func in plugins.items():
             ret[name] = func()
-
+        # Example Data:
+        #  ret = {'datastore': {'count': 526975L, 
+        #                       'timestamp': '2012-05-05 11:13:01', 
+        #                       'bytes': 9349778801L, 
+        #                       'kinds': {u'Credential': {'count': 11L, 'bytes': 39973L}, 
+        #                                 u'_AE_MR_ShardState': {'count': 8L, 'bytes': 9675L}, 
+        #                                 u'Akte': {'count': 167630L, 'bytes': 1212085803L}, 
+        #                                 u'StrConfig': {'count': 2L, 'bytes': 1096L}, 
+        #                                 u'Dokument': {'count': 179660L, 'bytes': 2134737862L}, 
+        #                                 u'DokumentFile': {'count': 179661L, 'bytes': 6002900376L}, 
+        #                                 u'DateTimeConfig': {'count': 2L, 'bytes': 1266L}, 
+        #                                 u'_AE_MR_MapreduceState': {'count': 1L, 'bytes': 2750L}}}, 
+        #         'memcache': {'hits': 5064L, 
+        #                      'items': 396L, 
+        #                      'bytes': 4049589L, 
+        #                      'oldest_item_age': 5409L, 
+        #                      'misses': 40L, 
+        #                      'byte_hits': 2665806L}}
+        gaetk_Stats(key_name=datetime.datetime.now().strftime('%Y-%m-%dT%H'),  # no minutes
+                    d_count=ret['datastore']['count'],
+                    d_bytes=ret['datastore']['bytes'],
+                    m_count=ret['memcache']['items'],
+                    m_bytes=ret['memcache']['bytes'],
+                    m_hits=ret['memcache']['hits'],
+                    m_hits_bytes=ret['memcache']['byte_hits'],
+                    m_misses=ret['memcache']['misses'],
+                    m_oldest_item_age=ret['memcache']['oldest_item_age'],
+                   ).put()
         self.response.headers['Content-Type'] = 'application/json'
-        self.response.out.write(simplejson.dumps(ret))
+        self.response.out.write(json.dumps(ret))
 
 
 class RobotTxtHandler(gaetk.handler.BasicHandler):
@@ -121,7 +165,35 @@ class VersionHandler(gaetk.handler.BasicHandler):
 
 
 class CredentialsHandler(gaetk.handler.BasicHandler):
-    """Credentials - generate or update - Write only."""
+    """Credentials - generate or update"""
+
+    def authchecker(self, *args, **kwargs):
+        """Only admin users are allowed to access credentials"""
+        self.login_required()
+        if not self.credential.admin:
+            gaetk.handler.HTTP403_Forbidden()
+
+    def get(self):
+        """Returns information about the credential"""
+
+        # Lazily import hujson to allow using the other classes in this module to be used without
+        # huTools beinin installed.
+        import huTools.hujson
+
+        email = self.request.get('email')
+
+        credential = gaetk.handler.Credential.get_by_key_name(email)
+        if credential is None:
+            raise gaetk.handler.HTTP404_NotFound
+
+        self.response.headers["Content-Type"] = "application/json"
+        self.response.out.write(huTools.hujson.dumps(dict(uid=credential.uid,
+                                                          admin=credential.admin, text=credential.text,
+                                                          tenant=credential.tenant, email=credential.email,
+                                                          permissions=credential.permissions,
+                                                          created_at=credential.created_at,
+                                                          updated_at=credential.updated_at)))
+        
     def post(self):
         """Use it like this
 
@@ -134,7 +206,7 @@ class CredentialsHandler(gaetk.handler.BasicHandler):
             }
         """
         # Lazily import hujson to allow using the other classes in this module to be used without
-        # huTools beinin installed.
+        # huTools beinig installed.
         import huTools.hujson
 
         config = object()
@@ -143,15 +215,19 @@ class CredentialsHandler(gaetk.handler.BasicHandler):
         except ImportError:
             pass
 
-        self.login_required()
-        if not self.credential.admin:
-            gaetk.handler.HTTP403_Forbidden()
+        # The data can be submitted either as a json encoded body or form encoded
+        if self.request.headers.get('Content-Type', '').startswith('application/json'):
+            data = huTools.hujson.loads(self.request.body)
+        else:
+            data = self.request
 
-        admin = self.request.get('admin', '').lower() == 'true'
-        text = self.request.get('text', '')
-        email = self.request.get('email')
-        tenant = self.request.get('tenant')
-        permissions = self.request.get('permissions', [])
+        admin = str(data.get('admin', '')).lower() == 'true'
+        text = data.get('text', '')
+        email = data.get('email')
+        tenant = data.get('tenant')
+        permissions = data.get('permissions', '')
+        if isinstance(permissions, basestring):
+            permissions = permissions.split(',')
 
         credential = gaetk.handler.Credential.get_by_key_name(email)
         if credential:
@@ -161,7 +237,7 @@ class CredentialsHandler(gaetk.handler.BasicHandler):
             credential.tenant = tenant
             credential.email = email
             credential.permissions = []
-            for permission in permissions.split(','):
+            for permission in permissions:
                 if permission not in getattr(config, 'ALLOWED_PERMISSIONS', []):
                     raise gaetk.handler.HTTP400_BadRequest("invalid permission %r" % permission)
                 credential.permissions.append(permission)

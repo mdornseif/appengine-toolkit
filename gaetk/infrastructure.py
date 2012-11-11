@@ -30,7 +30,7 @@ def taskqueue_add_multi(qname, url, paramlist, **kwargs):
             tasks = []
     if tasks:
         taskqueue.Queue(name=qname).add(tasks)
-    logging.debug(u'%d tasks queued to %s', len(paramlist), url)
+    #logging.debug(u'%d tasks queued to %s', len(paramlist), url)
 
 
 def taskqueue_add_multi_payload(name, url, payloadlist, **kwargs):
@@ -51,7 +51,7 @@ def taskqueue_add_multi_payload(name, url, payloadlist, **kwargs):
             tasks = []
     if tasks:
         taskqueue.Queue(name=name).add(tasks)
-    logging.debug(u'%d tasks queued to %s', len(payloadlist), url)
+    #logging.debug(u'%d tasks queued to %s', len(payloadlist), url)
 
 
 def query_iterator(query, limit=50):
