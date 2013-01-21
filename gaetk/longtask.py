@@ -40,6 +40,11 @@ import gaetk.handler
 import logging
 import pickle
 import time
+import warnings
+
+
+warnings.warn("gaetk/longtask is deprecated use https://github.com/mdornseif/gaetk_longtask",
+                  DeprecationWarning, stacklevel=2)
 
 
 class gaetk_LongTask(db.Model):

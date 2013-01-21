@@ -154,7 +154,7 @@ class BasicHandler(webapp2.RequestHandler):
     provides
 
     * `self.session` which si based on https://github.com/dound/gae-sessions.
-    * `self.login_required(()` and `self.is_admin()` for Authentication
+    * `self.login_required()` and `self.is_admin()` for Authentication
     * `self.authchecker()` to be overwritten to fully customize authentication
     """
 
@@ -219,7 +219,7 @@ class BasicHandler(webapp2.RequestHandler):
 
         total = None
         if calctotal:
-            # We count up to maximum of 10000. Counting in a somewhat expensive operation on AppEngine
+            # We count up to maximum of 10000. Counting is a somewhat expensive operation on AppEngine
             total = query.count(10000)
 
         if self.request.get('cursor'):
@@ -483,8 +483,11 @@ class BasicHandler(webapp2.RequestHandler):
         Access from 127.0.0.1 is allowed without authentication unless deny_localhost is `True`.
         """
 
+        # Avoid beeing called twice
+        if getattr(self.request, '_login_required_called', False):
+            return self.credential
+
         self.credential = None
-        self.logintype = None
 
         # check if we are logged in via OpenID
         user = users.get_current_user()
@@ -507,7 +510,7 @@ class BasicHandler(webapp2.RequestHandler):
                 if not self.credential:
                     self.credential = create_credential_from_federated_login(user, apps_domain)
             self.session['uid'] = self.credential.uid
-            self.logintype = 'OAuth'
+            self.session['logintype'] = 'OAuth'
             self.response.set_cookie('gaetkopid', apps_domain, max_age=7776000)
 
         # try if we have a session based login
@@ -529,7 +532,7 @@ class BasicHandler(webapp2.RequestHandler):
                     memcache.set(cachekey,
                                  db.model_to_protobuf(self.credential).Encode(),
                                  CREDENTIAL_CACHE_TIMEOUT)
-                self.logintype = 'session'
+                self.session['logintype'] = 'session'
 
         if not self.credential:
             # still no session information - try HTTP - Auth
@@ -554,11 +557,14 @@ class BasicHandler(webapp2.RequestHandler):
                         self.credential = credential
                         self.session['uid'] = credential.uid
                         self.session['email'] = credential.email
-                        self.logintype = 'HTTP'
-                        # logging.info("HTTP-Login from %s/%s", uid, self.request.remote_addr)
+                        self.session['logintype'] = 'HTTP'
+                        logging.info("HTTP-Login from %s/%s", uid, self.request.remote_addr)
                     else:
                         logging.error("failed HTTP-Login from %s/%s %s", uid, self.request.remote_addr,
                                        self.request.headers.get('Authorization'))
+                        raise HTTP401_Unauthorized("Invalid HTTP-Auth",
+                            headers={'WWW-Authenticate': 'Basic realm="API Login"'})
+
                 else:
                     logging.error("unknown HTTP-Login type %r %s %s", auth_type, self.request.remote_addr,
                                    self.request.headers.get('Authorization'))
@@ -591,24 +597,37 @@ class BasicHandler(webapp2.RequestHandler):
                                   self.request.headers.get('Authorization'))
                     raise HTTP401_Unauthorized(headers={'WWW-Authenticate': 'Basic realm="API Login"'})
 
-        if self.credential.user and (not users.get_current_user()) and self.logintype != 'HTTP':
+        if self.credential.user and (not users.get_current_user()) and self.session.get('logintype') != 'HTTP':
             # We have an active session and the credential is associated with an Federated/OpenID
             # Account, but the user is not logged in via OpenID on the gAE Infrastructure anymore.
-            # If we are given tie desired domain via a coocky and this is a GET request
+            # If we are given tie desired domain via a cookie and this is a GET request
             # without parameters we try automatic login
 
             logging.info("Session without gae! %s:%s", self.credential.user, self.request.cookies)
             if (self.request.cookies.get('gaetkopid', '') and self.request.method == 'GET'
                 and not self.request.query_string):
                 domain = self.request.cookies.get('gaetkopid', '')
-                if domain in LOGIN_ALLOWED_DOMAINS:
+                if domain and domain in LOGIN_ALLOWED_DOMAINS:
                     openid_url = 'https://www.google.com/accounts/o8/site-xrds?hd=%s' % domain
                     logging.info('login: automatically OpenID login to %s', openid_url)
                     # Hand over Authentication Processing to Google/OpenID
                     # TODO: save get parameters in session
-                    raise HTTP302_Found(location=users.create_login_url(self.request.path_url,
-                                                                            None, openid_url))
+                    try:
+                        raise HTTP302_Found(location=users.create_login_url(self.request.path_url,
+                                                                                None, openid_url))
+                    except users.NotAllowedError:
+                        logging.info("OpenID failed")
+                        # we assume the request came via a browser - redirect to the "nice" login page
+                        self.response.set_status(302)
+                        absolute_url = users.create_login_url(self.abs_url(self.request.url))
+                        #absolute_url = self.abs_url("/_ah/login_required?continue=%s"
+                        #                            % urllib.quote(self.request.url))
+                        self.response.headers['Location'] = str(absolute_url)
+                        raise HTTP302_Found(location=str(absolute_url))
+            absolute_url = users.create_login_url(self.abs_url(self.request.url))
+            raise HTTP302_Found(location=str(absolute_url))
 
+        self.request._login_required_called = True
         return self.credential
 
     def authchecker(self, method, *args, **kwargs):
