@@ -1,4 +1,4 @@
-GAE_VERSION=1.6.0
+GAE_VERSION=1.7.3
 
 check: google_appengine
 	pyflakes gaetk/
