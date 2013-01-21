@@ -72,7 +72,7 @@ class OpenIdLoginHandler(BasicHandler):
 
         For information on OpenID, see http://code.google.com/appengine/articles/openid.html"""
 
-        continue_url = self.request.GET.get('continue', '/')
+        continue_url = self.request.GET.get('continue', '/').encode('ascii', 'ignore')
 
         # check if we are logged in via OpenID
         user = users.get_current_user()
