@@ -584,7 +584,7 @@ class BasicHandler(webapp2.RequestHandler):
                     or self.request.referer):
                     # we assume the request came via a browser - redirect to the "nice" login page
                     self.response.set_status(302)
-                    absolute_url = str(users.create_login_url(self.abs_url(self.request.url))
+                    absolute_url = str(users.create_login_url(self.abs_url(self.request.url)))
                     #absolute_url = self.abs_url("/_ah/login_required?continue=%s"
                     #                            % urllib.quote(self.request.url))
                     logging.debug('redirecting browser to nice login page at %r', absolute_url)
@@ -714,14 +714,9 @@ class JsonResponseHandler(BasicHandler):
     def serialize(self, content):
         import huTools.hujson
         return huTools.hujson.dumps(content)
-        # return huTools.hujson.dumps(content, sort_keys=True, indent=1)
 
     def dispatch(self):
         """Dispatches the requested method."""
-
-        # Lazily import hujson to allow using the other classes in this module to be used without
-        # huTools beinin installed.
-        import huTools.hujson
 
         request = self.request
         method_name = request.route.handler_method
