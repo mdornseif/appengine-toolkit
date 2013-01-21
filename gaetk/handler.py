@@ -578,11 +578,12 @@ class BasicHandler(webapp2.RequestHandler):
                     or self.request.referer):
                     # we assume the request came via a browser - redirect to the "nice" login page
                     self.response.set_status(302)
-                    absolute_url = users.create_login_url(self.abs_url(self.request.url))
+                    absolute_url = str(users.create_login_url(self.abs_url(self.request.url))
                     #absolute_url = self.abs_url("/_ah/login_required?continue=%s"
                     #                            % urllib.quote(self.request.url))
-                    self.response.headers['Location'] = str(absolute_url)
-                    raise HTTP302_Found(location=str(absolute_url))
+                    logging.debug('redirecting browser to nice login page at %r', absolute_url)
+                    self.response.headers['Location'] = absolute_url
+                    raise HTTP302_Found(location=absolute_url)
                 else:
                     logging.debug('Accept: %s', self.request.headers.get('Accept', ''))
                     # We assume the access came via cURL et al, request Auth vie 401 Status code.
