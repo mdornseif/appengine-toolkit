@@ -77,22 +77,22 @@ class Stats(gaetk.handler.BasicHandler):
         for name, func in plugins.items():
             ret[name] = func()
         # Example Data:
-        #  ret = {'datastore': {'count': 526975L, 
-        #                       'timestamp': '2012-05-05 11:13:01', 
-        #                       'bytes': 9349778801L, 
-        #                       'kinds': {u'Credential': {'count': 11L, 'bytes': 39973L}, 
-        #                                 u'_AE_MR_ShardState': {'count': 8L, 'bytes': 9675L}, 
-        #                                 u'Akte': {'count': 167630L, 'bytes': 1212085803L}, 
-        #                                 u'StrConfig': {'count': 2L, 'bytes': 1096L}, 
-        #                                 u'Dokument': {'count': 179660L, 'bytes': 2134737862L}, 
-        #                                 u'DokumentFile': {'count': 179661L, 'bytes': 6002900376L}, 
-        #                                 u'DateTimeConfig': {'count': 2L, 'bytes': 1266L}, 
-        #                                 u'_AE_MR_MapreduceState': {'count': 1L, 'bytes': 2750L}}}, 
-        #         'memcache': {'hits': 5064L, 
-        #                      'items': 396L, 
-        #                      'bytes': 4049589L, 
-        #                      'oldest_item_age': 5409L, 
-        #                      'misses': 40L, 
+        #  ret = {'datastore': {'count': 526975L,
+        #                       'timestamp': '2012-05-05 11:13:01',
+        #                       'bytes': 9349778801L,
+        #                       'kinds': {u'Credential': {'count': 11L, 'bytes': 39973L},
+        #                                 u'_AE_MR_ShardState': {'count': 8L, 'bytes': 9675L},
+        #                                 u'Akte': {'count': 167630L, 'bytes': 1212085803L},
+        #                                 u'StrConfig': {'count': 2L, 'bytes': 1096L},
+        #                                 u'Dokument': {'count': 179660L, 'bytes': 2134737862L},
+        #                                 u'DokumentFile': {'count': 179661L, 'bytes': 6002900376L},
+        #                                 u'DateTimeConfig': {'count': 2L, 'bytes': 1266L},
+        #                                 u'_AE_MR_MapreduceState': {'count': 1L, 'bytes': 2750L}}},
+        #         'memcache': {'hits': 5064L,
+        #                      'items': 396L,
+        #                      'bytes': 4049589L,
+        #                      'oldest_item_age': 5409L,
+        #                      'misses': 40L,
         #                      'byte_hits': 2665806L}}
         gaetk_Stats(key_name=datetime.datetime.now().strftime('%Y-%m-%dT%H'),  # no minutes
                     d_count=ret['datastore']['count'],
@@ -193,7 +193,7 @@ class CredentialsHandler(gaetk.handler.BasicHandler):
                                                           permissions=credential.permissions,
                                                           created_at=credential.created_at,
                                                           updated_at=credential.updated_at)))
-        
+
     def post(self):
         """Use it like this
 
