@@ -613,8 +613,8 @@ class BasicHandler(webapp2.RequestHandler):
                     # Hand over Authentication Processing to Google/OpenID
                     # TODO: save get parameters in session
                     try:
-                        raise HTTP302_Found(location=users.create_login_url(self.request.path_url,
-                                                                                None, openid_url))
+                        location = users.create_login_url(self.request.path_url, None, openid_url)
+                        raise HTTP302_Found(location=str(location))
                     except users.NotAllowedError:
                         logging.info("OpenID failed")
                         # we assume the request came via a browser - redirect to the "nice" login page
