@@ -232,7 +232,11 @@ class CredentialsHandler(gaetk.handler.BasicHandler):
         if isinstance(permissions, basestring):
             permissions = permissions.split(',')
 
-        credential = gaetk.handler.Credential.get_by_key_name(uid)
+        if uid:
+            credential = gaetk.handler.Credential.get_by_key_name(uid)
+        else:
+            credential = None
+
         if credential:
             # if a credential already exists we only have to modify it
             credential.admin = admin
