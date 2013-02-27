@@ -500,6 +500,10 @@ class BasicHandler(webapp2.RequestHandler):
                 apps_domain = user.email().split('@')[-1].lower()
             else:
                 apps_domain = user.federated_provider().split('/')[4].lower()
+
+            if not apps_domain in LOGIN_ALLOWED_DOMAINS:
+                raise HTTP403_Forbidden("GEH WEG!")
+
             username = user.email() or user.nickname()
 
             self.credential = Credential.get_by_key_name(username)
