@@ -495,11 +495,9 @@ class BasicHandler(webapp2.RequestHandler):
             logging.info('Google user = %s', user)
             # yes, active OpenID session
             # user.federated_provider() == 'https://www.google.com/a/hudora.de/o8/ud?be=o8'
-            if not user.federated_provider():
-                # development server
-                apps_domain = user.email().split('@')[-1].lower()
-            else:
-                apps_domain = user.federated_provider().split('/')[4].lower()
+            apps_domain = user.email().split('@')[-1].lower()
+            if not apps_domain in LOGIN_ALLOWED_DOMAINS:
+                raise HTTP403_Forbidden("Access denied!")
             username = user.email() or user.nickname()
 
             self.credential = Credential.get_by_key_name(username)
