@@ -174,15 +174,17 @@ class CredentialsHandler(gaetk.handler.BasicHandler):
             gaetk.handler.HTTP403_Forbidden()
 
     def get(self):
-        """Returns information about the credential"""
+        """Returns information about the credential referenced by parameter `uid`"""
 
         # Lazily import hujson to allow using the other classes in this module to be used without
         # huTools beinin installed.
         import huTools.hujson
 
-        email = self.request.get('email')
+        uid = self.request.get('uid')
+        if not uid:
+            raise gaetk.handler.HTTP404_NotFound
 
-        credential = gaetk.handler.Credential.get_by_key_name(email)
+        credential = gaetk.handler.Credential.get_by_key_name(uid)
         if credential is None:
             raise gaetk.handler.HTTP404_NotFound
 
@@ -223,13 +225,18 @@ class CredentialsHandler(gaetk.handler.BasicHandler):
 
         admin = str(data.get('admin', '')).lower() == 'true'
         text = data.get('text', '')
+        uid = data.get('uid')
         email = data.get('email')
         tenant = data.get('tenant')
         permissions = data.get('permissions', '')
         if isinstance(permissions, basestring):
             permissions = permissions.split(',')
 
-        credential = gaetk.handler.Credential.get_by_key_name(email)
+        if uid:
+            credential = gaetk.handler.Credential.get_by_key_name(uid)
+        else:
+            credential = None
+
         if credential:
             # if a credential already exists we only have to modify it
             credential.admin = admin

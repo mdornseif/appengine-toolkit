@@ -85,6 +85,11 @@ class OpenIdLoginHandler(BasicHandler):
                 apps_domain = user.email().split('@')[-1].lower()
             else:
                 apps_domain = user.federated_provider().split('/')[4].lower()
+
+            if not apps_domain in LOGIN_ALLOWED_DOMAINS:
+                self.response.set_status(403)
+                return
+
             username = user.email()
             credential = Credential.get_by_key_name(username)
             if not credential or not credential.uid == username:
