@@ -34,7 +34,7 @@ def nicenum(value, spacer='&#8239;'):
     return '<span class="nicenum">%s</span>' % value
 
 
-def eurocent(value, spacer='&#8239;', decimalplaces=2):
+def eurocent(value, spacer='&#8239;', decimalplaces=2, plain=False):
     """Format the given cents as Euro with spacer as delimiter, e.g. '1 234 456.23'
 
     Obviously works also with US$ and other currencies.
@@ -51,7 +51,10 @@ def eurocent(value, spacer='&#8239;', decimalplaces=2):
     euro_value, cent_value = tmp.split('.')
     rev_value = euro_value[::-1]
     euro_value = spacer.join(reversed([rev_value[i:i + 3][::-1] for i in range(0, len(rev_value), 3)]))
-    return '<span class="currency">%s.%s</span>' % (euro_value, cent_value)
+    if plain:
+        return '%s.%s' % (euro_value, cent_value)
+    else:
+        return '<span class="currency">%s.%s</span>' % (euro_value, cent_value)
 
 
 def to_json(value):
