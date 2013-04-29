@@ -703,7 +703,7 @@ class JsonResponseHandler(BasicHandler):
 
     Dict is converted to JSON. `status` is used as HTTP status code. `cachingtime`
     is used to generate a `Cache-Control` header. If `cachingtime is None`, no header
-    is generated. `cachingtime` defaults to two hours.
+    is generated. `cachingtime` defaults to 60 seconds.
     """
     # Our default caching is 60s
     default_cachingtime = 60
