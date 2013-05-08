@@ -33,6 +33,7 @@ import uuid
 import warnings
 
 from functools import partial
+from gaetk._internal import lru_cache
 
 try:
     import mywebapp2 as webapp2  # on AppEngine python27
@@ -65,14 +66,15 @@ import google.appengine.ext.db
 import google.appengine.runtime.apiproxy_errors
 
 
-warnings.filterwarnings('ignore',
+warnings.filterwarnings(
+    'ignore',
     'decode_param_names is deprecated and will not be supported starting with WebOb 1.2')
 
 # to mark the exception as being used
 _dummy = [HTTP301_Moved, HTTP302_Found, HTTP303_SeeOther, HTTP307_TemporaryRedirect,
-          HTTP400_BadRequest, HTTP403_Forbidden, HTTP404_NotFound, HTTP413_TooLarge,
-          HTTP406_NotAcceptable, HTTP409_Conflict, HTTP410_Gone, HTTP415_UnsupportedMediaType,
-          HTTP501_NotImplemented, HTTP503_ServiceUnavailable]
+          HTTP400_BadRequest, HTTP403_Forbidden, HTTP404_NotFound, HTTP405_HTTPMethodNotAllowed,
+          HTTP406_NotAcceptable, HTTP409_Conflict, HTTP410_Gone, HTTP413_TooLarge,
+          HTTP415_UnsupportedMediaType, HTTP501_NotImplemented, HTTP503_ServiceUnavailable]
 
 
 CREDENTIAL_CACHE_TIMEOUT = 300
@@ -81,6 +83,11 @@ _jinja_env_cache = {}
 
 # for import by clients
 WSGIApplication = webapp2.WSGIApplication
+
+
+@lru_cache(maxsize=4)
+def _get_credential(username):
+    return Credential.get_by_key_name(username)
 
 
 class Credential(db.Expando):
@@ -500,7 +507,7 @@ class BasicHandler(webapp2.RequestHandler):
                 raise HTTP403_Forbidden("Access denied!")
             username = user.email() or user.nickname()
 
-            self.credential = Credential.get_by_key_name(username)
+            self.credential = _get_credential(username)
             if not self.credential or not self.credential.uid == username:
                 # So far we have no Credential entity for that user, create one
                 if getattr(config, 'LOGIN_OPENID_CREDENTIAL_CREATOR', None):
