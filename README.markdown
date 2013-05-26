@@ -32,7 +32,7 @@ Features:
 * Handling of Long running tasks with minimal effort via [`gaetk_longtask`](https://github.com/mdornseif/gaetk_longtask)
 * Profiling with [`gae_mini_profiler`](https://github.com/kamens/gae_mini_profiler)
 * Nice Error-Reports with [`my_ereporter`](https://github.com/mdornseif/my_ereporter)
-* Syncronisation with MySQL via [`approcket_industrial`](https://github.com/mdornseif/approcket_industrial) 
+* Syncronisation with MySQL via [`approcket_industrial`](https://github.com/mdornseif/approcket_industrial)
 
 
 Creating a Project / getting started
@@ -255,6 +255,27 @@ Generation of sequential numbers ('autoincrement') on Google appengine is hard. 
     >>> get_numbers('invoce_number', 2)
     [1, 2]
 
+
+To use it you need a `index.yaml` like this:
+
+```
+indexes:
+- kind: gaetkSequence
+  ancestor: yes
+  properties:
+  - name: type
+  - name: start
+- kind: gaetkSequence
+  ancestor: yes
+  properties:
+  - name: type
+  - name: end
+- kind: gaetkSequence
+  properties:
+  - name: active
+  - name: type
+  - name: start
+```
 
 
 Pre-Made Views and static files
