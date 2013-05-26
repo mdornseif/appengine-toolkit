@@ -99,7 +99,7 @@
           {%- endfor %}
           {%- endif %}
           <h1>{% block firstheading %}{% if title is defined %}{{ title|e }}{% endif %}{% endblock %}
-              {# <small>Supporting text or tagline</small> #}</h1> 
+              {# <small>Supporting text or tagline</small> #}</h1>
         </div>
         <div class="row">
           {% block mainrow -%}
@@ -120,7 +120,7 @@
       </div>
 
       <footer>
-        {% block footer %}{% if footer is defined %}{{ footer }}{% else %}made with gaetk{% endif %}{% endblock %}
+        {% block footer %}{% if footer is defined %}{{ footer }}{% else %}made with <a href="https://github.com/mdornseif/appengine-toolkit">gaetk</a>{% endif %}{% endblock %}
       </footer>
     {%- endblock %}
     </div> <!-- /container -->
