@@ -4,7 +4,7 @@
 handler.py - default Request Handler
 
 Created by Maximillian Dornseif on 2010-10-03.
-Copyright (c) 2010-2012 HUDORA. All rights reserved.
+Copyright (c) 2010-2013 HUDORA. All rights reserved.
 """
 
 # pylint can't handle db.Model.get()
@@ -13,17 +13,20 @@ Copyright (c) 2010-2012 HUDORA. All rights reserved.
 # pylint: disable=E1101
 
 
+import logging
 
+# Wenn es ein `config` Modul gibt, verwenden wir es, wenn nicht haben wir ein default.
 try:
     import config
-    LOGIN_ALLOWED_DOMAINS = config.LOGIN_ALLOWED_DOMAINS
-except (AttributeError, NameError, ImportError):
+except (ImportError), msg:
+    logging.debug('no config file used because of %s', msg)
     config = object()
-    LOGIN_ALLOWED_DOMAINS = []
+
+LOGIN_ALLOWED_DOMAINS = getattr(config, 'LOGIN_ALLOWED_DOMAINS', [])
+config.template_dirs = getattr(config, 'template_dirs', ['./templates'])
 
 import base64
 import hashlib
-import logging
 import os
 import time
 import types
@@ -315,11 +318,7 @@ class BasicHandler(webapp2.RequestHandler):
         # TypeError: unhashable type: 'list'
         key = tuple(extensions)
         if not key in _jinja_env_cache:
-            # Wenn es ein `config` Modul gibt, verwenden wir es, wenn nicht haben wir ein default.
-            try:
-                template_dirs = config.template_dirs
-            except AttributeError:
-                template_dirs = ['./templates']
+            template_dirs = config.template_dirs
 
             env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dirs),
                                      extensions=extensions,
@@ -348,12 +347,19 @@ class BasicHandler(webapp2.RequestHandler):
         try:
             template = env.get_template(template_name)
         except jinja2.TemplateNotFound:
+            # better error reporting - we want to see the name of the base template
             raise jinja2.TemplateNotFound(template_name)
         myval = dict(uri=self.request.url, credential=self.credential)
         myval.update(self.default_template_vars(values))
         self._expire_messages()
         myval.update(dict(_gaetk_messages=self.session.get('_gaetk_messages', [])))
-        content = template.render(myval)
+        try:
+            content = template.render(myval)
+        except jinja2.TemplateNotFound:
+            # better error reporting
+            logging.info('jinja environment: %s', env)
+            logging.info('template dirs: %s', config.template_dirs)
+            raise
         return content
 
     def render(self, values, template_name):
