@@ -77,22 +77,22 @@ class Stats(gaetk.handler.BasicHandler):
         for name, func in plugins.items():
             ret[name] = func()
         # Example Data:
-        #  ret = {'datastore': {'count': 526975L, 
-        #                       'timestamp': '2012-05-05 11:13:01', 
-        #                       'bytes': 9349778801L, 
-        #                       'kinds': {u'Credential': {'count': 11L, 'bytes': 39973L}, 
-        #                                 u'_AE_MR_ShardState': {'count': 8L, 'bytes': 9675L}, 
-        #                                 u'Akte': {'count': 167630L, 'bytes': 1212085803L}, 
-        #                                 u'StrConfig': {'count': 2L, 'bytes': 1096L}, 
-        #                                 u'Dokument': {'count': 179660L, 'bytes': 2134737862L}, 
-        #                                 u'DokumentFile': {'count': 179661L, 'bytes': 6002900376L}, 
-        #                                 u'DateTimeConfig': {'count': 2L, 'bytes': 1266L}, 
-        #                                 u'_AE_MR_MapreduceState': {'count': 1L, 'bytes': 2750L}}}, 
-        #         'memcache': {'hits': 5064L, 
-        #                      'items': 396L, 
-        #                      'bytes': 4049589L, 
-        #                      'oldest_item_age': 5409L, 
-        #                      'misses': 40L, 
+        #  ret = {'datastore': {'count': 526975L,
+        #                       'timestamp': '2012-05-05 11:13:01',
+        #                       'bytes': 9349778801L,
+        #                       'kinds': {u'Credential': {'count': 11L, 'bytes': 39973L},
+        #                                 u'_AE_MR_ShardState': {'count': 8L, 'bytes': 9675L},
+        #                                 u'Akte': {'count': 167630L, 'bytes': 1212085803L},
+        #                                 u'StrConfig': {'count': 2L, 'bytes': 1096L},
+        #                                 u'Dokument': {'count': 179660L, 'bytes': 2134737862L},
+        #                                 u'DokumentFile': {'count': 179661L, 'bytes': 6002900376L},
+        #                                 u'DateTimeConfig': {'count': 2L, 'bytes': 1266L},
+        #                                 u'_AE_MR_MapreduceState': {'count': 1L, 'bytes': 2750L}}},
+        #         'memcache': {'hits': 5064L,
+        #                      'items': 396L,
+        #                      'bytes': 4049589L,
+        #                      'oldest_item_age': 5409L,
+        #                      'misses': 40L,
         #                      'byte_hits': 2665806L}}
         gaetk_Stats(key_name=datetime.datetime.now().strftime('%Y-%m-%dT%H'),  # no minutes
                     d_count=ret['datastore']['count'],
@@ -174,15 +174,17 @@ class CredentialsHandler(gaetk.handler.BasicHandler):
             gaetk.handler.HTTP403_Forbidden()
 
     def get(self):
-        """Returns information about the credential"""
+        """Returns information about the credential referenced by parameter `uid`"""
 
         # Lazily import hujson to allow using the other classes in this module to be used without
         # huTools beinin installed.
         import huTools.hujson
 
-        email = self.request.get('email')
+        uid = self.request.get('uid')
+        if not uid:
+            raise gaetk.handler.HTTP404_NotFound
 
-        credential = gaetk.handler.Credential.get_by_key_name(email)
+        credential = gaetk.handler.Credential.get_by_key_name(uid)
         if credential is None:
             raise gaetk.handler.HTTP404_NotFound
 
@@ -193,7 +195,7 @@ class CredentialsHandler(gaetk.handler.BasicHandler):
                                                           permissions=credential.permissions,
                                                           created_at=credential.created_at,
                                                           updated_at=credential.updated_at)))
-        
+
     def post(self):
         """Use it like this
 
@@ -223,13 +225,18 @@ class CredentialsHandler(gaetk.handler.BasicHandler):
 
         admin = str(data.get('admin', '')).lower() == 'true'
         text = data.get('text', '')
+        uid = data.get('uid')
         email = data.get('email')
         tenant = data.get('tenant')
         permissions = data.get('permissions', '')
         if isinstance(permissions, basestring):
             permissions = permissions.split(',')
 
-        credential = gaetk.handler.Credential.get_by_key_name(email)
+        if uid:
+            credential = gaetk.handler.Credential.get_by_key_name(uid)
+        else:
+            credential = None
+
         if credential:
             # if a credential already exists we only have to modify it
             credential.admin = admin

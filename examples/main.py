@@ -17,7 +17,7 @@ import gaetk.defaulthandlers
 
 
 class Homepage(gaetk.handler.BasicHandler):
-    """Strt/Übersichtsseite"""
+    """Startpage"""
 
     def get(self):
         """No parameters are accepted."""

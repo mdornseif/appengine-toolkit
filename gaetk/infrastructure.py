@@ -8,7 +8,6 @@ Copyright (c) 2011, 2012 HUDORA. All rights reserved.
 """
 
 from google.appengine.api import taskqueue
-import logging
 import zlib
 
 

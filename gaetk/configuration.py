@@ -16,7 +16,7 @@ None
 >>> configuration.get_config('MY-KEY-NAME')
 u'5711'
 
-Values are locally cached for 10 seconds, but the cache can be flushed
+Values are locally cached for 100 seconds, but the cache can be flushed
 with the provided FlushConfigCacheHandler.
 The handler needs to be included in handlers section of app.yaml:
 
@@ -52,7 +52,7 @@ def get_config(key, default=None):
     """Get (cached) configuration value for key"""
 
     if key in CONFIG_CACHE:
-        if CONFIG_CACHE.get(key[0]) > time.time() + 10:
+        if CONFIG_CACHE.get(key[0]) > time.time() - 100:
             return CONFIG_CACHE.get(key)[1]
 
     obj = Configuration.get_by_key_name(key)

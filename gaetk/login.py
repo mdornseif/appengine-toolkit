@@ -72,7 +72,7 @@ class OpenIdLoginHandler(BasicHandler):
 
         For information on OpenID, see http://code.google.com/appengine/articles/openid.html"""
 
-        continue_url = self.request.GET.get('continue', '/')
+        continue_url = self.request.GET.get('continue', '/').encode('ascii', 'ignore')
 
         # check if we are logged in via OpenID
         user = users.get_current_user()
@@ -85,6 +85,11 @@ class OpenIdLoginHandler(BasicHandler):
                 apps_domain = user.email().split('@')[-1].lower()
             else:
                 apps_domain = user.federated_provider().split('/')[4].lower()
+
+            if not apps_domain in LOGIN_ALLOWED_DOMAINS:
+                self.response.set_status(403)
+                return
+
             username = user.email()
             credential = Credential.get_by_key_name(username)
             if not credential or not credential.uid == username:
@@ -138,7 +143,7 @@ class OpenIdLoginHandler(BasicHandler):
 
         # Last attempt: If there's a cookie which contains the OpenID domain, try to login the user
         domain = self.request.cookies.get('gaetkopid', '')
-        if domain in LOGIN_ALLOWED_DOMAINS:
+        if domain and domain in LOGIN_ALLOWED_DOMAINS:
             logging.info(u'login: automatically OpenID login to %s', domain)
             openid_url = 'https://www.google.com/accounts/o8/site-xrds?hd=%s' % domain
             # Hand over Authentication Processing to Google/OpenID

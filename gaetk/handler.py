@@ -12,12 +12,13 @@ Copyright (c) 2010-2012 HUDORA. All rights reserved.
 # pylint can't handle google.appengine.api.memcache
 # pylint: disable=E1101
 
-import config
-config.imported = True
+
 
 try:
+    import config
     LOGIN_ALLOWED_DOMAINS = config.LOGIN_ALLOWED_DOMAINS
-except AttributeError:
+except (AttributeError, NameError, ImportError):
+    config = object()
     LOGIN_ALLOWED_DOMAINS = []
 
 import base64
@@ -32,6 +33,7 @@ import uuid
 import warnings
 
 from functools import partial
+from gaetk._internal import lru_cache
 
 try:
     import mywebapp2 as webapp2  # on AppEngine python27
@@ -64,14 +66,15 @@ import google.appengine.ext.db
 import google.appengine.runtime.apiproxy_errors
 
 
-warnings.filterwarnings('ignore',
+warnings.filterwarnings(
+    'ignore',
     'decode_param_names is deprecated and will not be supported starting with WebOb 1.2')
 
 # to mark the exception as being used
-config.dummy = [HTTP301_Moved, HTTP302_Found, HTTP303_SeeOther, HTTP307_TemporaryRedirect,
-                HTTP400_BadRequest, HTTP403_Forbidden, HTTP404_NotFound, HTTP413_TooLarge,
-                HTTP406_NotAcceptable, HTTP409_Conflict, HTTP410_Gone, HTTP415_UnsupportedMediaType,
-                HTTP501_NotImplemented, HTTP503_ServiceUnavailable]
+_dummy = [HTTP301_Moved, HTTP302_Found, HTTP303_SeeOther, HTTP307_TemporaryRedirect,
+          HTTP400_BadRequest, HTTP403_Forbidden, HTTP404_NotFound, HTTP405_HTTPMethodNotAllowed,
+          HTTP406_NotAcceptable, HTTP409_Conflict, HTTP410_Gone, HTTP413_TooLarge,
+          HTTP415_UnsupportedMediaType, HTTP501_NotImplemented, HTTP503_ServiceUnavailable]
 
 
 CREDENTIAL_CACHE_TIMEOUT = 300
@@ -80,6 +83,11 @@ _jinja_env_cache = {}
 
 # for import by clients
 WSGIApplication = webapp2.WSGIApplication
+
+
+@lru_cache(maxsize=4)
+def _get_credential(username):
+    return Credential.get_by_key_name(username)
 
 
 class Credential(db.Expando):
@@ -153,7 +161,7 @@ class BasicHandler(webapp2.RequestHandler):
     provides
 
     * `self.session` which si based on https://github.com/dound/gae-sessions.
-    * `self.login_required(()` and `self.is_admin()` for Authentication
+    * `self.login_required()` and `self.is_admin()` for Authentication
     * `self.authchecker()` to be overwritten to fully customize authentication
     """
 
@@ -218,7 +226,7 @@ class BasicHandler(webapp2.RequestHandler):
 
         total = None
         if calctotal:
-            # We count up to maximum of 10000. Counting in a somewhat expensive operation on AppEngine
+            # We count up to maximum of 10000. Counting is a somewhat expensive operation on AppEngine
             total = query.count(10000)
 
         if self.request.get('cursor'):
@@ -307,7 +315,13 @@ class BasicHandler(webapp2.RequestHandler):
         # TypeError: unhashable type: 'list'
         key = tuple(extensions)
         if not key in _jinja_env_cache:
-            env = jinja2.Environment(loader=jinja2.FileSystemLoader(config.template_dirs),
+            # Wenn es ein `config` Modul gibt, verwenden wir es, wenn nicht haben wir ein default.
+            try:
+                template_dirs = config.template_dirs
+            except AttributeError:
+                template_dirs = ['./templates']
+
+            env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dirs),
                                      extensions=extensions,
                                      auto_reload=True,  # do check if the source changed
                                      trim_blocks=True,  # first newline after a block is removed
@@ -476,8 +490,11 @@ class BasicHandler(webapp2.RequestHandler):
         Access from 127.0.0.1 is allowed without authentication unless deny_localhost is `True`.
         """
 
+        # Avoid beeing called twice
+        if getattr(self.request, '_login_required_called', False):
+            return self.credential
+
         self.credential = None
-        self.logintype = None
 
         # check if we are logged in via OpenID
         user = users.get_current_user()
@@ -485,14 +502,12 @@ class BasicHandler(webapp2.RequestHandler):
             logging.info('Google user = %s', user)
             # yes, active OpenID session
             # user.federated_provider() == 'https://www.google.com/a/hudora.de/o8/ud?be=o8'
-            if not user.federated_provider():
-                # development server
-                apps_domain = user.email().split('@')[-1].lower()
-            else:
-                apps_domain = user.federated_provider().split('/')[4].lower()
+            apps_domain = user.email().split('@')[-1].lower()
+            if not apps_domain in LOGIN_ALLOWED_DOMAINS:
+                raise HTTP403_Forbidden("Access denied!")
             username = user.email() or user.nickname()
 
-            self.credential = Credential.get_by_key_name(username)
+            self.credential = _get_credential(username)
             if not self.credential or not self.credential.uid == username:
                 # So far we have no Credential entity for that user, create one
                 if getattr(config, 'LOGIN_OPENID_CREDENTIAL_CREATOR', None):
@@ -500,7 +515,7 @@ class BasicHandler(webapp2.RequestHandler):
                 if not self.credential:
                     self.credential = create_credential_from_federated_login(user, apps_domain)
             self.session['uid'] = self.credential.uid
-            self.logintype = 'OAuth'
+            self.session['logintype'] = 'OAuth'
             self.response.set_cookie('gaetkopid', apps_domain, max_age=7776000)
 
         # try if we have a session based login
@@ -522,7 +537,7 @@ class BasicHandler(webapp2.RequestHandler):
                     memcache.set(cachekey,
                                  db.model_to_protobuf(self.credential).Encode(),
                                  CREDENTIAL_CACHE_TIMEOUT)
-                self.logintype = 'session'
+                self.session['logintype'] = 'session'
 
         if not self.credential:
             # still no session information - try HTTP - Auth
@@ -547,11 +562,14 @@ class BasicHandler(webapp2.RequestHandler):
                         self.credential = credential
                         self.session['uid'] = credential.uid
                         self.session['email'] = credential.email
-                        self.logintype = 'HTTP'
-                        # logging.info("HTTP-Login from %s/%s", uid, self.request.remote_addr)
+                        self.session['logintype'] = 'HTTP'
+                        logging.info("HTTP-Login from %s/%s", uid, self.request.remote_addr)
                     else:
                         logging.error("failed HTTP-Login from %s/%s %s", uid, self.request.remote_addr,
                                        self.request.headers.get('Authorization'))
+                        raise HTTP401_Unauthorized("Invalid HTTP-Auth",
+                            headers={'WWW-Authenticate': 'Basic realm="API Login"'})
+
                 else:
                     logging.error("unknown HTTP-Login type %r %s %s", auth_type, self.request.remote_addr,
                                    self.request.headers.get('Authorization'))
@@ -571,10 +589,11 @@ class BasicHandler(webapp2.RequestHandler):
                     or self.request.referer):
                     # we assume the request came via a browser - redirect to the "nice" login page
                     self.response.set_status(302)
-                    absolute_url = self.abs_url("/_ah/login_required?continue=%s"
-                                                % urllib.quote(self.request.url))
-                    self.response.headers['Location'] = str(absolute_url)
-                    raise HTTP302_Found(location=str(absolute_url))
+                    absolute_url = self.abs_url("/_ah/login_required?continue=%s" %
+                        urllib.quote(self.request.url))
+                    logging.debug('redirecting browser to nice login page at %r', absolute_url)
+                    self.response.headers['Location'] = absolute_url
+                    raise HTTP302_Found(location=absolute_url)
                 else:
                     logging.debug('Accept: %s', self.request.headers.get('Accept', ''))
                     # We assume the access came via cURL et al, request Auth vie 401 Status code.
@@ -582,24 +601,37 @@ class BasicHandler(webapp2.RequestHandler):
                                   self.request.headers.get('Authorization'))
                     raise HTTP401_Unauthorized(headers={'WWW-Authenticate': 'Basic realm="API Login"'})
 
-        if self.credential.user and (not users.get_current_user()) and self.logintype != 'HTTP':
+        if self.credential.user and (not users.get_current_user()) and self.session.get('logintype') != 'HTTP':
             # We have an active session and the credential is associated with an Federated/OpenID
             # Account, but the user is not logged in via OpenID on the gAE Infrastructure anymore.
-            # If we are given tie desired domain via a coocky and this is a GET request
+            # If we are given tie desired domain via a cookie and this is a GET request
             # without parameters we try automatic login
 
             logging.info("Session without gae! %s:%s", self.credential.user, self.request.cookies)
             if (self.request.cookies.get('gaetkopid', '') and self.request.method == 'GET'
                 and not self.request.query_string):
                 domain = self.request.cookies.get('gaetkopid', '')
-                if domain in LOGIN_ALLOWED_DOMAINS:
+                if domain and domain in LOGIN_ALLOWED_DOMAINS:
                     openid_url = 'https://www.google.com/accounts/o8/site-xrds?hd=%s' % domain
                     logging.info('login: automatically OpenID login to %s', openid_url)
                     # Hand over Authentication Processing to Google/OpenID
                     # TODO: save get parameters in session
-                    raise HTTP302_Found(location=users.create_login_url(self.request.path_url,
-                                                                            None, openid_url))
+                    try:
+                        location = users.create_login_url(self.request.path_url, None, openid_url)
+                        raise HTTP302_Found(location=str(location))
+                    except users.NotAllowedError:
+                        logging.info("OpenID failed")
+                        # we assume the request came via a browser - redirect to the "nice" login page
+                        self.response.set_status(302)
+                        absolute_url = users.create_login_url(self.abs_url(self.request.url))
+                        #absolute_url = self.abs_url("/_ah/login_required?continue=%s"
+                        #                            % urllib.quote(self.request.url))
+                        self.response.headers['Location'] = str(absolute_url)
+                        raise HTTP302_Found(location=str(absolute_url))
+            absolute_url = users.create_login_url(self.abs_url(self.request.url))
+            raise HTTP302_Found(location=str(absolute_url))
 
+        self.request._login_required_called = True
         return self.credential
 
     def authchecker(self, method, *args, **kwargs):
@@ -641,7 +673,11 @@ class BasicHandler(webapp2.RequestHandler):
             args = ()
 
         # bind session on dispatch (not in __init__)
-        self.session = get_current_session()
+        try:
+            self.session = get_current_session()
+        except AttributeError:
+            # session handling not activated
+            self.session = {}
         # init messages array based on session
         self.session['_gaetk_messages'] = self.session.get('_gaetk_messages', [])
         # Give authentication Hooks opportunity to do their thing
@@ -674,7 +710,7 @@ class JsonResponseHandler(BasicHandler):
 
     Dict is converted to JSON. `status` is used as HTTP status code. `cachingtime`
     is used to generate a `Cache-Control` header. If `cachingtime is None`, no header
-    is generated. `cachingtime` defaults to two hours.
+    is generated. `cachingtime` defaults to 60 seconds.
     """
     # Our default caching is 60s
     default_cachingtime = 60
@@ -682,14 +718,9 @@ class JsonResponseHandler(BasicHandler):
     def serialize(self, content):
         import huTools.hujson
         return huTools.hujson.dumps(content)
-        # return huTools.hujson.dumps(content, sort_keys=True, indent=1)
 
     def dispatch(self):
         """Dispatches the requested method."""
-
-        # Lazily import hujson to allow using the other classes in this module to be used without
-        # huTools beinin installed.
-        import huTools.hujson
 
         request = self.request
         method_name = request.route.handler_method
