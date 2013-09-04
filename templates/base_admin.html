@@ -84,13 +84,13 @@
         </div>
         <div class="row">
           {% block mainrow -%}
-          <div class="span12" id="maincontent">
+          <div class="span9" id="maincontent">
               {% block maincontent -%}
                 {% if content is defined -%}{{ content }}{%- else -%}
                 {#<h3>Main content</h3>#}{%- endif %}
               {%- endblock maincontent %}
           </div>
-          <div class="span4" id="secondarycontent">
+          <div class="span3" id="secondarycontent">
              {% block secondarycontent -%}
                 {% if secondarycontent is defined -%}{{ secondarycontent }}
                 {%- else -%}{# <h3>Secondary content</h3> #}{%- endif %}
