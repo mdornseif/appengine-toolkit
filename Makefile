@@ -22,6 +22,9 @@ test: dependencies
 	PYTHONPATH=examples nosetests $(TEST_ARGS) tests/*.py
 
 pythonenv:
-	pip -q install --upgrade nose nosegae WebTest gaetestbed coverage mock fixture huTools
+	pip -q install huTools 
+	pip -q install WebTest gaetestbed 
+	pip -q install coverage mock fixture
+	pip -q install nose nosegae 
 
 .PHONY: clean check
