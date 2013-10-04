@@ -10,7 +10,7 @@ dependencies: pythonenv google_appengine
 google_appengine:
 	curl -s -O http://googleappengine.googlecode.com/files/google_appengine_$(GAE_VERSION).zip
 	#/google/__init__.py:
-	unzip google_appengine_$(GAE_VERSION).zip
+	unzip -q google_appengine_$(GAE_VERSION).zip
 	rm -Rf google_appengine_$(GAE_VERSION).zip
 
 clean:
