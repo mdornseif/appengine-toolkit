@@ -438,3 +438,7 @@ gaetk code is Copyright 2010, 2011 Dr. Maximillian Dornseif & Hudora GmbH and du
 [5]: http://twitter.github.com/bootstrap/
 [6]: https://docs.djangoproject.com/en/dev/ref/contrib/flatpages/
 [7]: https://github.com/kamens/gae_mini_profiler
+
+
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/mdornseif/appengine-toolkit/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+
