@@ -64,6 +64,16 @@ def to_json(value):
     return json.dumps(value)
 
 
+def plural(value, singular_str, plural_str):
+    """Return value with singular or plural form"""
+    if not isinstance(value, (int, long)):
+        return unicode(value)
+
+    if value == 1:
+        return u'%s %s' % (value, singular_str)
+    return u'%s %s' % (value, plural_str)
+
+
 def register_custom_filters(jinjaenv):
     """Register the filters to the given Jinja environment."""
     jinjaenv.filters['ljustify'] = left_justify
@@ -71,3 +81,4 @@ def register_custom_filters(jinjaenv):
     jinjaenv.filters['nicenum'] = nicenum
     jinjaenv.filters['eurocent'] = eurocent
     jinjaenv.filters['to_json'] = to_json
+    jinjaenv.filters['plural'] = plural
