@@ -67,11 +67,11 @@ def to_json(value):
 def plural(value, singular_str, plural_str):
     """Return value with singular or plural form"""
     if not isinstance(value, (int, long)):
-        return unicode(value)
+        return singular_str
 
     if value == 1:
-        return u'%s %s' % (value, singular_str)
-    return u'%s %s' % (value, plural_str)
+        return singular_str
+    return plural_str
 
 
 def register_custom_filters(jinjaenv):
