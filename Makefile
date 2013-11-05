@@ -86,7 +86,7 @@ clean:
 	rm -rf google/__init__.py pythonenv
 	find . -name '*.pyc' -or -name '*.pyo' -delete
 
-TEST_ARGS=-v -s --without-sandbox --with-gae --gae-lib-root=google_appengine --gae-application=./examples
+TEST_ARGS=-s --with-gae --gae-lib-root=google_appengine --gae-application=./examples
 test: dependencies
 	PYTHONPATH=examples nosetests $(TEST_ARGS) tests/*.py
 
