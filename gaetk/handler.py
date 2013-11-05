@@ -29,7 +29,6 @@ import base64
 import hashlib
 import os
 import time
-import types
 import urllib
 import urlparse
 import uuid
@@ -64,9 +63,6 @@ from webob.exc import HTTPServiceUnavailable as HTTP503_ServiceUnavailable
 from webob.exc import HTTPTemporaryRedirect as HTTP307_TemporaryRedirect
 from webob.exc import HTTPUnauthorized as HTTP401_Unauthorized
 from webob.exc import HTTPUnsupportedMediaType as HTTP415_UnsupportedMediaType
-
-import google.appengine.ext.db
-import google.appengine.runtime.apiproxy_errors
 
 
 warnings.filterwarnings(
@@ -150,8 +146,8 @@ def create_credential_from_federated_login(user, apps_domain):
     # No insane user names
     if len(str(uid)) > 35:
         uid = hex(hash(str(uid)))
-    credential = Credential.create(tenant=apps_domain, user=user, uid=uid,
-        email=user.email(),
+    credential = Credential.create(
+        tenant=apps_domain, user=user, uid=uid, email=user.email(),
         text="Automatically created via OpenID Provider %s" % user.federated_provider(),
         # for accounts created via Google Apps domains we default to admin permissions
         admin=False)
@@ -327,7 +323,7 @@ class BasicHandler(webapp2.RequestHandler):
                                      # This does not work (yet):
                                      # <type 'exceptions.RuntimeError'>: disallowed bytecode
                                      # bytecode_cache=jinja2.MemcachedBytecodeCache(memcache, timeout=600)
-                                    )
+                                     )
 
             # Eigene Filter
             #env.filters['dateformat'] = filter_dateformat
@@ -463,8 +459,8 @@ class BasicHandler(webapp2.RequestHandler):
             disposition = "inline"
 
         if fmt not in ['html', 'json']:
-            self.response.headers["Content-Disposition"] = \
-                                str("%s; filename=%s.%s" % (disposition, filename, fmt))
+            self.response.headers["Content-Disposition"] = str("%s; filename=%s.%s" % (
+                disposition, filename, fmt))
         # If we have gotten a `callback` parameter, we expect that this is a
         # [JSONP](http://en.wikipedia.org/wiki/JSONP#JSONP) can and therefore add the padding
         if self.request.get('callback', None) and fmt == 'json':
@@ -571,14 +567,17 @@ class BasicHandler(webapp2.RequestHandler):
                         self.session['logintype'] = 'HTTP'
                         logging.info("HTTP-Login from %s/%s", uid, self.request.remote_addr)
                     else:
-                        logging.error("failed HTTP-Login from %s/%s %s", uid, self.request.remote_addr,
-                                       self.request.headers.get('Authorization'))
-                        raise HTTP401_Unauthorized("Invalid HTTP-Auth",
+                        logging.error(
+                            "failed HTTP-Login from %s/%s %s", uid, self.request.remote_addr,
+                            self.request.headers.get('Authorization'))
+                        raise HTTP401_Unauthorized(
+                            "Invalid HTTP-Auth",
                             headers={'WWW-Authenticate': 'Basic realm="API Login"'})
 
                 else:
-                    logging.error("unknown HTTP-Login type %r %s %s", auth_type, self.request.remote_addr,
-                                   self.request.headers.get('Authorization'))
+                    logging.error(
+                        "unknown HTTP-Login type %r %s %s", auth_type, self.request.remote_addr,
+                        self.request.headers.get('Authorization'))
 
         # HTTP Basic Auth failed
         if not self.credential:
@@ -589,33 +588,39 @@ class BasicHandler(webapp2.RequestHandler):
                                                     text='Automatically created for testing')
             else:
                 # Login not successful
-                if ('text/' in self.request.headers.get('Accept', '')
+                is_browser = (
+                    'text/' in self.request.headers.get('Accept', '')
                     or 'image/' in self.request.headers.get('Accept', '')
                     or self.request.is_xhr
-                    or self.request.referer):
-                    # we assume the request came via a browser - redirect to the "nice" login page
-                    self.response.set_status(302)
-                    absolute_url = self.abs_url("/_ah/login_required?continue=%s" %
-                        urllib.quote(self.request.url))
-                    logging.debug('redirecting browser to nice login page at %r', absolute_url)
-                    self.response.headers['Location'] = absolute_url
-                    raise HTTP302_Found(location=absolute_url)
+                    or self.request.referer)
+                if is_browser:
+                        # we assume the request came via a browser - redirect to the "nice" login page
+                        self.response.set_status(302)
+                        absolute_url = self.abs_url(
+                            "/_ah/login_required?continue=%s" % urllib.quote(self.request.url))
+                        logging.debug('redirecting browser to nice login page at %r', absolute_url)
+                        self.response.headers['Location'] = absolute_url
+                        raise HTTP302_Found(location=absolute_url)
                 else:
                     logging.debug('Accept: %s', self.request.headers.get('Accept', ''))
                     # We assume the access came via cURL et al, request Auth vie 401 Status code.
                     logging.info("requesting HTTP-Auth %s %s", self.request.remote_addr,
-                                  self.request.headers.get('Authorization'))
+                                 self.request.headers.get('Authorization'))
                     raise HTTP401_Unauthorized(headers={'WWW-Authenticate': 'Basic realm="API Login"'})
 
-        if self.credential.user and (not users.get_current_user()) and self.session.get('logintype') != 'HTTP':
+        if self.credential.user and not users.get_current_user() and self.session.get('logintype') != 'HTTP':
             # We have an active session and the credential is associated with an Federated/OpenID
-            # Account, but the user is not logged in via OpenID on the gAE Infrastructure anymore.
+            # Account, but the user is not logged in via OpenID on the GAE Infrastructure anymore.
             # If we are given tie desired domain via a cookie and this is a GET request
             # without parameters we try automatic login
 
             logging.info("Session without gae! %s:%s", self.credential.user, self.request.cookies)
-            if (self.request.cookies.get('gaetkopid', '') and self.request.method == 'GET'
-                and not self.request.query_string):
+
+            may_force_openid = (
+                self.request.cookies.get('gaetkopid', '')
+                and self.request.method == 'GET'
+                and not self.request.query_string)
+            if may_force_openid:
                 domain = self.request.cookies.get('gaetkopid', '')
                 if domain and domain in LOGIN_ALLOWED_DOMAINS:
                     openid_url = 'https://www.google.com/accounts/o8/site-xrds?hd=%s' % domain

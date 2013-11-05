@@ -72,7 +72,7 @@ class Stats(gaetk.handler.BasicHandler):
             for kindstat in stats.KindStat.all().filter("timestamp =", timestamp).fetch(200):
                 if kindstat.kind_name and not kindstat.kind_name.startswith('__'):
                     ret['datastore']['kinds'][kindstat.kind_name] = dict(bytes=kindstat.bytes,
-                                                                     count=kindstat.count)
+                                                                         count=kindstat.count)
 
         for name, func in plugins.items():
             ret[name] = func()
@@ -103,7 +103,7 @@ class Stats(gaetk.handler.BasicHandler):
                     m_hits_bytes=ret['memcache']['byte_hits'],
                     m_misses=ret['memcache']['misses'],
                     m_oldest_item_age=ret['memcache']['oldest_item_age'],
-                   ).put()
+                    ).put()
         self.response.headers['Content-Type'] = 'application/json'
         self.response.out.write(json.dumps(ret))
 
@@ -265,11 +265,13 @@ class CredentialsHandler(gaetk.handler.BasicHandler):
 
 
 application = gaetk.webapp2.WSGIApplication([
-                                         ('/gaetk/stats.json', Stats),
-                                         ('/gaetk/credentials', CredentialsHandler),
-                                         ('/robots.txt', RobotTxtHandler),
-                                         ('/version.txt', VersionHandler),
-                                         ])
+    ('/gaetk/stats.json', Stats),
+    ('/gaetk/credentials', CredentialsHandler),
+    ('/robots.txt', RobotTxtHandler),
+    ('/version.txt', VersionHandler),
+    ])
+
+
 def main():
     application.run()
 

@@ -205,7 +205,7 @@ class LogoutHandler(OpenIdLoginHandler):
 
 application = gaetk.webapp2.WSGIApplication([('.*/logout', LogoutHandler),
                                              ('.*', OpenIdLoginHandler),
-                                            ])
+                                             ])
 
 
 def main():
