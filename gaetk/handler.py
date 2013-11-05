@@ -650,7 +650,7 @@ class BasicHandler(webapp2.RequestHandler):
 
         # simple sample implementation: check compliance for headers/wsgiref
         for name, val in self.response.headers.items():
-            if not ((type(name) is types.StringType) and (type(val) is types.StringType)):
+            if not (isinstance(name, basestring) and isinstance(val, basestring)):
                 logging.error("Header names and values must be strings: {%r: %r}", name, val)
 
     def dispatch(self):
