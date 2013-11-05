@@ -2,9 +2,10 @@ language: python
 python:
 - "2.7"
 install:
-- pip install coveralls flake8 pylint virtualenv
+  - pip install coveralls
+  - pip install flake8 pylint virtualenv
 script: make check test
 notifications:
   email: false
 after_success:
-- coveralls
+  - coveralls

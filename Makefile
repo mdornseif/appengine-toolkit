@@ -75,6 +75,8 @@ check: google_appengine pythonenv
 	@# der erste Durchlauf zeigt alle Probleme inkl. TODOs an
 	-sh -c 'LC_ALL=en_US.UTF-8 PYTHONPATH=google_appengine ./pythonenv/bin/pylint $(PYLINT_ARGS) $(LINT_FILES)'
 
+dependencies: pythonenv google_appengine
+
 google_appengine:
 	curl -s -O http://googleappengine.googlecode.com/files/google_appengine_$(GAE_VERSION).zip
 	#/google/__init__.py:
@@ -86,8 +88,8 @@ clean:
 	find . -name '*.pyc' -or -name '*.pyo' -delete
 
 TEST_ARGS=-v -s --without-sandbox --with-gae --gae-lib-root=google_appengine --gae-application=./examples
-test: pythonenv google_appengine
-	PYTHONPATH=examples ./pythonenv/bin/nosetests $(TEST_ARGS) tests/*.py
+test: dependencies
+	PYTHONPATH=examples nosetests $(TEST_ARGS) tests/*.py
 
 pythonenv:
 	virtualenv --python=python2.7 --no-site-packages pythonenv
