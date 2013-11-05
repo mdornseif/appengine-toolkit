@@ -2,7 +2,6 @@ language: python
 python:
 - "2.7"
 install:
-- make dependencies
 - pip install coveralls flake8 pylint virtualenv
 script: make check test
 notifications:
