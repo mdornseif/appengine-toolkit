@@ -71,8 +71,7 @@ PYLINT_ARGS= --output-format=parseable -rn --ignore=mywebapp2.py,gaesessions.py,
 
 check: google_appengine pythonenv
 	./pythonenv/bin/flake8 $(LINT_FLAKE8_ARGS) $(LINT_FILES)
-	sh -c 'LC_ALL=en_US.UTF-8 PYTHONPATH=google_appengine ./pythonenv/bin/pylint $(PYLINT_ARGS) $(STRICT_LINT_FILES)'
-	@# der erste Durchlauf zeigt alle Probleme inkl. TODOs an
+	#sh -c 'LC_ALL=en_US.UTF-8 PYTHONPATH=google_appengine ./pythonenv/bin/pylint $(PYLINT_ARGS) $(STRICT_LINT_FILES)'
 	-sh -c 'LC_ALL=en_US.UTF-8 PYTHONPATH=google_appengine ./pythonenv/bin/pylint $(PYLINT_ARGS) $(LINT_FILES)'
 
 dependencies: pythonenv google_appengine
