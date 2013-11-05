@@ -69,16 +69,16 @@ PYLINT_ARGS= --output-format=parseable -rn --ignore=mywebapp2.py,gaesessions.py,
 #              --class-rgx=\(ab_\|audit_\|aui_\|bi_\|e_\|ent_\|fk_\|gs_\|ic_\|k_\|kui\|p_\|pr_\|sui_\)?[A-Z_][a-zA-Z0-9]+   \
 
 
-check: google_appengine
-	flake8 $(LINT_FLAKE8_ARGS) $(LINT_FILES)
-	sh -c 'LC_ALL=en_US.UTF-8 PYTHONPATH=google_appengine pylint $(PYLINT_ARGS) $(STRICT_LINT_FILES)'
+check: google_appengine pythonenv
+	./pythonenv/bin/flake8 $(LINT_FLAKE8_ARGS) $(LINT_FILES)
+	sh -c 'LC_ALL=en_US.UTF-8 PYTHONPATH=google_appengine ./pythonenv/bin/pylint $(PYLINT_ARGS) $(STRICT_LINT_FILES)'
 	@# der erste Durchlauf zeigt alle Probleme inkl. TODOs an
-	-sh -c 'LC_ALL=en_US.UTF-8 PYTHONPATH=google_appengine pylint $(PYLINT_ARGS) $(LINT_FILES)'
+	-sh -c 'LC_ALL=en_US.UTF-8 PYTHONPATH=google_appengine ./pythonenv/bin/pylint $(PYLINT_ARGS) $(LINT_FILES)'
 
 google_appengine:
 	curl -s -O http://googleappengine.googlecode.com/files/google_appengine_$(GAE_VERSION).zip
 	#/google/__init__.py:
-	unzip google_appengine_$(GAE_VERSION).zip
+	unzip -q google_appengine_$(GAE_VERSION).zip
 	rm -Rf google_appengine_$(GAE_VERSION).zip
 
 clean:
@@ -91,6 +91,8 @@ test: pythonenv google_appengine
 
 pythonenv:
 	virtualenv --python=python2.7 --no-site-packages pythonenv
-	./pythonenv/bin/python pythonenv/bin/pip -q install --upgrade nose nosegae WebTest gaetestbed coverage mock fixture huTools
+	./pythonenv/bin/python pythonenv/bin/pip -q install --upgrade nose nosegae WebTest gaetestbed coverage mock fixture flake8 pylint
+	./pythonenv/bin/python pythonenv/bin/pip -q install --upgrade jinja2 webapp2 simplejson
+	./pythonenv/bin/python pythonenv/bin/pip -q install --upgrade huTools
 
 .PHONY: clean check

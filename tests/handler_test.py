@@ -83,7 +83,6 @@ class TestPagination(unittest.TestCase):
 
         data = self._get_json('/?cursor=%s' % data['cursor'])
         self.assertEquals(data['objects'], [])
-        self.assertTrue('cursor' in data)
 
     def tearDown(self):
         """Remove all `Widget`s"""

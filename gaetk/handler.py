@@ -86,6 +86,7 @@ WSGIApplication = webapp2.WSGIApplication
 
 @lru_cache(maxsize=4)
 def _get_credential(username):
+    """Gelper to read Credentials - can be monkey_patched"""
     return Credential.get_by_key_name(username)
 
 
@@ -265,8 +266,8 @@ class BasicHandler(webapp2.RequestHandler):
             ret[datanodename] = [formatter(x) for x in objects]
         else:
             ret[datanodename] = []
-            for x in objects:
-                ret[datanodename].append(x)
+            for obj in objects:
+                ret[datanodename].append(obj)
         return ret
 
     def default_template_vars(self, values):
@@ -373,7 +374,7 @@ class BasicHandler(webapp2.RequestHandler):
     def multirender(self, fmt, data, mappers=None, contenttypes=None, filename='download',
                     defaultfmt='html', html_template='data', html_addon=None,
                     xml_root='data', xml_lists=None):
-        """Multirender is meant to provide rendering for a variety of formats with minimal code.
+        r"""Multirender is meant to provide rendering for a variety of formats with minimal code.
         For the three major formats HTML, XML und JSON you can get away with virtually no code.
         Some real-world view method might look like this:
 
@@ -594,13 +595,13 @@ class BasicHandler(webapp2.RequestHandler):
                     or self.request.is_xhr
                     or self.request.referer)
                 if is_browser:
-                        # we assume the request came via a browser - redirect to the "nice" login page
-                        self.response.set_status(302)
-                        absolute_url = self.abs_url(
-                            "/_ah/login_required?continue=%s" % urllib.quote(self.request.url))
-                        logging.debug('redirecting browser to nice login page at %r', absolute_url)
-                        self.response.headers['Location'] = absolute_url
-                        raise HTTP302_Found(location=absolute_url)
+                    # we assume the request came via a browser - redirect to the "nice" login page
+                    self.response.set_status(302)
+                    absolute_url = self.abs_url(
+                        "/_ah/login_required?continue=%s" % urllib.quote(self.request.url))
+                    logging.debug('redirecting browser to nice login page at %r', absolute_url)
+                    self.response.headers['Location'] = absolute_url
+                    raise HTTP302_Found(location=absolute_url)
                 else:
                     logging.debug('Accept: %s', self.request.headers.get('Accept', ''))
                     # We assume the access came via cURL et al, request Auth vie 401 Status code.
