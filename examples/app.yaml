@@ -3,6 +3,7 @@ version: dev
 runtime: python27
 api_version: 1
 default_expiration: "6d"
+threadsafe: no
 
 builtins:
 - remote_api: off

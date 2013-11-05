@@ -56,6 +56,7 @@ class Stats(gaetk.handler.BasicHandler):
     #               "byte_hits": 176865465}
     # }
     def get(self):
+        """Deliver all Statistics available to gaetk."""
         # memcache statistics are straightforward
         ret = dict(memcache=google.appengine.api.memcache.get_stats())
 
@@ -273,6 +274,7 @@ application = gaetk.webapp2.WSGIApplication([
 
 
 def main():
+    """Provide interface to default handlers."""
     application.run()
 
 

@@ -10,7 +10,7 @@ Copyright (c) 2010 HUDORA. All rights reserved.
 import re
 
 
-def split(s):
+def split(stos):
     """Split a string at space characters while respecting quoting.
 
     Unicode version of shlex.split().
@@ -22,7 +22,7 @@ def split(s):
     """
 
     # based on http://stackoverflow.com/questions/79968
-    return [x.strip('\'" ') for x in re.split(r"""( |".*?"|'.*?')""", s) if x.strip()]
+    return [x.strip('\'" ') for x in re.split(r"""( |".*?"|'.*?')""", stos) if x.strip()]
 
 
 if __name__ == "__main__":
