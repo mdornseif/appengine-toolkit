@@ -439,4 +439,4 @@ gaetk code is Copyright 2010, 2011 Dr. Maximillian Dornseif & Hudora GmbH and du
 [6]: https://docs.djangoproject.com/en/dev/ref/contrib/flatpages/
 [7]: https://github.com/kamens/gae_mini_profiler
 
-[![Build Status](https://travis-ci.org/mdornseif/appengine-toolkit?branch=master)](https://travis-ci.org/mdornseif/mdornseif.github.com) [![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/mdornseif/appengine-toolkit/trend.png)](https://bitdeli.com/free "Bitdeli Badge")[![Coverage Status](https://coveralls.io/repos/mdornseif/appengine-toolkit/badge.png)](https://coveralls.io/r/mdornseif/appengine-toolkit)
+[![Build Status](https://travis-ci.org/mdornseif/appengine-toolkit?branch=master)](https://travis-ci.org/mdornseif/appengine-toolkit) [![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/mdornseif/appengine-toolkit/trend.png)](https://bitdeli.com/free "Bitdeli Badge") [![Coverage Status](https://coveralls.io/repos/mdornseif/appengine-toolkit/badge.png)](https://coveralls.io/r/mdornseif/appengine-toolkit)
