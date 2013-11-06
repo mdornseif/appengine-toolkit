@@ -86,13 +86,17 @@ clean:
 	rm -rf google/__init__.py pythonenv
 	find . -name '*.pyc' -or -name '*.pyo' -delete
 
-TEST_ARGS=-s --with-gae --gae-lib-root=google_appengine --gae-application=./examples
+TEST_ARGS=-s --with-gae --without-sandbox --gae-lib-root=google_appengine --gae-application=./examples
 test: dependencies
-	PYTHONPATH=examples nosetests $(TEST_ARGS) tests/*.py
+	PYTHONPATH=examples ./pythonenv/bin/nosetests $(TEST_ARGS) tests/*.py
 
 pythonenv:
 	virtualenv --python=python2.7 --no-site-packages pythonenv
-	./pythonenv/bin/python pythonenv/bin/pip -q install --upgrade nose nosegae WebTest gaetestbed coverage mock fixture flake8 pylint
+	./pythonenv/bin/python pythonenv/bin/pip -q install --upgrade nose 
+	./pythonenv/bin/python pythonenv/bin/pip -q install --upgrade NoseGAE 
+	./pythonenv/bin/python pythonenv/bin/pip -q install --upgrade WebTest 
+	./pythonenv/bin/python pythonenv/bin/pip -q install --upgrade gaetestbed 
+	./pythonenv/bin/python pythonenv/bin/pip -q install --upgrade coverage mock fixture flake8 pylint
 	./pythonenv/bin/python pythonenv/bin/pip -q install --upgrade jinja2 webapp2 simplejson
 	./pythonenv/bin/python pythonenv/bin/pip -q install --upgrade huTools
 
