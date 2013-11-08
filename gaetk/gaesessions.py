@@ -7,9 +7,9 @@ import hmac
 import logging
 import pickle
 import os
+import re
 import threading
 import time
-import warnings
 
 from google.appengine.api import memcache
 from google.appengine.ext import db
@@ -36,10 +36,6 @@ _tls = threading.local()
 
 def get_current_session():
     """Returns the session associated with the current request."""
-    if not hasattr(_tls, 'current_session'):
-        warnings.warn('no current Session for this thread - your setup might be broken',
-                      RuntimeWarning)
-        set_current_session(Session())
     return _tls.current_session
 
 
@@ -451,16 +447,19 @@ class SessionMiddleware(object):
     memcache/datastore latency which is critical for small sessions.  Larger
     sessions are kept in memcache+datastore instead.  Defaults to 10KB.
     """
-    def __init__(self, app, cookie_key, lifetime=DEFAULT_LIFETIME, no_datastore=False, cookie_only_threshold=DEFAULT_COOKIE_ONLY_THRESH):
+    def __init__(self, app, cookie_key, lifetime=DEFAULT_LIFETIME, no_datastore=False, cookie_only_threshold=DEFAULT_COOKIE_ONLY_THRESH, ignore_paths=None):
         self.app = app
         self.lifetime = lifetime
         self.no_datastore = no_datastore
         self.cookie_only_thresh = cookie_only_threshold
         self.cookie_key = cookie_key
+        self.ignore_paths = ignore_paths
         if not self.cookie_key:
             raise ValueError("cookie_key MUST be specified")
         if len(self.cookie_key) < 32:
             raise ValueError("RFC2104 recommends you use at least a 32 character key.  Try os.urandom(64) to make a key.")
+        if self.ignore_paths:
+            self.ignore_paths = re.compile(self.ignore_paths)
 
     def __call__(self, environ, start_response):
         # initialize a session for the current user
@@ -468,10 +467,13 @@ class SessionMiddleware(object):
 
         # create a hook for us to insert a cookie into the response headers
         def my_start_response(status, headers, exc_info=None):
-            _tls.current_session.save()  # store the session if it was changed
-            for ch in _tls.current_session.make_cookie_headers():
-                headers.append(('Set-Cookie', ch))
-            return start_response(status, headers, exc_info)
+            if self.ignore_paths and self.ignore_paths.match(environ['PATH_INFO']):
+                return start_response(status, headers, exc_info)
+            else:
+                _tls.current_session.save()  # store the session if it was changed
+                for ch in _tls.current_session.make_cookie_headers():
+                    headers.append(('Set-Cookie', ch))
+                return start_response(status, headers, exc_info)
 
         # let the app do its thing
         return self.app(environ, my_start_response)

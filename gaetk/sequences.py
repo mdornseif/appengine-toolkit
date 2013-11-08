@@ -56,16 +56,16 @@ class gaetkSequence(db.Model):
 
     def __repr__(self):
         return ('<gaetkSequence: type=%s, start=%d, end=%d, current=%s, active=%s, '
-            'created_at=%s>') % (self.type, self.start, self.end, self.current,
-                    self.active, self.created_at)
+                'created_at=%s>') % (self.type, self.start, self.end, self.current,
+                                     self.active, self.created_at)
 
 
 def _init_sequence_helper(typ, start, end, root):
     # ensure there are no overlapping ranges
     query1 = gaetkSequence.all().ancestor(root).filter('type = ', typ).filter(
-                'start >= ', start).filter('start <', end).fetch(1)
+        'start >= ', start).filter('start <', end).fetch(1)
     query2 = gaetkSequence.all().ancestor(root).filter('type = ', typ).filter(
-                'end >= ', start).filter('end <', end).fetch(1)
+        'end >= ', start).filter('end <', end).fetch(1)
     if query1 or query2:
         raise ValueError('%d:%d overlaps with %s/%s' % (start, end, query1, query2))
     seq = gaetkSequence(type=typ, parent=root, start=start, end=end, active=True)

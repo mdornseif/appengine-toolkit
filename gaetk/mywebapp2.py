@@ -998,7 +998,7 @@ class Route(BaseRoute):
         for name, regex in variables.iteritems():
             value = kwargs.pop(name, self.defaults.get(name))
             if not value:
-                raise KeyError('Missing argument "%s" to build URI.' % \
+                raise KeyError('Missing argument "%s" to build URI.' %
                     name.strip('_'))
 
             if not isinstance(value, basestring):
@@ -1281,7 +1281,7 @@ class Router(object):
         return adapter(handler)
 
     def __repr__(self):
-        routes = self.match_routes + [v for k, v in \
+        routes = self.match_routes + [v for k, v in
             self.build_routes.iteritems() if v not in self.match_routes]
 
         return '<Router(%r)>' % routes
@@ -1929,7 +1929,7 @@ def _get_route_variables(match, default_kwargs=None):
     kwargs.update(match.groupdict())
     if kwargs:
         args = tuple(value[1] for value in sorted(
-            (int(key[2:-2]), kwargs.pop(key)) for key in kwargs.keys() \
+            (int(key[2:-2]), kwargs.pop(key)) for key in kwargs.keys()
             if key.startswith('__') and key.endswith('__')))
     else:
         args = ()

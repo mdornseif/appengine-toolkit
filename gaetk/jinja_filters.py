@@ -27,7 +27,7 @@ def nicenum(value, spacer='&#8239;'):
     default spacer is NARROW NO-BREAK SPACE U+202F
     probably `style="white-space:nowrap; word-spacing:0.5em;"` would be an CSS based alternative.
     """
-    if value != 0 and not value :
+    if value != 0 and not value:
         return ''
     rev_value = ("%d" % int(value))[::-1]
     value = spacer.join(reversed([rev_value[i:i + 3][::-1] for i in range(0, len(rev_value), 3)]))
@@ -64,6 +64,16 @@ def to_json(value):
     return json.dumps(value)
 
 
+def plural(value, singular_str, plural_str):
+    """Return value with singular or plural form"""
+    if not isinstance(value, (int, long)):
+        return singular_str
+
+    if value == 1:
+        return singular_str
+    return plural_str
+
+
 def register_custom_filters(jinjaenv):
     """Register the filters to the given Jinja environment."""
     jinjaenv.filters['ljustify'] = left_justify
@@ -71,3 +81,4 @@ def register_custom_filters(jinjaenv):
     jinjaenv.filters['nicenum'] = nicenum
     jinjaenv.filters['eurocent'] = eurocent
     jinjaenv.filters['to_json'] = to_json
+    jinjaenv.filters['plural'] = plural

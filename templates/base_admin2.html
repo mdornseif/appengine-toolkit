@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>{% block title %}{% if title is defined %}{{ title|e }}{% else %}gaetk{% endif %}{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Le styles -->
+    <link href="/gaetk/static/bootstrap/2.3.x/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+      body {
+        padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
+      }
+    </style>
+    <link href="/gaetk/static/bootstrap/2.3.x/css/bootstrap-responsive.css" rel="stylesheet">
+
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="https://raw.github.com/aFarkas/html5shiv/master/dist/html5shiv.js"></script>
+    <![endif]-->
+    {% block gaetkstyle %}
+    <style type="text/css">
+      body {
+        padding-top: 20px;
+        padding-bottom: 40px;
+      }
+    </style>
+    {% endblock gaetkstyle %}
+    {% block extrastyle %}
+    {% endblock extrastyle %}
+  </head>
+
+  <body>
+    <div class="container-fluid">
+      <div class="masthead">
+        {#
+        <ul class="nav nav-pills pull-right">
+          <li class="active"><a href="#">Home</a></li>
+          <li><a href="#">About</a></li>
+          <li><a href="#">Contact</a></li>
+        </ul>
+        #}
+        <h3 class="muted">
+        {% block projectname -%}
+          {% if projectname is defined -%}
+            {{ projectname|e }}
+          {%- else -%}
+            gaetk used without setting `projectname`
+          {%- endif -%}
+        {%- endblock projectname %}
+        </h3>
+      </div>
+
+    {% block content -%}
+      <div class="row-fluid">
+        <div class="span12">
+        {# display session specific messages #}
+        {% if _gaetk_messages is defined -%}
+          {% for message in _gaetk_messages -%}
+            <div class="alert alert-{{ message.type }}">
+              <button type="button" class="close" data-dismiss="alert">&times;</button>
+              <p>{{ message.html }}</p>
+            </div>
+          {%- endfor %}
+        {%- endif %}
+
+        {% block hero %}{% endblock hero %}
+
+        <h1>{% block firstheading -%}
+              {% if title is defined -%}
+                {{ title|e }}
+              {%- endif -%}
+            {%- endblock %}
+            {# <small>Supporting text or tagline</small> #}</h1>
+        </div>
+      </div>
+
+      <div class="row-fluid">
+      {% block mainrow -%}
+        <div class="span9">
+        {% block maincontent -%}
+          {% if content is defined -%}
+            {{ content }}
+          {%- else -%}
+            {#<h3>Main content</h3>#}
+          {%- endif %}
+        {%- endblock maincontent %}
+        </div>
+        <div class="span3">
+        {% block secondarycontent -%}
+          {% if secondarycontent is defined -%}
+            {{ secondarycontent }}
+          {%- else -%}
+            {# <h3>Secondary content</h3> #}
+          {%- endif %}
+        {%- endblock secondarycontent %}
+        </div>
+      {%- endblock mainrow %}
+      </div>
+
+      <hr>
+      <footer>
+      {% block footer -%}
+        {% if footer is defined -%}
+          {{ footer }}
+        {%- else -%}
+          made with <a href="https://github.com/mdornseif/appengine-toolkit">gaetk</a>
+        {%- endif %}
+      {%- endblock %}
+      </footer>
+
+    {%- endblock content %}
+    </div> <!-- /container -->
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+    <script src="/gaetk/static/bootstrap/2.3.x/js/bootstrap.min.js"></script>
+
+  </body>
+</html>

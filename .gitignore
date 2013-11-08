@@ -1,4 +1,5 @@
 google_appengine/
+.pythoscope/
 pythonenv
 *.pyc
 *~

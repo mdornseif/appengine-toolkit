@@ -32,7 +32,10 @@ Copyright (c) 2011, 2012 HUDORA. All rights reserved.
 import config
 config.imported = True
 
-import json
+try:
+    import json
+except ImportError:
+    import simplejson as json
 import time
 
 import gaetk
