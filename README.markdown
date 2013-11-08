@@ -27,6 +27,7 @@ Features:
 * mini CMS like [Django flatpages][6] (TO BE MERGED)
 * in place editing (TO BE MERGED)
 * Generic Configuration objects
+* simple testing for REST APIs
 
 ### Now distributed seperately
 * Handling of Long running tasks with minimal effort via [`gaetk_longtask`](https://github.com/mdornseif/gaetk_longtask)
@@ -48,8 +49,6 @@ Create a appengine Project, then:
     cp lib/appengine-toolkit/examples/config.py .
     cp lib/appengine-toolkit/examples/appengine_config.py .
     sed -i -e "s/%%PUT_RANDOM_VALUE_HERE%%/`(date;md5 /etc/* 2&>/dev/null)|md5`-5a17/" appengine_config.py
-    # If you want to use jinja2
-    git submodule add https://github.com/mitsuhiko/jinja2.git lib/jinja2
     # You might also want to install https://github.com/hudora/huTools for some additional functionality.
     git submodule add git@github.com:hudora/huTools.git lib/huTools
     git submodule foreach 'echo ./`basename ${path}` >> ../submodules.pth'
@@ -409,6 +408,63 @@ There are two convenience functions for getting and setting values, `get_config`
 
 Configuration values are cached infinitely. The module provides a HTTP handler
 as a mean to flush all cached values.
+
+RESTtest
+========
+
+gaetk comes with a simple frameworks to do simle minded acceptance tests againgst
+an installed version of your app. The testing harness is installed in `resttest_dsl`.
+
+A possible test script would look like this:
+
+  import sys
+  from resttest_dsl import create_testclient_from_cli, get_app_version
+
+
+  def main():  # pylint: disable=R0915
+      """Main Entry Point"""
+
+      # init with app id and some credentials
+      client = create_testclient_from_cli(default_hostname='%s.<myappid>.appspot.com' % get_app_version(),
+                                          default_credentials_user='someregular:6BTUKW5TQ',
+                                          default_credentials_admin='someadmin:EEGE2OGZ7')
+
+      client.GET('/').responds_http_status(200)
+      client.GET('/').responds_content_type('text/html')
+      # the two lines above can be written as
+      client.GET('/').responds_http_status(200).responds_content_type('text/html')
+      # or even shorter
+      client.GET('/').responds_html()
+
+      # checks for valid XML or JSON
+      client.GET('/feed.atom').responds_xml()
+      client.GET('/api.json').responds_json()
+
+      # checks that there is a response within 1000 ms
+      client.GET('/').responds_fast()
+      # or 500 msa
+      client.GET('/').responds_fast(500)
+      # combines responds_html and respondes fast
+      client.GET('/').responds_normal()
+
+      # checks if there is an redirect
+      client.GET('/artnr/1400/03').redirects_to('/artnr/14600/03.trailer/')
+
+      # Internal Pages only available to logged in users
+      client.GET('/backend/').responds_access_denied()
+      client.GET('/backend/', auth='user').responds_html()
+      client.GET('/backend/', auth='admin').responds_html()
+
+      # Admin pages available only to admin users
+      client.GET('/admin/').responds_access_denied()
+      client.GET('/admin/', auth='user').responds_access_denied()
+      client.GET('/admin/', auth='admin').responds_html()
+
+      sys.exit(client.errors)
+
+  if __name__ == "__main__":
+      main()
+
 
 
 Thanks
