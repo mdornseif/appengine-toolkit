@@ -26,6 +26,8 @@ COLOR_SEQ = "\033[1;%dm"
 # print success messages
 DEBUG = False
 
+DEFAULTFAST = int(os.environ.get('DEFAULTFAST_MS', 1000))
+
 # save slowest access to each URL
 slowstats = Counter()
 
@@ -168,13 +170,13 @@ class Response(object):
               'expected content-location to end with %r, got %r.' % (expected_location, content_location))
         return self
 
-    def responds_fast(self, maxduration=1000):
+    def responds_fast(self, maxduration=DEFAULTFAST):
         """sichert zu, dass der Zugriff schnell geht (unter maxduration ms)."""
         self.expect_condition(self.duration <= maxduration,
                         'expected answer within %d ms, took %d ms' % (maxduration, self.duration))
         return self
 
-    def responds_normal(self, maxduration=1000):
+    def responds_normal(self, maxduration=DEFAULTFAST):
         """Normale Seite: Status 200, HTML, Schnelle Antwort."""
         self.responds_html()
         self.responds_fast(maxduration)
@@ -210,7 +212,7 @@ class TestClient(object):
         # try request several times if it is slow to get rid of network jitter
         counter = 0
         duration = 100001
-        while counter < 5 and duration >= 500:
+        while counter < 5 and duration >= DEFAULTFAST:
             if counter > 1:
                 if DEBUG:
                     print "retry request because of %d ms duration" % duration
