@@ -6,8 +6,10 @@ Copyright (c) 2011, 2013 HUDORA. All rights reserved.
 File created by Philipp Benjamin Koeppchen on 2011-02-23
 """
 
+from collections import Counter
 import optparse
 import os
+import sys
 import time
 import urlparse
 import xml.dom.minidom
@@ -23,6 +25,9 @@ RESET_SEQ = "\033[0m"
 COLOR_SEQ = "\033[1;%dm"
 # print success messages
 DEBUG = False
+
+# save slowest access to each URL
+slowstats = Counter()
 
 def colored(text, color):
     """Färbt den Text mit Terminalsequenzen ein.
@@ -198,17 +203,22 @@ class TestClient(object):
         # try request several times if it is slow to get rid of network jitter
         counter = 0
         duration = 100001
-        while counter < 3 and duration >= 500:
+        while counter < 5 and duration >= 500:
             if counter > 1:
                 if DEBUG:
                     print "retry request because of %d ms duration" % duration
+                else:
+                    sys.stdout.write('.')
+                    sys.stdout.flush()
                 time.sleep(1.5)
             start = time.time()
             status, responseheaders, content = fetch(
                 url, content='', method='GET',
                 credentials=self.authdict.get(auth),
                 headers=headers, multipart=False, ua='', timeout=30)
-            duration = (time.time() - start) * 1000
+            duration = int((time.time() - start) * 1000)
+            if slowstats.get(url, 0) < duration:
+                slowstats[url] = duration
             counter += 1
         response = Response('GET', url, status, responseheaders, content, duration)
         self.responses.append(response)
@@ -258,7 +268,7 @@ def create_testclient_from_cli(default_hostname, default_credentials_user, defau
     opts, args = parser.parse_args()
     if args:
         parser.error('positional arguments are not accepted')
-        DEBUG = opts.debug
+    DEBUG = opts.debug
 
     if os.environ.get('RESTTESTHOST'):
         default_hostname = os.environ.get('RESTTESTHOST')
