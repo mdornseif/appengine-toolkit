@@ -127,6 +127,13 @@ class Response(object):
         self.converter_succeeds(xml.dom.minidom.parseString, 'expected valid xml')
         return self
 
+    def responds_rssxml(self):
+        """sichert zu, dass die Antwort ein well-formed RSS+XML-Dokument war."""
+        self.responds_http_status(200)
+        self.responds_content_type('application/rss+xml')
+        self.converter_succeeds(xml.dom.minidom.parseString, 'expected valid rss+xml')
+        return self
+
     def responds_plaintext(self):
         """sichert zu, dass die Antwort ein Plaintext-Dokument war."""
         self.responds_http_status(200)
@@ -217,8 +224,7 @@ class TestClient(object):
                 credentials=self.authdict.get(auth),
                 headers=headers, multipart=False, ua='', timeout=30)
             duration = int((time.time() - start) * 1000)
-            if slowstats.get(url, 0) < duration:
-                slowstats[url] = duration
+            slowstats[url] = duration
             counter += 1
         response = Response('GET', url, status, responseheaders, content, duration)
         self.responses.append(response)
