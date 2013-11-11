@@ -6,6 +6,8 @@ Copyright (c) 2010, 2012 HUDORA. All rights reserved.
 """
 
 import json
+from itertools import groupby
+from operator import itemgetter
 
 
 def left_justify(value, width):
@@ -64,6 +66,38 @@ def to_json(value):
     return json.dumps(value)
 
 
+
+def make_attrgetter(environment, attribute):
+    """Returns a callable that looks up the given attribute from a
+    passed object with the rules of the environment.  Dots are allowed
+    to access attributes of attributes.
+    """
+    if not isinstance(attribute, basestring) or '.' not in attribute:
+        return lambda x: environment.getitem(x, attribute)
+    attribute = attribute.split('.')
+    def attrgetter(item):
+        for part in attribute:
+            item = environment.getitem(item, part)
+        return item
+    return attrgetter
+
+
+def do_groupbyr(environment, value, attribute):
+    """reversed groupby"""
+    expr = make_attrgetter(environment, attribute)
+    return sorted(map(_GroupTuple, groupby(sorted(value, key=expr, reverse=True), expr)), reverse=True)
+do_groupbyr.environmentfilter = True
+
+
+class _GroupTuple(tuple):
+    __slots__ = ()
+    grouper = property(itemgetter(0))
+    list = property(itemgetter(1))
+
+    def __new__(cls, (key, value)):
+        return tuple.__new__(cls, (key, list(value)))
+
+
 def register_custom_filters(jinjaenv):
     """Register the filters to the given Jinja environment."""
     jinjaenv.filters['ljustify'] = left_justify
@@ -71,3 +105,4 @@ def register_custom_filters(jinjaenv):
     jinjaenv.filters['nicenum'] = nicenum
     jinjaenv.filters['eurocent'] = eurocent
     jinjaenv.filters['to_json'] = to_json
+    jinjaenv.filters['groupbyr'] = do_groupbyr
