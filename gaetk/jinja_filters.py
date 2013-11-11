@@ -74,6 +74,7 @@ def make_attrgetter(environment, attribute):
     if not isinstance(attribute, basestring) or '.' not in attribute:
         return lambda x: environment.getitem(x, attribute)
     attribute = attribute.split('.')
+
     def attrgetter(item):
         for part in attribute:
             item = environment.getitem(item, part)
@@ -95,6 +96,7 @@ class _GroupTuple(tuple):
 
     def __new__(cls, (key, value)):
         return tuple.__new__(cls, (key, list(value)))
+
 
 def plural(value, singular_str, plural_str):
     """Return value with singular or plural form"""
