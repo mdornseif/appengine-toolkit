@@ -493,20 +493,38 @@ class BasicHandler(webapp2.RequestHandler):
         Access from 127.0.0.1 is allowed without authentication unless deny_localhost is `True`.
         """
 
+        # This funcion is somewhat involved. We allow
+        # a) Login via HTTP-Auth
+        # b) Login via Username and Password in a Web-Form
+        # c) Login via OpenID with speciffic domains registered at Google Apps
+        # d) Login via OpenID with all Google/GMail Accounts
+        # d) automatic creation of HTTP-Credentials for OpenID accounts
+        #
+        # This is to allow Single Sign on for Browser USers while still allowing simple
+        # Authentication for API-Calls.
+        #
+        # Once everythong set up you just call `self.login_Required()` in your handlers.
+        # Overwriting authchecker is the easiest way:
+        #
+        #     class ProtectedHandlerHandler(gaetk.handler.BasicHandler):
+        #         def authchecker(self, method, *args, **kwargs):
+        #             self.login_required()
+
+
         # Avoid beeing called twice
         if getattr(self.request, '_login_required_called', False):
             return self.credential
 
         self.credential = None
 
-        # check if we are logged in via OpenID
+        # check if we are logged already in via OpenID
         user = users.get_current_user()
-        if user and LOGIN_ALLOWED_DOMAINS:
+        if user:
             logging.info('Google user = %s', user)
             # yes, active OpenID session
             # user.federated_provider() == 'https://www.google.com/a/hudora.de/o8/ud?be=o8'
             apps_domain = user.email().split('@')[-1].lower()
-            if not apps_domain in LOGIN_ALLOWED_DOMAINS:
+            if LOGIN_ALLOWED_DOMAINS and not apps_domain in LOGIN_ALLOWED_DOMAINS:
                 logging.error("wrong OpenID Domain: %r not in %s", apps_domain, LOGIN_ALLOWED_DOMAINS)
                 raise HTTP403_Forbidden("Access denied!")
             username = user.email() or user.nickname()
@@ -597,11 +615,16 @@ class BasicHandler(webapp2.RequestHandler):
                     or self.request.referer)
                 if is_browser:
                     # we assume the request came via a browser - redirect to the "nice" login page
-                    self.response.set_status(302)
-                    absolute_url = self.abs_url(
-                        "/_ah/login_required?continue=%s" % urllib.quote(self.request.url))
-                    logging.debug('redirecting browser to nice login page at %r', absolute_url)
-                    self.response.headers['Location'] = absolute_url
+                    if LOGIN_ALLOWED_DOMAINS:
+                        # we use our internal login page for redirecting to Google Apps
+                        absolute_url = self.abs_url(
+                            "/_ah/login_required?continue=%s" % urllib.quote(self.request.url))
+                        logging.debug('redirecting browser to nice login page at %r', absolute_url)
+                        self.response.headers['Location'] = absolute_url
+                    else:
+                        # use Google Login Infrastructure
+                        absolute_url = users.create_login_url(self.request.url)
+                        logging.debug('redirecting browser to google login at %r', absolute_url)
                     raise HTTP302_Found(location=absolute_url)
                 else:
                     logging.debug('Accept: %s', self.request.headers.get('Accept', ''))
