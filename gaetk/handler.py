@@ -501,12 +501,13 @@ class BasicHandler(webapp2.RequestHandler):
 
         # check if we are logged in via OpenID
         user = users.get_current_user()
-        if user:
+        if user and LOGIN_ALLOWED_DOMAINS:
             logging.info('Google user = %s', user)
             # yes, active OpenID session
             # user.federated_provider() == 'https://www.google.com/a/hudora.de/o8/ud?be=o8'
             apps_domain = user.email().split('@')[-1].lower()
             if not apps_domain in LOGIN_ALLOWED_DOMAINS:
+                logging.error("wrong OpenID Domain: %r not in %s", apps_domain, LOGIN_ALLOWED_DOMAINS)
                 raise HTTP403_Forbidden("Access denied!")
             username = user.email() or user.nickname()
 
