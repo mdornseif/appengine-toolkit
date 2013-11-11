@@ -66,8 +66,6 @@ def to_json(value):
     return json.dumps(value)
 
 
-<<<<<<< HEAD
-
 def make_attrgetter(environment, attribute):
     """Returns a callable that looks up the given attribute from a
     passed object with the rules of the environment.  Dots are allowed
