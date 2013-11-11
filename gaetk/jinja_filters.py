@@ -29,7 +29,7 @@ def nicenum(value, spacer='&#8239;'):
     default spacer is NARROW NO-BREAK SPACE U+202F
     probably `style="white-space:nowrap; word-spacing:0.5em;"` would be an CSS based alternative.
     """
-    if value != 0 and not value :
+    if value != 0 and not value:
         return ''
     rev_value = ("%d" % int(value))[::-1]
     value = spacer.join(reversed([rev_value[i:i + 3][::-1] for i in range(0, len(rev_value), 3)]))
@@ -66,6 +66,7 @@ def to_json(value):
     return json.dumps(value)
 
 
+<<<<<<< HEAD
 
 def make_attrgetter(environment, attribute):
     """Returns a callable that looks up the given attribute from a
@@ -97,6 +98,15 @@ class _GroupTuple(tuple):
     def __new__(cls, (key, value)):
         return tuple.__new__(cls, (key, list(value)))
 
+def plural(value, singular_str, plural_str):
+    """Return value with singular or plural form"""
+    if not isinstance(value, (int, long)):
+        return singular_str
+
+    if value == 1:
+        return singular_str
+    return plural_str
+
 
 def register_custom_filters(jinjaenv):
     """Register the filters to the given Jinja environment."""
@@ -106,3 +116,4 @@ def register_custom_filters(jinjaenv):
     jinjaenv.filters['eurocent'] = eurocent
     jinjaenv.filters['to_json'] = to_json
     jinjaenv.filters['groupbyr'] = do_groupbyr
+    jinjaenv.filters['plural'] = plural

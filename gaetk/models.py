@@ -30,7 +30,7 @@ def get_current_user():
     If the user logged in via Basic Auth, the user id is taken from the related Credential object.
     """
     user = users.get_current_user()
-    if user != None:
+    if user is not None:
         return user
     else:
         session = get_current_session()
@@ -67,8 +67,8 @@ class AuditLog(db.Model):
 
     @classmethod
     def kind(cls):
-      """Returns entity kind."""
-      return "_gaetk_AuditLog"
+        """Returns entity kind."""
+        return "_gaetk_AuditLog"
 
 
 class LoggedModel(db.Model):
