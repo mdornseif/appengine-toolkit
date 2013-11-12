@@ -215,8 +215,9 @@ class Response(object):
                         if 'trimming empty <p' not in errortext and 'inserting implicit ' not in errortext:
                             print "line {0}:{1} {2}".format(linenr, colnr, errortext),
                             print repr(contentlines[int(linenr)-1])
-        except ImportError:
+        except (ImportError, OSError):
             pass
+        return self
 
     def responds_normal(self, maxduration=DEFAULTFAST):
         """Normale Seite: Status 200, HTML, schnelle Antwort, keine kaputten Links"""
