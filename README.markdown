@@ -465,6 +465,27 @@ A possible test script would look like this:
   if __name__ == "__main__":
       main()
 
+It comes also with preformance and Broken-Link monitoring support.
+So add before `sys.exit()`:
+
+
+    # `responds_normal()` checks for HTML, speed and broken links
+    client.GET('/').responds_normal()
+    client.GET('/wir/outlet.html').responds_normal()
+
+    # slowstats and brokenlinks contain statistics gathered during the run
+    from resttest_dsl slowstats, brokenlinks
+
+    print "## slowest Pages "
+    for url, speed in slowstats.most_common(10):
+        print "{0} ms {1}".format(speed, url)
+
+    if brokenlinks:
+        print "## broken links"
+        print brokenlinks.values()
+        for link in brokenlinks:
+            for source in brokenlinks[link]:
+                print (u"{0} via {1}".format(link, source)).encode('utf-8')
 
 
 Thanks
