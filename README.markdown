@@ -487,6 +487,8 @@ So add before `sys.exit()`:
             for source in brokenlinks[link]:
                 print (u"{0} via {1}".format(link, source)).encode('utf-8')
 
+If `tidylib` is installed, it will also output HTML-Errors.
+
 
 Thanks
 ======

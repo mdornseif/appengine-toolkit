@@ -198,12 +198,30 @@ class Response(object):
                     oklinks.add(link)
                 else:
                     brokenlinks.setdefault(link, set()).add(self.url)
-                    print repr(status)
                 #self.expect_condition(status == '200', 'invalid link to %r' % (link))
+
+    def responds_with_valid_html(self):
+        try:
+            from tidylib import tidy_document
+            document, errors = tidy_document(self.content, options={'numeric-entities':1, 'input-encoding': 'utf8'})
+            if errors:
+                print "### {0} see http://validator.w3.org/nu/?doc={0}".format(self.url)
+                contentlines = self.content.split('\n')
+                for errorline in errors.split('\n'):
+                    address = errorline.split('-')[0]
+                    errortext = '-'.join(errorline.split('-')[1:])
+                    if address:
+                        line, linenr, column, colnr = address.split()
+                        if 'trimming empty <p' not in errortext and 'inserting implicit ' not in errortext:
+                            print "line {0}:{1} {2}".format(linenr, colnr, errortext),
+                            print repr(contentlines[int(linenr)-1])
+        except ImportError:
+            pass
 
     def responds_normal(self, maxduration=DEFAULTFAST):
         """Normale Seite: Status 200, HTML, schnelle Antwort, keine kaputten Links"""
         self.responds_html()
+        self.responds_with_valid_html()
         self.responds_with_valid_links()
         self.responds_fast(maxduration)
         return self
