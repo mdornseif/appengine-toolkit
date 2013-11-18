@@ -17,7 +17,7 @@ from pprint import pprint
 
 from huTools.http import fetch
 from huTools import hujson2
-
+import huTools.http._httplib2  # for ServerNotFoundError
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
 FOREGROUND = 30
@@ -191,7 +191,7 @@ class Response(object):
                         link,
                         headers=dict(referer=self.url),
                         content='', method='GET', multipart=False, ua='', timeout=30)
-                except:
+                except (IOError, huTools.http._httplib2.ServerNotFoundError):
                     status = 600
 
                 if status == 200:
