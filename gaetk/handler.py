@@ -367,8 +367,7 @@ class BasicHandler(webapp2.RequestHandler):
         """Quick and dirty sending of some plaintext to the client."""
         self.response.set_status(status)
         self.response.headers['Content-Type'] = contet_type
-        self.response.out.write(text)
-
+        self.response.body = text + '\n'
 
     def _expire_messages(self):
         new = []
