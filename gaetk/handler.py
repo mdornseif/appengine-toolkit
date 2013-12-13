@@ -363,10 +363,12 @@ class BasicHandler(webapp2.RequestHandler):
         """Render a Jinja2 Template and wite it to the client."""
         self.response.out.write(self.rendered(values, template_name))
 
-    def return_text(self, text, status=200, content_type='text/plain'):
+    def return_text(self, text, status=200, content_type='text/plain', encoding='utf-8'):
         """Quick and dirty sending of some plaintext to the client."""
         self.response.set_status(status)
         self.response.headers['Content-Type'] = content_type
+        if isinstance(text, unicode):
+            text = text.encode(encoding)
         self.response.body = text + '\n'
 
     def _expire_messages(self):
