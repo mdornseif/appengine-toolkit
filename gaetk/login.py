@@ -16,9 +16,6 @@ Created by Maximillian Dornseif on 2010-09-24.
 Copyright (c) 2010 HUDORA. All rights reserved.
 """
 
-# pylint can't handle db.Model.get()
-# pylint: disable=E1103
-
 import config
 config.imported = True
 

@@ -421,7 +421,7 @@ A possible test script would look like this:
   from resttest_dsl import create_testclient_from_cli, get_app_version
 
 
-  def main():  # pylint: disable=R0915
+  def main():
       """Main Entry Point"""
 
       # init with app id and some credentials

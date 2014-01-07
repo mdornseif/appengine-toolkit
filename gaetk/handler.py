@@ -7,8 +7,6 @@ Created by Maximillian Dornseif on 2010-10-03.
 Copyright (c) 2010-2013 HUDORA. All rights reserved.
 """
 
-# pylint can't handle db.Model.get()
-# pylint: disable=E1103
 # pylint can't handle google.appengine.api.memcache
 # pylint: disable=E1101
 
@@ -155,7 +153,7 @@ def create_credential_from_federated_login(user, apps_domain):
     return credential
 
 
-class BasicHandler(webapp2.RequestHandler):
+class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-methods
     """Generischc Handler functionality.
 
     provides

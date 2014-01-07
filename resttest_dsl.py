@@ -28,6 +28,9 @@ DEBUG = False
 
 DEFAULTFAST = int(os.environ.get('DEFAULTFAST_MS', 1000))
 
+NO_LINK_VALIDATION = False  # superss LINK validation
+NO_HTML_VALIDATION = False  # superss HTML validation
+
 # save slowest access to each URL
 slowstats = Counter()
 alllinks = Counter()
@@ -180,6 +183,8 @@ class Response(object):
         return self
 
     def responds_with_valid_links(self):
+        if NO_LINK_VALIDATION:
+            return self
         links = extract_links(self.content, self.url)
         for link in links:
             if link in brokenlinks:
@@ -201,6 +206,8 @@ class Response(object):
                 #self.expect_condition(status == '200', 'invalid link to %r' % (link))
 
     def responds_with_valid_html(self):
+        if NO_HTML_VALIDATION:
+            return self
         try:
             from tidylib import tidy_document
             document, errors = tidy_document(self.content, options={'numeric-entities':1, 'input-encoding': 'utf8'})
@@ -242,7 +249,7 @@ class TestClient(object):
         """
         self.authdict[auth] = creds
 
-    def GET(self, path, auth=None, accept=None):  # pylint: disable=C0103
+    def GET(self, path, auth=None, accept=None):
         """Führt einen HTTP-GET auf den gegebenen [path] aus.
         Nutzt dabei ggf. die credentials zu [auth] und [accept]."""
         if auth and auth not in self.authdict:
