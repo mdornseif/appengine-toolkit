@@ -4,7 +4,7 @@
 handler.py - default Request Handler
 
 Created by Maximillian Dornseif on 2010-10-03.
-Copyright (c) 2010-2013 HUDORA. All rights reserved.
+Copyright (c) 2010-2014 HUDORA. All rights reserved.
 """
 
 # pylint can't handle google.appengine.api.memcache
