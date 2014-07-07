@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}{% if title is defined %}{{ title|e }}{% else %}gaetk{% endif %}{% endblock %}</title>
+
+    <!-- Bootstrap -->
+    <link href="/gaetk/static/bootstrap/3.2.x/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+    {% block gaetkstyle %}
+    <style type="text/css">
+body {
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
+
+.navbar {
+  margin-bottom: 20px;
+}
+    </style>
+    {% endblock gaetkstyle %}
+    {% block extrastyle %}
+    {% endblock extrastyle %}
+  </head>
+
+  <body>
+    <div class="container">
+
+      <!-- Static navbar -->
+      <div class="navbar navbar-default" role="navigation">
+        <div class="container-fluid">
+          <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+              <span class="sr-only">Toggle navigation</span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="#">{% block projectname -%}
+              {% if projectname is defined -%}
+                {{ projectname|e }}
+              {%- else -%}
+                gaetk used without setting `projectname`
+              {%- endif -%}
+            {%- endblock projectname %}</a>
+          </div>
+          <div class="navbar-collapse collapse">
+            <ul class="nav navbar-nav">
+              <li class="active"><a href="#">Link</a></li>
+              <li><a href="#">Link</a></li>
+              <li><a href="#">Link</a></li>
+              <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown">Dropdown <b class="caret"></b></a>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li class="dropdown-header">Nav header</li>
+                  <li><a href="#">Separated link</a></li>
+                  <li><a href="#">One more separated link</a></li>
+                </ul>
+              </li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+              <li class="active"><a href="./">Default</a></li>
+              <li><a href="../navbar-static-top/">Static top</a></li>
+              <li><a href="../navbar-fixed-top/">Fixed top</a></li>
+            </ul>
+          </div><!--/.nav-collapse -->
+        </div><!--/.container-fluid -->
+      </div>
+
+    {% block content -%}
+
+        {# display session specific messages #}
+        {% if _gaetk_messages is defined -%}
+          {% for message in _gaetk_messages -%}
+            <div class="alert alert-{{ message.type }}">
+              <button type="button" class="close" data-dismiss="alert">&times;</button>
+              <p>{{ message.html }}</p>
+            </div>
+          {%- endfor %}
+        {%- endif %}
+
+      <!-- Main component for a primary marketing message or call to action -->
+      <div class="jumbotron">
+        <h1>Navbar example</h1>
+        <p>This example is a quick exercise to illustrate how the default, static navbar and fixed to top navbar work. It includes the responsive CSS and HTML, so it also adapts to your viewport and device.</p>
+        <p>
+          <a class="btn btn-lg btn-primary" href="../../components/#navbar" role="button">View navbar docs &raquo;</a>
+        </p>
+      </div>
+
+      {% block mainrow -%}
+        {% block maincontent -%}
+          {% if content is defined -%}
+            {{ content }}
+          {%- else -%}
+            {#<h3>Main content</h3>#}
+          {%- endif %}
+        {%- endblock maincontent %}
+
+        {% block secondarycontent -%}
+          {% if secondarycontent is defined -%}
+            {{ secondarycontent }}
+          {%- else -%}
+            {# <h3>Secondary content</h3> #}
+          {%- endif %}
+        {%- endblock secondarycontent %}
+      {%- endblock mainrow %}
+    </div> <!-- /container -->
+
+    {%- endblock content %}
+    </div> <!-- /container -->
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.12.1/jquery.min.js"></script>
+    <script src="/gaetk/static/bootstrap/3.2.x/js/bootstrap.min.js"></script>
+
+  </body>
+</html>

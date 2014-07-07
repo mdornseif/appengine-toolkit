@@ -1,0 +1,34 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Log in with Google Apps{% endblock title %}
+
+{% block content %}
+<style>
+label {
+float: left;
+width: 100px;
+padding: 0 1em;
+text-align: right;
+}
+#submit {
+width: 200px;
+clear: both;
+padding-top: 1em;
+text-align: center;
+}
+</style>
+    <h1>Login</h1>
+    <form method="get" action="/_ah/login_required">
+        <div>
+            <div><label for="username">Username:</label> <input type="text" name="username" /></div>
+            <div><label for="password">Password:</label> <input type="password" name="password" /></div>
+            <div id="submit"><input name="Submit" value="Submit" type="submit"></div>
+        </div>
+
+        {% if continue %}
+          <input type="hidden" name="continue" value="{{continue|escape}}" />
+        {% endif %}
+
+        <p>Sie können sich alternativ mit <a href="?hudora.de.x=1">Ihrem HUDORA-Intranet Account</a> anmelden.</p>
+    </form>
+{% endblock content %}
