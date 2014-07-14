@@ -57,6 +57,7 @@ from webob.exc import HTTPNotFound as HTTP404_NotFound
 from webob.exc import HTTPNotImplemented as HTTP501_NotImplemented
 from webob.exc import HTTPRequestEntityTooLarge as HTTP413_TooLarge
 from webob.exc import HTTPSeeOther as HTTP303_SeeOther
+from webob.exc import HTTPServerError as HTTP500_ServerError
 from webob.exc import HTTPServiceUnavailable as HTTP503_ServiceUnavailable
 from webob.exc import HTTPTemporaryRedirect as HTTP307_TemporaryRedirect
 from webob.exc import HTTPUnauthorized as HTTP401_Unauthorized
