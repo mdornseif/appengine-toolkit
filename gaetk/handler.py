@@ -233,13 +233,14 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
             objects = query.fetch(limit)
             start = self.request.get_range('cursor_start', min_value=0, max_value=10000, default=0)
             more_objects = (len(objects) == limit)
+            cursor = query.cursor()
         else:
             # Attention: the order of these statements matter, because query.cursor() is used later.
             # If the order is reversed, the client gets a cursor to the query to test for more objects,
             # not a cursor to the actual objects
             objects = query.fetch(limit, start)
             cursor = query.cursor()
-            more_objects = query.with_cursor(cursor).fetch(1) != []
+            more_objects = query.with_cursor(cursor).count(1) > 0
 
         prev_objects = (start > 0) or self.request.get('cursor')
         prev_start = max(start - limit - 1, 0)
@@ -250,7 +251,7 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
                    prev_start=prev_start, next_start=next_start,
                    total=total)
         if more_objects:
-            ret['cursor'] = query.cursor()
+            ret['cursor'] = cursor
             ret['cursor_start'] = start + limit
             # query string to get to the next page
             qs = dict(cursor=ret['cursor'], cursor_start=ret['cursor_start'])
