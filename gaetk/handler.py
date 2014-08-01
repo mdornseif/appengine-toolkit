@@ -33,12 +33,8 @@ import uuid
 import warnings
 
 from functools import partial
+from gaetk import webapp2
 from gaetk._internal import lru_cache
-
-try:
-    import mywebapp2 as webapp2  # on AppEngine python27
-except ImportError:
-    from gaetk import webapp2
 
 from gaetk.gaesessions import get_current_session
 from google.appengine.api import memcache
