@@ -16,8 +16,9 @@ Copyright (c) 2011 HUDORA. All rights reserved.
 """
 
 from gaetk.gaesessions import get_current_session
-from google.appengine.ext import db
+from google.appengine.ext import blobstore
 from google.appengine.api import users
+from google.appengine.ext import db
 
 import decimal
 import os
@@ -95,6 +96,15 @@ class LoggedModel(db.Model):
             current_value = prop.make_value_from_datastore(tmp)
             tmp = prop.get_value_for_datastore(self)
             new_value = prop.make_value_from_datastore(tmp)
+
+            # Empty lists are stored as None
+            if isinstance(prop, (db.ListProperty, db.StringListProperty)):
+                if current_value is None:
+                    current_value = new_value
+            elif isinstance(prop, blobstore.BlobReferenceProperty):
+                # TODO: Compare BlobInfo
+                current_value = new_value
+
             if current_value != new_value:
                 if isinstance(prop, db.UnindexedProperty):
                     # Reduce logging output to 500 chars (max length for StringProperty)
