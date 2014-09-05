@@ -113,7 +113,7 @@ class LoggedModel(db.Model):
                     if len(new_value) > 245:
                         new_value = "%s ..." % new_value[:244]
                 change = u'%s: %s \u21d2 %s' % (prop.name, current_value, new_value)
-                changelist.append(chage[:500])
+                changelist.append(change[:500])
 
         key = super(LoggedModel, self).put(**kwargs)
         if changelist:
