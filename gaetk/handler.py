@@ -524,6 +524,7 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
             self.session['uid'] = self.credential.uid
             self.session['logintype'] = 'OAuth'
             self.response.set_cookie('gaetkopid', apps_domain, max_age=7776000)
+            return self.credential
 
         # try if we have a session based login
         if self.enableSessionAuth and self.session.get('uid'):
