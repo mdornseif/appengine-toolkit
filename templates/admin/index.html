@@ -1,0 +1,17 @@
+{% set title = "%APP% Administration" %}
+{% extends "base_admin.html" %}
+
+{% block maincontent %}
+<h2>Daten bearbeiten</h2>
+{% for app in apps %}
+    <h4>{{ app.capitalize() }}</h4>
+    <ul>
+    {% for model in apps[app] -%}
+        <li><a href="/admin/{{ app }}/{{ model }}/">{{ model }}</a></li>
+    {%- endfor %}
+    </ul>
+{% endfor %}
+{% endblock %}
+
+{% block secondarycontent %}
+{% endblock %}

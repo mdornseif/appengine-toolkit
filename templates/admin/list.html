@@ -1,0 +1,64 @@
+{% set title = model + " Administration" %}
+{% extends "base_admin.html" %}
+
+{% block breadcrumbs %}
+<ul class="breadcrumb">
+  <li><a href="/">Backend</a> <span class="divider">/backend/</span></li>
+  <li><a href="/admin/">Administration</a> <span class="divider">/</span></li>
+  <li class="active">{{ model }}</li>
+</ul>
+{% endblock %}
+
+{% block maincontent %}
+    <form class="form-search" method="GET" action="search/">
+      <input id="q" class="input-large search-query" placeholder="Suchbegriffe" name="q" {% if term is defined %}value="{{ term }}"{% endif %}>
+    </form>
+
+    <form action="add/" method="GET">
+        <div class="form-actions"><input class="btn" type="submit" value="Neu"></div>
+    </form>
+    <form action="delete/" method="POST">
+        <table class="table table-bordered table-condensed table-striped">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Key/ID</th>
+                    {% for field in list_fields %}
+                        {# This is a little bit hackish. Django now uses a class ChangeList to display this table #}
+                        <th>{% if field in model_class.properties() %}
+                                <a href="?ot=asc&amp;o={{ field }}">{{ field|title }}</a>
+                            {% else %}
+                                {{ field|title }}
+                            {% endif %}
+                        </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for obj in object_list %}
+                <tr>
+                    <td>
+                        <input name="object_id" type="checkbox" value="{{ obj.key() }}">
+                    </td>
+                    <td><a href="/admin/{{ app }}/{{ model }}/{{ obj.key()|e }}/">{{ obj|e }}</a></td>
+                    {% for field in list_fields %}
+                    <td>{{ obj|attr(field) }}</td>
+                        {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="form-actions">
+            <button class="btn btn-danger" type="submit">Löschen</button>
+        </div>
+    </form>
+
+    <div class="pagination">
+      <ul>
+        <li class="prev {% if not prev_objects %}disabled{% endif %}"><a href="?{{ prev_qs }}">&larr; Zurück</a></li>
+        <li class="next {% if not more_objects %}disabled{% endif %}"><a href="?{{ next_qs }}">Vor &rarr;</a></li>
+      </ul>
+    </div>
+{% endblock %}
+{% block secondarycontent %}
+{% endblock %}
