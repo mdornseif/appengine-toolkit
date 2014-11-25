@@ -6,8 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}{% if title is defined %}{{ title|e }}{% else %}gaetk{% endif %}{% endblock %}</title>
 
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
     <!-- Bootstrap -->
     <link href="/gaetk/static/bootstrap/3.3.x/css/bootstrap.min.css" rel="stylesheet">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -35,6 +37,7 @@ body {
   <body>
     <div class="container">
 
+      {% block navbar -%}
       <!-- Static navbar -->
       <div class="navbar navbar-default" role="navigation">
         <div class="container-fluid">
@@ -45,7 +48,7 @@ body {
               <span class="icon-bar"></span>
               <span class="icon-bar"></span>
             </button>
-            <a class="navbar-brand" href="#">{% block projectname -%}
+            <a class="navbar-brand" href="/">{% block projectname -%}
               {% if projectname is defined -%}
                 {{ projectname|e }}
               {%- else -%}
@@ -79,6 +82,7 @@ body {
           </div><!--/.nav-collapse -->
         </div><!--/.container-fluid -->
       </div>
+     {%- endblock navbar %}
 
     {% block content -%}
 
@@ -92,14 +96,7 @@ body {
           {%- endfor %}
         {%- endif %}
 
-      <!-- Main component for a primary marketing message or call to action -->
-      <div class="jumbotron">
-        <h1>Navbar example</h1>
-        <p>This example is a quick exercise to illustrate how the default, static navbar and fixed to top navbar work. It includes the responsive CSS and HTML, so it also adapts to your viewport and device.</p>
-        <p>
-          <a class="btn btn-lg btn-primary" href="../../components/#navbar" role="button">View navbar docs &raquo;</a>
-        </p>
-      </div>
+      {% block firstheading -%}<h1>{% if title is defined %}{{ title|e }}{% endif %}</h1>{%- endblock firstheading %}
 
       {% block mainrow -%}
         {% block maincontent -%}
@@ -126,8 +123,7 @@ body {
     <!-- Le javascript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
-    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
-    <script src="/gaetk/static/bootstrap/3.2.x/js/bootstrap.min.js"></script>
-
+    <script src="/gaetk/static/bootstrap/3.3.x/js/bootstrap.min.js"></script>
+    {% block javascript -%}{%- endblock javascript %}
   </body>
 </html>

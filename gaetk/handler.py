@@ -277,7 +277,6 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
         """
         values.update({'is_admin': self.is_admin()})
         if self.is_admin():
-            # for admin requests we import and activate the profiler
             values.update({'credential': self.credential,
                            'is_admin': self.is_admin()})
         return values
@@ -336,6 +335,7 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
         import jinja_filters
 
         env = self.create_jinja2env()
+        # TODO: do we need that here or in create_jinja2env?
         jinja_filters.register_custom_filters(env)
         try:
             template = env.get_template(template_name)
@@ -733,8 +733,8 @@ class JsonResponseHandler(BasicHandler):
     default_cachingtime = 60
 
     def serialize(self, content):
-        import huTools.hujson
-        return huTools.hujson.dumps(content)
+        import huTools.hujson2
+        return huTools.hujson2.dumps(content)
 
     def dispatch(self):
         """Dispatches the requested method."""
