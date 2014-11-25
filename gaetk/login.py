@@ -13,11 +13,8 @@ In app.yaml add:
       script: lib/gaetk/gaetk/login.py
 
 Created by Maximillian Dornseif on 2010-09-24.
-Copyright (c) 2010 HUDORA. All rights reserved.
+Copyright (c) 2010, 2014 HUDORA. All rights reserved.
 """
-
-# pylint can't handle db.Model.get()
-# pylint: disable=E1103
 
 import config
 config.imported = True

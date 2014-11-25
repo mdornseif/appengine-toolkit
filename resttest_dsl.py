@@ -17,7 +17,7 @@ from pprint import pprint
 
 from huTools.http import fetch
 from huTools import hujson2
-
+import huTools.http._httplib2  # for ServerNotFoundError
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
 FOREGROUND = 30
@@ -28,8 +28,14 @@ DEBUG = False
 
 DEFAULTFAST = int(os.environ.get('DEFAULTFAST_MS', 1000))
 
+NO_LINK_VALIDATION = False  # superss LINK validation
+NO_HTML_VALIDATION = False  # superss HTML validation
+
 # save slowest access to each URL
 slowstats = Counter()
+alllinks = Counter()
+oklinks = set()
+brokenlinks = {}
 
 def colored(text, color):
     """Färbt den Text mit Terminalsequenzen ein.
@@ -176,9 +182,55 @@ class Response(object):
                         'expected answer within %d ms, took %d ms' % (maxduration, self.duration))
         return self
 
+    def responds_with_valid_links(self):
+        if NO_LINK_VALIDATION:
+            return self
+        links = extract_links(self.content, self.url)
+        for link in links:
+            if link in brokenlinks:
+                # no need to check again
+                brokenlinks.setdefault(link, set()).add(self.url)
+            elif link not in oklinks:
+                try:
+                    status, _responseheaders, _content = fetch(
+                        link,
+                        headers=dict(referer=self.url),
+                        content='', method='GET', multipart=False, ua='', timeout=30)
+                except (IOError, huTools.http._httplib2.ServerNotFoundError):
+                    status = 600
+
+                if status == 200:
+                    oklinks.add(link)
+                else:
+                    brokenlinks.setdefault(link, set()).add(self.url)
+                #self.expect_condition(status == '200', 'invalid link to %r' % (link))
+
+    def responds_with_valid_html(self):
+        if NO_HTML_VALIDATION:
+            return self
+        try:
+            from tidylib import tidy_document
+            document, errors = tidy_document(self.content, options={'numeric-entities':1, 'input-encoding': 'utf8'})
+            if errors:
+                print "### {0} see http://validator.w3.org/nu/?doc={0}".format(self.url)
+                contentlines = self.content.split('\n')
+                for errorline in errors.split('\n'):
+                    address = errorline.split('-')[0]
+                    errortext = '-'.join(errorline.split('-')[1:])
+                    if address:
+                        line, linenr, column, colnr = address.split()
+                        if 'trimming empty <p' not in errortext and 'inserting implicit ' not in errortext:
+                            print "line {0}:{1} {2}".format(linenr, colnr, errortext),
+                            print repr(contentlines[int(linenr)-1])
+        except (ImportError, OSError):
+            pass
+        return self
+
     def responds_normal(self, maxduration=DEFAULTFAST):
-        """Normale Seite: Status 200, HTML, Schnelle Antwort."""
+        """Normale Seite: Status 200, HTML, schnelle Antwort, keine kaputten Links"""
         self.responds_html()
+        self.responds_with_valid_html()
+        self.responds_with_valid_links()
         self.responds_fast(maxduration)
         return self
 
@@ -197,7 +249,7 @@ class TestClient(object):
         """
         self.authdict[auth] = creds
 
-    def GET(self, path, auth=None, accept=None):  # pylint: disable=C0103
+    def GET(self, path, auth=None, accept=None):
         """Führt einen HTTP-GET auf den gegebenen [path] aus.
         Nutzt dabei ggf. die credentials zu [auth] und [accept]."""
         if auth and auth not in self.authdict:
@@ -236,6 +288,18 @@ class TestClient(object):
     def errors(self):
         """Anzahl der fehlgeschlagenen Zusicherungen, die für Anfragen dieses Clients gefroffen wurden."""
         return sum(r.errors for r in self.responses)
+
+
+def extract_links(content, url):
+    import lxml.html
+    links = []
+    dom =  lxml.html.document_fromstring(content, base_url=url)
+    dom.make_links_absolute(url)
+    for _element, _attribute, link, _pos in dom.iterlinks():
+        if link.startswith('http'):
+            links.append(link)
+        alllinks[link] += 1
+    return links
 
 
 def get_app_version():

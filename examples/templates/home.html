@@ -17,8 +17,7 @@ padding-top: 1em;
 text-align: center;
 }
 </style>
-  <h1>Login</h1>
-  <div>
+    <h1>Login</h1>
     <form method="get" action="/_ah/login_required">
         <div>
             <div><label for="username">Username:</label> <input type="text" name="username" /></div>
@@ -30,9 +29,6 @@ text-align: center;
           <input type="hidden" name="continue" value="{{continue|escape}}" />
         {% endif %}
 
+        <p>Sie können sich alternativ mit <a href="?hudora.de.x=1">Ihrem HUDORA-Intranet Account</a> anmelden.</p>
     </form>
-  </div>
-  <div>
-    <p>Sie können sich alternativ mit <a href="?hudora.de.x=1">Ihrem HUDORA-Intranet Account</a> anmelden.</p>
-  </div>
 {% endblock content %}

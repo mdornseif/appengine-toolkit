@@ -55,7 +55,8 @@ def get_config(key, default=None):
     """Get (cached) configuration value for key"""
 
     if key in CONFIG_CACHE:
-        if CONFIG_CACHE.get(key[0]) > time.time() - 100:
+        timestamp, value = CONFIG_CACHE[key]
+        if timestamp > time.time() - 100:
             return CONFIG_CACHE.get(key)[1]
 
     obj = Configuration.get_by_key_name(key)

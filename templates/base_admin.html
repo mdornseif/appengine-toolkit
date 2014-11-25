@@ -7,7 +7,8 @@
     <!--[if lt IE 9]>
       <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
-    <link href="/gaetk/static/bootstrap/1.4.x/bootstrap.css" rel="stylesheet">
+    <link href="/gaetk/static/bootstrap/2.3.x/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/gaetk/static/bootstrap/2.3.x/css/bootstrap-responsive.min.css" rel="stylesheet">
     {% block gaetkstyle %}
     <style type="text/css">
       /* Override some defaults */
@@ -56,7 +57,7 @@
 <!-- profiler_request_id = "{{ profiler_request_id }}" -->
 {% if is_admin and profiler_request_id -%}<link rel="stylesheet" type="text/css" href="/gae_mini_profiler/static/css/profiler.css" />{%- endif %}
 {% block stylesheets -%}{%- endblock %}
-<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js" type="text/javascript"></script>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js" type="text/javascript"></script>
 {% if is_admin and profiler_request_id -%}  {# Den Profiler sollen nur Admins angezeigt bekommen. #}
 <script type="text/javascript" src="/gae_mini_profiler/static/js/profiler.js"></script>
 <script type="text/javascript">GaeMiniProfiler.init("{{ profiler_request_id }}", false)</script>
@@ -73,7 +74,7 @@
           {# display session specific messages #}
           {% if _gaetk_messages is defined -%}
           {% for message in _gaetk_messages -%}
-            <div class="alert-message {{ message.type }}">
+            <div class="alert alert-{{ message.type }}">
               <a class="close" href="#">×</a>
               <p>{{ message.html }}</p>
             </div>
@@ -84,13 +85,13 @@
         </div>
         <div class="row">
           {% block mainrow -%}
-          <div class="span12" id="maincontent">
+          <div class="span9" id="maincontent">
               {% block maincontent -%}
                 {% if content is defined -%}{{ content }}{%- else -%}
                 {#<h3>Main content</h3>#}{%- endif %}
               {%- endblock maincontent %}
           </div>
-          <div class="span4" id="secondarycontent">
+          <div class="span3" id="secondarycontent">
              {% block secondarycontent -%}
                 {% if secondarycontent is defined -%}{{ secondarycontent }}
                 {%- else -%}{# <h3>Secondary content</h3> #}{%- endif %}

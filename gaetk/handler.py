@@ -4,11 +4,9 @@
 handler.py - default Request Handler
 
 Created by Maximillian Dornseif on 2010-10-03.
-Copyright (c) 2010-2013 HUDORA. All rights reserved.
+Copyright (c) 2010-2014 HUDORA. All rights reserved.
 """
 
-# pylint can't handle db.Model.get()
-# pylint: disable=E1103
 # pylint can't handle google.appengine.api.memcache
 # pylint: disable=E1101
 
@@ -35,12 +33,8 @@ import uuid
 import warnings
 
 from functools import partial
+from gaetk import webapp2
 from gaetk._internal import lru_cache
-
-try:
-    import mywebapp2 as webapp2  # on AppEngine python27
-except ImportError:
-    from gaetk import webapp2
 
 from gaetk.gaesessions import get_current_session
 from google.appengine.api import memcache
@@ -59,6 +53,7 @@ from webob.exc import HTTPNotFound as HTTP404_NotFound
 from webob.exc import HTTPNotImplemented as HTTP501_NotImplemented
 from webob.exc import HTTPRequestEntityTooLarge as HTTP413_TooLarge
 from webob.exc import HTTPSeeOther as HTTP303_SeeOther
+from webob.exc import HTTPServerError as HTTP500_ServerError
 from webob.exc import HTTPServiceUnavailable as HTTP503_ServiceUnavailable
 from webob.exc import HTTPTemporaryRedirect as HTTP307_TemporaryRedirect
 from webob.exc import HTTPUnauthorized as HTTP401_Unauthorized
@@ -155,7 +150,7 @@ def create_credential_from_federated_login(user, apps_domain):
     return credential
 
 
-class BasicHandler(webapp2.RequestHandler):
+class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-methods
     """Generischc Handler functionality.
 
     provides
@@ -234,13 +229,14 @@ class BasicHandler(webapp2.RequestHandler):
             objects = query.fetch(limit)
             start = self.request.get_range('cursor_start', min_value=0, max_value=10000, default=0)
             more_objects = (len(objects) == limit)
+            cursor = query.cursor()
         else:
             # Attention: the order of these statements matter, because query.cursor() is used later.
             # If the order is reversed, the client gets a cursor to the query to test for more objects,
             # not a cursor to the actual objects
             objects = query.fetch(limit, start)
             cursor = query.cursor()
-            more_objects = query.with_cursor(cursor).fetch(1) != []
+            more_objects = query.with_cursor(cursor).count(1) > 0
 
         prev_objects = (start > 0) or self.request.get('cursor')
         prev_start = max(start - limit - 1, 0)
@@ -251,7 +247,7 @@ class BasicHandler(webapp2.RequestHandler):
                    prev_start=prev_start, next_start=next_start,
                    total=total)
         if more_objects:
-            ret['cursor'] = query.cursor()
+            ret['cursor'] = cursor
             ret['cursor_start'] = start + limit
             # query string to get to the next page
             qs = dict(cursor=ret['cursor'], cursor_start=ret['cursor_start'])
@@ -281,7 +277,6 @@ class BasicHandler(webapp2.RequestHandler):
         """
         values.update({'is_admin': self.is_admin()})
         if self.is_admin():
-            # for admin requests we import and activate the profiler
             values.update({'credential': self.credential,
                            'is_admin': self.is_admin()})
         return values
@@ -340,6 +335,7 @@ class BasicHandler(webapp2.RequestHandler):
         import jinja_filters
 
         env = self.create_jinja2env()
+        # TODO: do we need that here or in create_jinja2env?
         jinja_filters.register_custom_filters(env)
         try:
             template = env.get_template(template_name)
@@ -362,6 +358,14 @@ class BasicHandler(webapp2.RequestHandler):
     def render(self, values, template_name):
         """Render a Jinja2 Template and wite it to the client."""
         self.response.out.write(self.rendered(values, template_name))
+
+    def return_text(self, text, status=200, content_type='text/plain', encoding='utf-8'):
+        """Quick and dirty sending of some plaintext to the client."""
+        self.response.set_status(status)
+        self.response.headers['Content-Type'] = content_type
+        if isinstance(text, unicode):
+            text = text.encode(encoding)
+        self.response.body = text + '\n'
 
     def _expire_messages(self):
         new = []
@@ -539,6 +543,7 @@ class BasicHandler(webapp2.RequestHandler):
             self.session['uid'] = self.credential.uid
             self.session['logintype'] = 'OAuth'
             self.response.set_cookie('gaetkopid', apps_domain, max_age=7776000)
+            return self.credential
 
         # try if we have a session based login
         if self.enableSessionAuth and self.session.get('uid'):
@@ -752,8 +757,8 @@ class JsonResponseHandler(BasicHandler):
     default_cachingtime = 60
 
     def serialize(self, content):
-        import huTools.hujson
-        return huTools.hujson.dumps(content)
+        import huTools.hujson2
+        return huTools.hujson2.dumps(content)
 
     def dispatch(self):
         """Dispatches the requested method."""

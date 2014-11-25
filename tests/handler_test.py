@@ -11,11 +11,9 @@ Copyright (c) 2011 HUDORA GmbH. All rights reserved.
 import unittest
 
 from google.appengine.ext import db
-import unittest
 import gaetk
-from mock import Mock
 import webtest
-from huTools.hujson import loads
+from huTools.hujson2 import loads
 
 from gaetk.gaesessions import SessionMiddleware
 

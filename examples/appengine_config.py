@@ -3,8 +3,8 @@
 import config
 config.imported = True
 
-# from gaetk.gaesessions import SessionMiddleware
-COOKIE_KEY = '%%PUT_RANDOM_VALUE_HERE%%'
+from gaetk.gaesessions import SessionMiddleware
+COOKIE_KEY = '13f22fe8170a0a564fc2a26b8ffae123-5a17'
 
 
 def webapp_add_wsgi_middleware(app):
