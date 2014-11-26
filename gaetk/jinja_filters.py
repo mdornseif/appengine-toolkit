@@ -2,10 +2,14 @@
 # encoding: utf-8
 """
 jinja_filters.py - custom jinja2 filters
-Copyright (c) 2010, 2012 HUDORA. All rights reserved.
+Copyright (c) 2010, 2012, 2014 HUDORA. All rights reserved.
 """
 
 import json
+import re
+
+import jinja2
+from jinja2.utils import Markup
 
 
 def left_justify(value, width):
@@ -74,6 +78,49 @@ def plural(value, singular_str, plural_str):
     return plural_str
 
 
+def filter_dateformat(value, formatstring='%Y-%m-%d'):
+    """Formates a date"""
+
+    from huTools.calendar.formats import convert_to_date
+    from babel import dates
+    date = convert_to_date(value)
+    # We do not want locale specific formating, clamp on ISO 8601
+    # TODO: why use babel then?
+    return dates.format_date(date, formatstring, locale='de_DE')
+
+
+def filter_markdown(value):
+    """
+    Rendert a string as Markdown
+
+    Syntax:
+        {{ value|markdown }}
+    """
+
+    import huTools.markdown2
+    return Markup(huTools.markdown2.markdown(value))
+
+
+@jinja2.evalcontextfilter
+def filter_nl2br(eval_ctx, value):
+    """Newlines in <br>-Tags konvertieren"""
+    paragraph_re = re.compile(r'(?:\r\n|\r|\n){2,}')
+    result = u'\n\n'.join(u'<p>%s</p>' % paragraph.replace('\n', '<br>\n')
+                          for paragraph in paragraph_re.split(value))
+    if eval_ctx.autoescape:
+        result = Markup(result)
+    return result
+
+
+def filter_urlquote(value):
+    """Makes a string valid in an URL."""
+    import huTools.http.tools
+
+    if type(value) == 'Markup':
+        value = value.unescape()
+    return huTools.http.tools.quote(value)
+
+
 def register_custom_filters(jinjaenv):
     """Register the filters to the given Jinja environment."""
     jinjaenv.filters['ljustify'] = left_justify
@@ -82,3 +129,6 @@ def register_custom_filters(jinjaenv):
     jinjaenv.filters['eurocent'] = eurocent
     jinjaenv.filters['to_json'] = to_json
     jinjaenv.filters['plural'] = plural
+    jinjaenv.filters['filter_dateformat'] = plural
+    jinjaenv.filters['filter_markdown'] = plural
+    jinjaenv.filters['filter_nl2br'] = plural
