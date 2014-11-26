@@ -491,6 +491,16 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
             return False
         return getattr(self.credential, 'admin', False)
 
+    def has_permission(self, permission):
+        """
+        Checks if user has a given permission.
+
+        Returns False, if no user is logged in.
+        """
+        if self.credential:
+            return permission in self.credential.permissions
+        return False
+
     def login_required(self, deny_localhost=False):
         """Returns the currently logged in user and forces login.
 
