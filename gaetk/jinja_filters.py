@@ -6,6 +6,7 @@ Copyright (c) 2010, 2012, 2014 HUDORA. All rights reserved.
 """
 
 import json
+import logging
 import re
 
 import jinja2
@@ -121,6 +122,108 @@ def filter_urlquote(value):
     return huTools.http.tools.quote(value)
 
 
+@jinja2.contextfilter
+def filter_authorize(context, value, permission_types):
+    """Display content only if the current logged in user has a specific permission"""
+
+    if not isinstance(permission_types, list):
+        permission_types = [permission_types]
+
+    granted = not context.get('request').get('_gaetk_disable_permissions', False)
+    for permission in permission_types:
+        if context.get('credential') and permission in context.get('credential').permissions:
+            granted = True
+            break
+
+    if granted:
+        value = '<span class="restricted">%s</span>' % (value)
+    else:
+        value = u'…<!-- Berechtigung %s -->' % (', '.join(permission_types))
+        if not context.get('credential'):
+            logging.info('context has no credential!')
+
+    if context.eval_ctx.autoescape:
+        value = Markup(value)
+    return value
+
+
+@jinja2.contextfilter
+def filter_tertial(_context, value):
+    """Wandelt ein Date oder Datetime-Objekt in einen Tertial-String"""
+    from huTools.calendar.formats import tertial
+    return tertial(value)
+
+
+@jinja2.contextfilter
+def filter_to_date(_context, value):
+    """Wandelt ein Date oder Datetime-Objekt in einen Dat-Objekt"""
+    from huTools.calendar.formats import convert_to_date
+    return convert_to_date(value)
+
+
+@jinja2.contextfilter
+def filter_yesno(_context, value, answers='yes,no,maybe'):
+    """
+    Beispiel: {{ value|yesno:"yeah,nope,maybe" }}
+    """
+
+    bits = answers.split(u',')
+    if len(bits) == 3:
+        vyes, vno, vmaybe = bits
+    elif len(bits) == 2:
+        vyes, vno, vmaybe = bits[0], bits[1], bits[1]
+    else:
+        return value
+
+    if value is None:
+        return vmaybe
+    if value:
+        return vyes
+    return vno
+
+
+@jinja2.contextfilter
+def percent(_context, value):
+    """Fomat Percent and handle None"""
+    if value is None:
+        return u'␀'
+    return "%.0f" % float(value)
+
+
+@jinja2.contextfilter
+def euroword(_context, value):
+    """Fomat Cents as pretty Euros"""
+    if value is None:
+        return u'␀'
+    return _formatint(value / 100)
+
+
+# Aus Django
+@jinja2.contextfilter
+def intword(_context, value):
+    """
+    Converts a large integer to a friendly text representation. Works best for
+    numbers over 1 million. For example, 1000000 becomes '1.0 Mio', 1200000
+    becomes '1.2 Mio' and '1200000000' becomes '1200 Mio'.
+    """
+    return _formatint(value)
+
+
+def _formatint(value):
+    """Format an Integer nicely with spacing"""
+    if value is None:
+        return u'␀'
+    value = int(value)
+    if abs(value) < 1000000:
+        rev_value = ("%d" % int(value))[::-1]
+        value = u' '.join(reversed([rev_value[i:i + 3][::-1] for i in range(0, len(rev_value), 3)]))
+        return value
+    else:
+        new_value = value / 1000000.0
+        return '%(value).1f Mio' % {'value': new_value}
+    return value
+
+
 def register_custom_filters(jinjaenv):
     """Register the filters to the given Jinja environment."""
     jinjaenv.filters['ljustify'] = left_justify
@@ -129,6 +232,12 @@ def register_custom_filters(jinjaenv):
     jinjaenv.filters['eurocent'] = eurocent
     jinjaenv.filters['to_json'] = to_json
     jinjaenv.filters['plural'] = plural
-    jinjaenv.filters['filter_dateformat'] = plural
-    jinjaenv.filters['filter_markdown'] = plural
-    jinjaenv.filters['filter_nl2br'] = plural
+    jinjaenv.filters['filter_dateformat'] = filter_dateformat
+    jinjaenv.filters['filter_markdown'] = filter_markdown
+    jinjaenv.filters['filter_nl2br'] = filter_nl2br
+    jinjaenv.filters['filter_authorize'] = filter_authorize
+    jinjaenv.filters['filter_to_date'] = filter_to_date
+    jinjaenv.filters['filter_yesno'] = filter_yesno
+    jinjaenv.filters['percent'] = percent
+    jinjaenv.filters['euroword'] = euroword
+    jinjaenv.filters['intword'] = intword
