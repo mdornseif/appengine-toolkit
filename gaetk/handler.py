@@ -162,6 +162,7 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
 
     # disable session based authentication on demand
     enableSessionAuth = True
+    defaultCachingTime = None
 
     def __init__(self, *args, **kwargs):
         """Initialize RequestHandler"""
@@ -330,7 +331,9 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
         """Return the rendered content of a Jinja2 Template.
 
         Per default the template is provided with the `uri` and `credential` variables plus everything
-        which is given in `values`."""
+        which is given in `values`.
+        """
+
         import jinja2
         import jinja_filters
 
@@ -350,14 +353,36 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
             content = template.render(myval)
         except jinja2.TemplateNotFound:
             # better error reporting
-            logging.info('jinja environment: %s', env)
+            logging.info('jinja2 environment: %s', env)
             logging.info('template dirs: %s', config.template_dirs)
             raise
+
         return content
 
-    def render(self, values, template_name):
-        """Render a Jinja2 Template and wite it to the client."""
+    def render(self, values, template_name, caching_time=None):
+        """Render a Jinja2 Template and write it to the client.
+
+        The parameter `caching_time` describes the number of seconds,
+        the result should be cachet at frontend caches.
+        None means no Caching-Headers.
+        0 or negative Values generate an comand to disable all caching.
+        """
+
+        if caching_time is None:
+            caching_time = self.defaultCachingTime
+
+        if caching_time is not None:
+            if caching_time > 0:
+                self.response.headers['Cache-Control'] = 'max-age=%d public' % caching_time
+            elif caching_time <= 0:
+                self.response.headers['Cache-Control'] = 'no-cache public'
+
+        start = time.time()
         self.response.out.write(self.rendered(values, template_name))
+        delta = time.time() - start
+        if delta > 500:
+            logging.warn("rendering took %d ms", (delta * 1000.0))
+
 
     def return_text(self, text, status=200, content_type='text/plain', encoding='utf-8'):
         """Quick and dirty sending of some plaintext to the client."""
