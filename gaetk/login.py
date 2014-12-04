@@ -35,21 +35,6 @@ except AttributeError:
     LOGIN_ALLOWED_DOMAINS = []
 
 
-def get_verified_credential(username, password, session=None):
-    """Get a credential object
-
-    The credential object for the given username...
-    Otherwise, None is returned.
-    """
-    # TODO: Add memcache layer, like in gaetk.handler.BasicHandler.login_required
-    credential = Credential.get_by_key_name(username)
-    if credential and credential.secret == password:
-        if session:
-            session['uid'] = credential.uid
-            session['email'] = credential.email
-        return credential
-
-
 class OpenIdLoginHandler(BasicHandler):
     """Handler for Login"""
 
@@ -63,6 +48,19 @@ class OpenIdLoginHandler(BasicHandler):
         self.session.regenerate_id()
         if self.session.is_active():
             self.session.terminate()
+
+    def get_verified_credential(self, username, password, session=None):
+        """Get a credential object
+
+        The credential object for the given username...
+        Otherwise, None is returned.
+        """
+        credential = Credential.get_by_key_name(username)
+        if credential and credential.secret == password:
+            if session:
+                session['uid'] = credential.uid
+                session['email'] = credential.email
+            return credential
 
     def get(self):
         """Handler for Federated login consumer (OpenID) AND HTTP-Basic-Auth.
@@ -128,7 +126,7 @@ class OpenIdLoginHandler(BasicHandler):
 
         # Verify submitted username and password
         if username:
-            credential = get_verified_credential(username, password, session=self.session)
+            credential = self.get_verified_credential(username, password, session=self.session)
             if credential:
                 logging.info(u'login: Login by %s/%s, redirect to %s',
                              username, self.request.remote_addr, continue_url)
