@@ -41,6 +41,7 @@ from google.appengine.api import memcache
 from google.appengine.api import users
 from google.appengine.datastore import entity_pb
 from google.appengine.ext import db
+from google.appengine.ext import ndb
 from webob.exc import HTTPBadRequest as HTTP400_BadRequest
 from webob.exc import HTTPConflict as HTTP409_Conflict
 from webob.exc import HTTPForbidden as HTTP403_Forbidden
@@ -234,9 +235,14 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
             # Attention: the order of these statements matter, because query.cursor() is used later.
             # If the order is reversed, the client gets a cursor to the query to test for more objects,
             # not a cursor to the actual objects
-            objects = query.fetch(limit, start)
-            cursor = query.cursor()
-            more_objects = query.with_cursor(cursor).count(1) > 0
+            if isinstance(query, db.Query):
+                objects = query.fetch(limit, offset=start)
+                cursor = query.cursor()
+                more_objects = query.with_cursor(cursor).count(1) > 0
+            elif isinstance(query, ndb.Query):
+                objects, cursor, more_objects = query.fetch_page(limit, offset=start)
+            else:
+                raise RuntimeError('unknown query class: %s' % type(query))
 
         prev_objects = (start > 0) or self.request.get('cursor')
         prev_start = max(start - limit - 1, 0)
