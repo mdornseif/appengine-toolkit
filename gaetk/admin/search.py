@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-common/admin/search.py
+gaetk/admin/search.py
 
 Created by Christian Klein on 2013-12-25.
 Copyright (c) 2013 HUDORA GmbH. All rights reserved.
@@ -18,7 +18,7 @@ from gaetk.admin.sites import site
 from gaetk.admin.util import get_app_name
 
 
-INDEX_NAME = 'common-admin'
+INDEX_NAME = 'gaetk-admin'
 
 
 def fsearch(query_string, kind, limit=40, offset=0):

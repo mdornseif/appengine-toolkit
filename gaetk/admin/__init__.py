@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-common/admin/__init__.py
+gaetk/admin/__init__.py
 
 Created by Christian Klein on 2011-08-19.
 Copyright (c) 2011 HUDORA GmbH. All rights reserved.
@@ -11,8 +11,15 @@ config.imported = True
 
 import logging
 import os
+import sys
 
-from util import import_module
+
+def import_module(name):
+    """Import a module."""
+
+    if name not in sys.modules:
+        __import__(name)
+    return sys.modules[name]
 
 
 def autodiscover(appsdir=None):

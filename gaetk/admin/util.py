@@ -11,13 +11,10 @@ import config
 config.imported = True
 
 import mimetypes
-import sys
 
-import gaetk.handler
+from google.appengine.api import files
 from google.appengine.ext import db
 from huTools.calendar.formats import convert_to_date, convert_to_datetime
-
-from gaetk.admin.sites import site
 
 
 def get_app_name(model):
@@ -36,12 +33,15 @@ def get_app_name(model):
         return components[-2]
 
 
-def get_model_class(application, model):
-    """Klasse zu 'model' zurückgeben."""
-    for model_class in site._registry:
-        if model == model_class.kind() and application == get_app_name(model_class):
-            return model_class
-    raise gaetk.handler.HTTP404_NotFound('No model %s' % ('%s.%s' % (application, model)))
+def get_kind(model_class):
+    """Get kind from db or ndb model class"""
+    if hasattr(model_class, '_get_kind'):
+        kind = model_class._get_kind()
+    elif hasattr(model_class, '_get_kind'):
+        kind = model_class.kind()
+    else:
+        kind = model_class.__name__
+    return kind
 
 
 def create_instance(klass, data):
@@ -80,13 +80,6 @@ def create_instance(klass, data):
     return klass(**tmp)
 
 
-def import_module(name):
-    """Import a module."""
-
-    __import__(name)
-    return sys.modules[name]
-
-
 def object_as_dict(obj):
     """Gib eine Repräsentation als dict zurück"""
 
@@ -105,8 +98,6 @@ def upload_to_blobstore(fileobj):
 
     Der Rückgabewert ist der Blob-Key des neuen Objekts.
     """
-    from google.appengine.api import files
-
     mime_type, _ = mimetypes.guess_type(fileobj.filename)
     filename = files.blobstore.create(mime_type=mime_type, _blobinfo_uploaded_filename=fileobj.filename)
 

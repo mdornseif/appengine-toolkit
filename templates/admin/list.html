@@ -1,6 +1,10 @@
 {% set title = model + " Administration" %}
 {% extends "base_admin.html" %}
 
+{% macro display_key(obj) %}
+{% if obj.key is callable %}{{ obj.key()|e }}{% else %}{{ obj.key.urlsafe()|e }}{% endif %}
+{% endmacro %}
+
 {% block breadcrumbs %}
 <ul class="breadcrumb">
   <li><a href="/">Backend</a> <span class="divider">/backend/</span></li>
@@ -25,7 +29,7 @@
                     <th>Key/ID</th>
                     {% for field in list_fields %}
                         {# This is a little bit hackish. Django now uses a class ChangeList to display this table #}
-                        <th>{% if field in model_class.properties() %}
+                        <th>{% if field in model_class._properties %}
                                 <a href="?ot=asc&amp;o={{ field }}">{{ field|title }}</a>
                             {% else %}
                                 {{ field|title }}
@@ -38,9 +42,9 @@
                 {% for obj in object_list %}
                 <tr>
                     <td>
-                        <input name="object_id" type="checkbox" value="{{ obj.key() }}">
+                        <input name="object_id" type="checkbox" value="{{ display_key(obj) }}">
                     </td>
-                    <td><a href="/admin/{{ app }}/{{ model }}/{{ obj.key()|e }}/">{{ obj|e }}</a></td>
+                    <td><a href="/admin/{{ app }}/{{ model }}/{{ display_key(obj) }}/">{{ obj|e }}</a></td>
                     {% for field in list_fields %}
                     <td>{{ obj|attr(field) }}</td>
                         {% endfor %}

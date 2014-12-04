@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-common/admin/models.py - logging, audit und Archivierung.
+gaetk/admin/models.py - logging, audit und Archivierung.
 
 Created by Dr. Maximillian Dornseif on 2011-09-30.
 Copyright (c) 2011 HUDORA GmbH. All rights reserved.
@@ -25,4 +25,4 @@ class DeletedObject(db.Model):
 
     def undelete_url(self, abs_url=lambda x: x):
         """Returns the URL where an Object can be restored."""
-        return "/admin/_undelete/%s" % self.key()
+        return abs_url('/admin/_undelete/%s' % self.key())
