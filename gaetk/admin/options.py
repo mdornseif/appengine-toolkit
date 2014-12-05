@@ -39,6 +39,7 @@ class ModelAdmin(object):
     # Reihenfolge ihrer Erzeugung sortiert, jedoch kann jede Admin-Klasse die Sortierung
     # mit 'order_field' beeinflussen, indem sie ein bel. anderes Feld dort angibt.
     order_field = '-created_at'
+    ordering = None
 
     # Standardmaessig lassen wir die App Engine fuer das Model automatisch einen
     # Key generieren. Es besteht jedoch in der Admin-Klasse die Moeglichkeit, via
@@ -49,17 +50,17 @@ class ModelAdmin(object):
     prepopulated_fields = {}
 
     blob_upload_fields = []
+
     list_fields = ('__str__',)
     list_display_links = ()
     list_per_page = 25
-    ordering = None
 
     # Wird dem Field beim Rendern übergeben
     # (ist das erste eigene Attribut)
     field_args = {}
 
-    # Actions
-    actions = []  # wohl eher nicht... Also entfernen!
+    # Actions, bisher nicht implementiert.
+    actions = []
 
     def __init__(self, model, admin_site):
         self.model = model
@@ -244,7 +245,12 @@ class ModelAdmin(object):
                     factory = self.model.create
                 else:
                     factory = self.model
-                obj = factory(key_name=key_name, **form_data)
+
+                if issubclass(self.model, ndb.Model):
+                    obj = factory(id=key_name, **form_data)
+                else:
+                    obj = factory(key_name=key_name, **form_data)
+
                 self.handle_blobstore_fields(handler, obj)
                 key = obj.put()
                 handler.add_message('success', u'<strong>%s</strong> wurde angelegt.' % obj)
@@ -285,14 +291,22 @@ class ModelAdmin(object):
             raise gaetk.handler.HTTP400_BadRequest(u'Falsche Request Methode für diesen Aufruf: %s' %
                                                    handler.request.method)
         # Instanzen sammeln und dann gemeinsam löschen
-        objects = []
+        keys = []
         for object_id in handler.request.get_all('object_id'):
             obj = self.get_object(object_id)
             if obj is None:
                 raise gaetk.handler.HTTP404_NotFound(u'Keine Instanz zu ID %s gefunden.' % object_id)
-            objects.append(obj)
             logging.info(u'Delete %s', object_id)
-        db.delete(objects)
+            if issubclass(self.model, ndb.Model):
+                keys.append(ndb.Key(urlsafe=object_id))
+            elif issubclass(self.model, db.Model):
+                keys.append(db.Key(object_id))
+
+        if issubclass(self.model, ndb.Model):
+            ndb.delete_multi(keys)
+        elif issubclass(self.model, db.Model):
+            db.delete(keys)
+
         raise gaetk.handler.HTTP302_Found(location='..')
 
     def get_template(self, action):
