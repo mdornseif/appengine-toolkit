@@ -1,0 +1,62 @@
+{% set title = " Administration" %}
+{% extends "base_admin.html" %}
+
+{% block javascript %}
+<script src="/gaetk/static/bootstrap/2.3.x/js/bootstrap.min.js"></script> 
+{% endblock %}
+
+{% block breadcrumbs %}
+<ul class="breadcrumb">
+  <li><a href="/">Backend</a> <span class="divider">/backend/</span></li>
+  <li><a href="/admin/">Administration</a> <span class="divider">/</span></li>
+  <li><a href="/admin/{{ app }}/{{ model }}/">{{ model }}</a> <span class="divider">/</span></li>
+  <li class="active">{{ object|e }}</li>
+</ul>
+{% endblock %}
+
+{% block maincontent %}
+    <form action="." method="POST" accept-charset="utf-8" enctype="multipart/form-data">
+      <fieldset>
+        <legend>Bearbeiten</legend>
+        {% block fields %}
+        {% for field in form %}
+          <div class="control-group {% if field.errors %}error{% endif %}">
+            <div class="controls">
+              {{ field.label() }}
+              {{ field(class="input-xxlarge", rows="5", **field_args.get(field.name, {})) }}
+              <!-- {{ field.widget }} -->
+              <span class="help-block">{{ ', '.join(field.errors) }}</span>
+            </div>
+          </div>
+        {% endfor %}
+        {% endblock %}
+
+        {% if admin_class.blob_upload_fields %}
+        <h2>Blobstore-Keys</h2>
+        {% for field in admin_class.blob_upload_fields %}
+          <label for="id_{{ field }}" >{{ field.capitalize() }}</label><input id="id_{{ field }}" type="file" name="{{ field }}">
+        {% endfor %}
+        {% endif %}
+
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">Speichern</button>
+          <button class="btn btn-danger" data-toggle="modal" data-target="#confirm-edit" data-keyboard="true" data-backdrop="static">Löschen</button>
+        </div>
+      </fieldset>
+
+      {# popup fuer den delete-button #}
+      <div id="confirm-edit" class="modal fade">
+          <div class="modal-header">
+              <a href="#" class="close">×</a>
+              <h3>Wirklich löschen?</h3>
+          </div>
+          <div class="modal-body">
+              <p>Wollen Sie <strong>{{ object|e }}</strong> wirklich löschen?</p>
+          </div>
+          <div class="modal-footer">
+            <a href="?delete=yesiwant" class="btn danger" id="confirmeddelete" type="submit">Löschen</button>
+            <a href="#" id="abort" class="btn secondary">Abbrechen</a>
+          </div>
+      </div>
+    </form>
+{% endblock %}

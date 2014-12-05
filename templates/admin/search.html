@@ -1,0 +1,42 @@
+{% set title = model + " Administration" %}
+{% extends "base_admin.html" %}
+
+{% block breadcrumbs %}
+<ul class="breadcrumb">
+  <li><a href="/">Backend</a> <span class="divider">/backend/</span></li>
+  <li><a href="/admin/">Administration</a> <span class="divider">/</span></li>
+  <li class="active">{{ model }}</li>
+</ul>
+{% endblock %}
+
+{% block maincontent %}
+<form class="form-search" method="GET">
+  <input id="q" class="input-large search-query" placeholder="Suchbegriffe" name="q" {% if term is defined %}value="{{ term }}"{% endif %}>
+</form>
+
+{% if hits %}
+<div><p>Suchergebnisse {{ (page * pagesize) + 1 }} - {{ (page * pagesize) + (hits|length) }} von {{ total }}</p></div>
+<ul>
+{% for result in hits %}
+  <li>
+    <a href="/admin/{{ result.app|e }}/{{ result.kind|e }}/{{ result.key|e }}/">{{ result.key_name|e }} - {{ result.str|e }}</a>
+  </li>
+{% endfor %}
+</ul>
+
+{% if total > hits|length %}
+<div class="pagination">
+  <ul>
+  {% for pageno in range((total // pagesize)|round(0, 'ceil')|int + 1) %}
+    <li {% if pageno == page %}class="active"{% endif %}>
+      <a href="?q={{ term }}&amp;offset={{ pageno * pagesize }}">{{ pageno + 1 }}</a>
+    </li>
+  {% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% endif %}
+{% endblock maincontent %}
+
+{% block secondarycontent %}
+{% endblock %}
