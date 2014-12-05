@@ -87,10 +87,6 @@ class AdminListHandler(AdminHandler):
         # unsupported: callables in List_fields
         query = admin_class.get_queryset(self.request)
 
-        cursor = self.request.get('cursor')
-        if cursor:
-            query = query.with_cursor(cursor)
-
         template_values = self.paginate(query,
                                         defaultcount=admin_class.list_per_page,
                                         datanodename='object_list', calctotal=False)

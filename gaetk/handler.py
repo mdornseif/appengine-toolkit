@@ -225,12 +225,19 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
             # We count up to maximum of 10000. Counting is a somewhat expensive operation on AppEngine
             total = query.count(10000)
 
-        if self.request.get('cursor'):
-            query.with_cursor(self.request.get('cursor'))
-            objects = query.fetch(limit)
-            start = self.request.get_range('cursor_start', min_value=0, max_value=10000, default=0)
-            more_objects = (len(objects) == limit)
-            cursor = query.cursor()
+        from google.appengine.datastore.datastore_query import Cursor
+
+        start_cursor = Cursor(urlsafe=self.request.get('cursor'))
+        if start_cursor:
+            if isinstance(query, db.Query):
+                query.with_cursor(start_cursor)
+                objects = query.fetch(limit)
+                start = self.request.get_range('cursor_start', min_value=0, max_value=10000, default=0)
+                more_objects = len(objects) == limit
+                cursor = query.cursor()
+            elif isinstance(query, ndb.Query):
+                objects, cursor, more_objects = query.fetch_page(limit, start_cursor=start_cursor)
+                # TODO: start =
         else:
             # Attention: the order of these statements matter, because query.cursor() is used later.
             # If the order is reversed, the client gets a cursor to the query to test for more objects,
@@ -244,7 +251,7 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
             else:
                 raise RuntimeError('unknown query class: %s' % type(query))
 
-        prev_objects = (start > 0) or self.request.get('cursor')
+        prev_objects = (start > 0) or cursor
         prev_start = max(start - limit - 1, 0)
         next_start = max(start + len(objects), 0)
         clean_qs = dict([(k, self.request.get(k)) for k in self.request.arguments()
@@ -253,7 +260,7 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
                    prev_start=prev_start, next_start=next_start,
                    total=total)
         if more_objects:
-            ret['cursor'] = cursor
+            ret['cursor'] = cursor.urlsafe()
             ret['cursor_start'] = start + limit
             # query string to get to the next page
             qs = dict(cursor=ret['cursor'], cursor_start=ret['cursor_start'])
