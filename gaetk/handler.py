@@ -40,6 +40,7 @@ from gaetk.gaesessions import get_current_session
 from google.appengine.api import memcache
 from google.appengine.api import users
 from google.appengine.datastore import entity_pb
+from google.appengine.datastore.datastore_query import Cursor
 from google.appengine.ext import db
 from google.appengine.ext import ndb
 from webob.exc import HTTPBadRequest as HTTP400_BadRequest
@@ -217,7 +218,6 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
         http://code.google.com/appengine/docs/python/datastore/queryclass.html#Query_cursor for
         further Information.
         """
-        start = self.request.get_range('start', min_value=0, max_value=10000, default=0)
         limit = self.request.get_range('limit', min_value=1, max_value=1000, default=defaultcount)
 
         total = None
@@ -225,20 +225,18 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
             # We count up to maximum of 10000. Counting is a somewhat expensive operation on AppEngine
             total = query.count(10000)
 
-        from google.appengine.datastore.datastore_query import Cursor
-
         start_cursor = Cursor(urlsafe=self.request.get('cursor'))
         if start_cursor:
             if isinstance(query, db.Query):
                 query.with_cursor(start_cursor)
                 objects = query.fetch(limit)
-                start = self.request.get_range('cursor_start', min_value=0, max_value=10000, default=0)
                 more_objects = len(objects) == limit
                 cursor = query.cursor()
             elif isinstance(query, ndb.Query):
                 objects, cursor, more_objects = query.fetch_page(limit, start_cursor=start_cursor)
-                # TODO: start =
+            start = self.request.get_range('cursor_start', min_value=0, max_value=10000, default=0)
         else:
+            start = self.request.get_range('start', min_value=0, max_value=10000, default=0)
             # Attention: the order of these statements matter, because query.cursor() is used later.
             # If the order is reversed, the client gets a cursor to the query to test for more objects,
             # not a cursor to the actual objects
