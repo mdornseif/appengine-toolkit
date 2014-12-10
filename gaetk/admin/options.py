@@ -177,14 +177,26 @@ class ModelAdmin(object):
 
         if handler.request.get('delete') == 'yesiwant':
             # Der User hat gebeten, dieses Objekt zu löschen.
-            data = db.model_to_protobuf(obj).Encode()
-            archived = DeletedObject(key_name=str(obj.key()), model_class=model_class.__name__,
-                                     old_key=str(obj.key()), data=data)
+            if hasattr(obj, 'model') and issubclass(obj.model, db.Model):
+                data = db.model_to_protobuf(obj).Encode()
+                dblayer = 'db'
+                key = obj.key()
+            else:
+                # assume ndb
+                data = ndb.ModelAdapter().entity_to_pb(obj).Encode()
+                dblayer = 'ndb'
+                key = obj.key
+            archived = DeletedObject(key_name=str(key), model_class=model_class.__name__,
+                                     old_key=str(key), dblayer=dblayer, data=data)
             archived.put()
-            obj.delete()
             # Indexierung für Admin-Volltextsuche
             from gaetk.admin.search import remove_from_index
-            deferred.defer(remove_from_index, obj.key())
+            if dblayer == 'ndb':
+                obj.key.delete()
+                deferred.defer(remove_from_index, obj.key)
+            else:
+                obj.delete()
+                deferred.defer(remove_from_index, obj.key())
             handler.add_message(
                 'warning',
                 u'<strong>%s</strong> wurde gelöscht. <a href="%s">Objekt wiederherstellen!</a>' % (

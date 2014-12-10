@@ -14,7 +14,7 @@ import datetime
 import gaetk.handler
 import webapp2
 from google.appengine.datastore import entity_pb
-from google.appengine.ext import db
+from google.appengine.ext import db, ndb
 
 from gaetk.admin import autodiscover
 from gaetk.admin import search
@@ -156,7 +156,11 @@ class AdminUndeleteHandler(AdminHandler):
     def get(self, key):
         """Objekt mit <key> wiederherstellen."""
         archived = DeletedObject.get(key)
-        entity = db.model_from_protobuf(entity_pb.EntityProto(archived.data))
+        if archived.dblayer == 'ndb':
+            entity = ndb.ModelAdapter().pb_to_entity(entity_pb.EntityProto(archived.data))
+        else:
+            # precondition: model class must be imported
+            entity = db.model_from_protobuf(entity_pb.EntityProto(archived.data))
         entity.put()
         archived.delete()
         self.add_message(
