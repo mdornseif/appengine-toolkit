@@ -4,7 +4,7 @@
 gaetk/admin/options.py
 
 Created by Christian Klein on 2011-08-22.
-Copyright (c) 2011 HUDORA GmbH. All rights reserved.
+Copyright (c) 2011, 2014 HUDORA GmbH. All rights reserved.
 """
 import config
 config.imported = True
@@ -104,6 +104,12 @@ class ModelAdmin(object):
                 else:
                     return query.order(prop)
         return query
+
+    def get_kind(self):
+        kind = getattr(self.model, '_get_kind', None)
+        if not kind:
+            kind = getattr(self.model, 'kind')
+        return kind()
 
     def get_queryset(self, request):
         """Gib das QuerySet für die Admin-Seite zurück
@@ -321,6 +327,30 @@ class ModelAdmin(object):
 
         raise gaetk.handler.HTTP302_Found(location='..')
 
+    def export_view_csv(self, handler, extra_context=None):  # pylint: disable=W0613
+        """Request zum Exportieren von allen Objekten behandeln.
+
+        `extra_context` ist für die Signatur erforderlich, wird aber nicht genutzt.
+        """
+        exporter = ModelExporter(self.model)
+        filename = '%s-%s.csv' % (self.get_kind(), datetime.datetime.now())
+        handler.response.headers['Content-Type'] = 'text/csv; charset=utf-8'
+        handler.response.headers['content-disposition'] = \
+            'attachment; filename=%s' % filename
+        exporter.to_csv(handler.response)
+
+    def export_view_xls(self, handler, extra_context=None):  # pylint: disable=W0613
+        """Request zum Exportieren von allen Objekten behandeln.
+
+        `extra_context` ist für die Signatur erforderlich, wird aber nicht genutzt.
+        """
+        exporter = ModelExporter(self.model)
+        filename = '%s-%s.xls' % (self.get_kind(), datetime.datetime.now())
+        handler.response.headers['Content-Type'] = 'application/msexcel'
+        handler.response.headers['content-disposition'] = \
+            'attachment; filename=%s' % filename
+        exporter.to_xls(handler.response)
+
     def get_template(self, action):
         """Auswahl des zur `action` passenden templates."""
 
@@ -332,3 +362,92 @@ class ModelAdmin(object):
 
         attr = action + '_form_template'
         return getattr(self, attr, 'admin/detail.html')
+
+
+import datetime
+import csv
+
+
+class ModelExporter(object):
+    def __init__(self, model, query=None):
+        self.model = model
+        self.query = query
+
+    @property
+    def fields(self):
+        """Liste der zu exportierenden Felder"""
+        if not hasattr(self, '_fields'):
+            fields = []
+            # ndb & db compatibility
+            props = getattr(self.model, '_properties', None)
+            if not props:
+                props = self.model.properties()
+            for prop in props.values():
+                # ndb & db compatibility
+                fields.append(getattr(prop, '_name', getattr(prop, 'name', '?')))
+            if hasattr(self, 'additional_fields'):
+                fields.extend(self.additional_fields)
+            fields.sort()
+            self._fields = fields
+        return self._fields
+
+    def create_header(self, output, fixer=lambda x: x):
+        """Erzeugt eine oder mehrere Headerzeilen in `output`"""
+        output.writerow(fixer(['# Exported at:', str(datetime.datetime.now())]))
+        output.writerow(fixer(self.fields + [u'Datenbankschlüssel']))
+
+    def create_row(self, output, data, fixer=lambda x: x):
+        """Erzeugt eine einzelne Zeile im Output."""
+        row = []
+        for field in self.fields:
+            attr = getattr(data, field)
+            if callable(attr):
+                tmp = attr()
+            else:
+                tmp = attr
+            row.append(unicode(tmp))
+        if callable(data.key):
+            row.append(unicode(data.key()))
+        else:
+            row.append(unicode(data.key.urlsafe()))
+        output.writerow(fixer(row))
+
+    def create_writer(self, fileobj):
+        """Generiert den Ausgabedatenstrom aus fileobj."""
+        return csv.writer(fileobj, dialect='excel', delimiter='\t')
+
+    def to_csv(self, fileobj):
+        csvwriter = csv.writer(fileobj, dialect='excel', delimiter='\t')
+        fixer = lambda row: [unicode(x).encode('utf-8') for x in row]
+        self.create_header(csvwriter, fixer)
+        for row in self.model.query():
+            self.create_row(csvwriter, row, fixer)
+
+    def to_xls(self, fileobj):
+        # we create a fake writer object to do buffering
+        # because xlwt cant do streaming writes.
+
+        xlswriter = XlsWriter()
+        self.create_header(xlswriter)
+        for row in self.model.query():
+            self.create_row(xlswriter, row)
+        xlswriter.save(fileobj)
+
+
+class XlsWriter(object):
+    def __init__(self):
+        from xlwt import Workbook
+        self.buff = []
+        self.book = Workbook()
+        self.sheet = self.book.add_sheet('Export')
+        self.rownum = 0
+
+    def writerow(self, row):
+        col = 0
+        for coldata in row:
+            self.sheet.write(self.rownum, col, coldata)
+            col += 1
+        self.rownum += 1
+
+    def save(self, fd):
+        self.book.save(fd)

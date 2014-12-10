@@ -4,7 +4,7 @@
 admin/views.py - administrationsinterface - inspieriert von Django.
 
 Created by Christian Klein on 2011-08-10.
-Copyright (c) 2011, 2013 HUDORA GmbH. All rights reserved.
+Copyright (c) 2011, 2013, 2014 HUDORA GmbH. All rights reserved.
 """
 
 import config
@@ -141,9 +141,15 @@ class AdminDetailHandler(AdminHandler):
             raise gaetk.handler.HTTP404_NotFound('No model %s' % ('%s.%s' % (application, model)))
         admin_class = site.get_admin_class(model_class)
 
+        import logging
+        logging.info("%s %s", action_or_objectid, self.request.route_args)
         # Bestimme Route! Da könnte man dann auch einen Handler mit angeben.
         if action_or_objectid == 'add':
             admin_class.add_view(self)
+        elif action_or_objectid == 'export_xls':
+            admin_class.export_view_xls(self)
+        elif action_or_objectid == 'export_csv':
+            admin_class.export_view_csv(self)
         elif action_or_objectid == 'delete':
             admin_class.delete_view(self)
         else:

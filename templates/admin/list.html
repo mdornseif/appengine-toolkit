@@ -22,9 +22,17 @@
       <input id="q" class="input-large search-query" placeholder="Suchbegriffe" name="q" {% if term is defined %}value="{{ term }}"{% endif %}>
     </form>
 
-    <form action="add/" method="GET">
-        <div class="form-actions"><input class="btn" type="submit" value="Neu"></div>
-    </form>
+        <div class="form-actions">
+                <button class="btn btg-action" onClick="parent.location='add/'">Neu</button>
+
+            <div class="btn-group">
+                <button class="btn dropdown-toggle" data-toggle="dropdown">Export <span class="caret"></span></button>
+                <ul class="dropdown-menu">
+                  <li><a href="export_xls/">XLS</a></li>
+                  <li><a href="export_csv/">CSV</a></li>
+                </ul>
+            </div>
+        </div>
     <form action="delete/" method="POST">
         <table class="table table-bordered table-condensed table-striped">
             <thead>
