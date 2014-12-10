@@ -70,7 +70,8 @@ warnings.filterwarnings(
 _dummy = [HTTP301_Moved, HTTP302_Found, HTTP303_SeeOther, HTTP307_TemporaryRedirect,
           HTTP400_BadRequest, HTTP403_Forbidden, HTTP404_NotFound, HTTP405_HTTPMethodNotAllowed,
           HTTP406_NotAcceptable, HTTP409_Conflict, HTTP410_Gone, HTTP413_TooLarge,
-          HTTP415_UnsupportedMediaType, HTTP501_NotImplemented, HTTP503_ServiceUnavailable]
+          HTTP415_UnsupportedMediaType, HTTP500_ServerError, HTTP501_NotImplemented,
+          HTTP503_ServiceUnavailable]
 
 
 CREDENTIAL_CACHE_TIMEOUT = 300
@@ -321,7 +322,7 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
         # Die Extensions müssen ein Tupel sein, eine Liste ist nicht hashable:
         # TypeError: unhashable type: 'list'
         key = tuple(extensions)
-        if not key in _jinja_env_cache:
+        if key not in _jinja_env_cache:
             template_dirs = config.template_dirs
 
             env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dirs),
@@ -334,7 +335,7 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
                                      )
 
             # Eigene Filter
-            #env.filters['dateformat'] = filter_dateformat
+            # env.filters['dateformat'] = filter_dateformat
             _jinja_env_cache[key] = env
         return _jinja_env_cache[key]
 
@@ -393,7 +394,6 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
         delta = time.time() - start
         if delta > 500:
             logging.warn("rendering took %d ms", (delta * 1000.0))
-
 
     def return_text(self, text, status=200, content_type='text/plain', encoding='utf-8'):
         """Quick and dirty sending of some plaintext to the client."""
@@ -556,7 +556,7 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
             # yes, active OpenID session
             # user.federated_provider() == 'https://www.google.com/a/hudora.de/o8/ud?be=o8'
             apps_domain = user.email().split('@')[-1].lower()
-            if not apps_domain in LOGIN_ALLOWED_DOMAINS:
+            if apps_domain not in LOGIN_ALLOWED_DOMAINS:
                 raise HTTP403_Forbidden("Access denied!")
             username = user.email() or user.nickname()
 
@@ -687,8 +687,8 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
                         # we assume the request came via a browser - redirect to the "nice" login page
                         self.response.set_status(302)
                         absolute_url = users.create_login_url(self.abs_url(self.request.url))
-                        #absolute_url = self.abs_url("/_ah/login_required?continue=%s"
-                        #                            % urllib.quote(self.request.url))
+                        # absolute_url = self.abs_url("/_ah/login_required?continue=%s"
+                        #                             % urllib.quote(self.request.url))
                         self.response.headers['Location'] = str(absolute_url)
                         raise HTTP302_Found(location=str(absolute_url))
             absolute_url = users.create_login_url(self.abs_url(self.request.url))

@@ -81,7 +81,7 @@ class OpenIdLoginHandler(BasicHandler):
             else:
                 apps_domain = user.federated_provider().split('/')[4].lower()
 
-            if not apps_domain in LOGIN_ALLOWED_DOMAINS:
+            if apps_domain not in LOGIN_ALLOWED_DOMAINS:
                 self.response.set_status(403)
                 return
 
@@ -160,7 +160,7 @@ class OpenIdLoginHandler(BasicHandler):
         if 'username' in self.request.params:
             username = self.request.get('username', '').strip()
             password = self.request.get('password', '').strip()
-            credential = get_verified_credential(username, password, self.session)
+            credential = self.get_verified_credential(username, password, self.session)
             if credential:
                 logging.info(u'Login by %s/%s', username, self.request.remote_addr)
                 response = {'success': True}
