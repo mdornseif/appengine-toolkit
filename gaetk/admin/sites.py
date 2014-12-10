@@ -9,6 +9,7 @@ Copyright (c) 2011 HUDORA GmbH. All rights reserved.
 import logging
 
 from gaetk.admin import util
+from gaetk.compat import xdb_kind
 
 
 class AdminSite(object):
@@ -35,7 +36,7 @@ class AdminSite(object):
         #     validate = lambda model, adminclass: None
 
         if model_class in self._registry:
-            logging.warn(u'The model %s is already registered', util.get_kind(model_class))
+            logging.warn(u'The model %s is already registered', xdb_kind(model_class))
 
         # Instantiate the admin class to save in the registry
         self._registry[model_class] = admin_class(model_class, self)
@@ -49,7 +50,7 @@ class AdminSite(object):
         """Klasse zu 'model' zurückgeben."""
 
         for model_class in self._registry:
-            if model == util.get_kind(model_class) and application == util.get_app_name(model_class):
+            if model == xdb_kind(model_class) and application == util.get_app_name(model_class):
                 return model_class
 
 

@@ -20,7 +20,8 @@ from gaetk.admin import autodiscover
 from gaetk.admin import search
 from gaetk.admin.models import DeletedObject
 from gaetk.admin.sites import site
-from gaetk.admin.util import get_app_name, get_kind
+from gaetk.admin.util import get_app_name
+from gaetk.compat import xdb_kind
 
 
 def make_app(url_mapping):
@@ -68,7 +69,7 @@ class AdminIndexHandler(AdminHandler):
         apps = {}
         for model_class in site.registry.keys():
             application = get_app_name(model_class)
-            apps.setdefault(application, []).append(get_kind(model_class))
+            apps.setdefault(application, []).append(xdb_kind(model_class))
         self.render({'apps': apps}, 'admin/index.html')
 
 

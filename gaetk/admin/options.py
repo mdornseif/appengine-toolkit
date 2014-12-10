@@ -11,7 +11,6 @@ config.imported = True
 
 import cgi
 import logging
-from urllib import unquote
 
 import gaetk.handler
 import wtforms
@@ -24,6 +23,7 @@ from wtforms.ext.appengine.db import model_form
 from gaetk.admin import util
 from gaetk.admin.sites import site
 from gaetk.admin.models import DeletedObject
+from gaetk import compat
 
 
 class ModelAdmin(object):
@@ -81,48 +81,13 @@ class ModelAdmin(object):
         direction = request.get('ot', 'asc')
         return order_field, '-' if direction == 'desc' else '+'
 
-    def _get_queryset_db(self, ordering=None):
-        """Queryset für Subklasse von db.Model"""
-        query = self.model.all()
-        if ordering:
-            attr, direction = ordering
-            if attr in self.model.properties():
-                if direction == '-':
-                    attr = '-' + attr
-                query.order(attr)
-        return query
-
-    def _get_queryset_ndb(self, ordering):
-        """Queryset für Subklasse von ndb.Model"""
-        query = self.model.query()
-        if ordering:
-            attr, direction = ordering
-            prop = self.model._properties.get(attr)
-            if prop:
-                if direction == '-':
-                    return query.order(-prop)
-                else:
-                    return query.order(prop)
-        return query
-
-    def get_kind(self):
-        kind = getattr(self.model, '_get_kind', None)
-        if not kind:
-            kind = getattr(self.model, 'kind')
-        return kind()
-
     def get_queryset(self, request):
         """Gib das QuerySet für die Admin-Seite zurück
 
         Es wird die gewünschte Sortierung durchgeführt.
         """
-        # TODO: Tupel: (attr, direction)
         ordering = self.get_ordering(request)
-        if issubclass(self.model, ndb.Model):
-            query = self._get_queryset_ndb(ordering)
-        elif issubclass(self.model, db.Model):
-            query = self._get_queryset_db(ordering)
-        return query
+        return compat.xdb_queryset(self.model, ordering)
 
     def get_form(self, **kwargs):
         """Erzeuge Formularklasse für das Model"""
@@ -155,12 +120,7 @@ class ModelAdmin(object):
 
     def get_object(self, encoded_key):
         """Ermittle die Instanz über den gegeben ID"""
-        if issubclass(self.model, ndb.Model):
-            key = ndb.Key(urlsafe=encoded_key)
-            instance = key.get()
-        elif issubclass(self.model, db.Model):
-            instance = self.model.get(unquote(encoded_key))
-        return instance
+        return compat.xdb_get(self.model, encoded_key)
 
     def handle_blobstore_fields(self, handler, obj):
         """Upload für Blobs"""
@@ -183,32 +143,29 @@ class ModelAdmin(object):
 
         if handler.request.get('delete') == 'yesiwant':
             # Der User hat gebeten, dieses Objekt zu löschen.
-            if hasattr(obj, 'model') and issubclass(obj.model, db.Model):
-                data = db.model_to_protobuf(obj).Encode()
-                dblayer = 'db'
-                key = obj.key()
-            else:
-                # assume ndb
-                data = ndb.ModelAdapter().entity_to_pb(obj).Encode()
+            key = compat.xdb_key(obj)
+            data = compat.xdb_to_protobuf(obj)
+            dblayer = 'db'
+            if compat.xdb_is_ndb(obj):
                 dblayer = 'ndb'
-                key = obj.key
             archived = DeletedObject(key_name=str(key), model_class=model_class.__name__,
                                      old_key=str(key), dblayer=dblayer, data=data)
             archived.put()
             # Indexierung für Admin-Volltextsuche
             from gaetk.admin.search import remove_from_index
-            if dblayer == 'ndb':
+            if compat.xdb_is_ndb(obj):
                 obj.key.delete()
                 deferred.defer(remove_from_index, obj.key)
             else:
                 obj.delete()
                 deferred.defer(remove_from_index, obj.key())
+
             handler.add_message(
                 'warning',
                 u'<strong>%s</strong> wurde gelöscht. <a href="%s">Objekt wiederherstellen!</a>' % (
                     obj, archived.undelete_url()))
             raise gaetk.handler.HTTP302_Found(location='/admin/%s/%s/' % (
-                util.get_app_name(model_class), util.get_kind(model_class)))
+                util.get_app_name(model_class), compat.xdb_kind(model_class)))
 
         # Wenn das Formular abgeschickt wurde und gültig ist,
         # speichere das veränderte Objekt und leite auf die Übersichtsseite um.
@@ -226,7 +183,7 @@ class ModelAdmin(object):
                 from gaetk.admin.search import add_to_index
                 deferred.defer(add_to_index, key)
                 raise gaetk.handler.HTTP302_Found(location='/admin/%s/%s/' % (
-                    util.get_app_name(model_class), util.get_kind(model_class)))
+                    util.get_app_name(model_class), compat.xdb_kind(model_class)))
         else:
             form = form_class(obj=obj)
 
@@ -332,8 +289,9 @@ class ModelAdmin(object):
 
         `extra_context` ist für die Signatur erforderlich, wird aber nicht genutzt.
         """
+        # irgendwann werden wir hier einen longtask nutzen muessen
         exporter = ModelExporter(self.model)
-        filename = '%s-%s.csv' % (self.get_kind(), datetime.datetime.now())
+        filename = '%s-%s.csv' % (compat.xdb_kind(self.model), datetime.datetime.now())
         handler.response.headers['Content-Type'] = 'text/csv; charset=utf-8'
         handler.response.headers['content-disposition'] = \
             'attachment; filename=%s' % filename
@@ -345,7 +303,7 @@ class ModelAdmin(object):
         `extra_context` ist für die Signatur erforderlich, wird aber nicht genutzt.
         """
         exporter = ModelExporter(self.model)
-        filename = '%s-%s.xls' % (self.get_kind(), datetime.datetime.now())
+        filename = '%s-%s.cls' % (compat.xdb_kind(self.model), datetime.datetime.now())
         handler.response.headers['Content-Type'] = 'application/msexcel'
         handler.response.headers['content-disposition'] = \
             'attachment; filename=%s' % filename
@@ -378,12 +336,12 @@ class ModelExporter(object):
         """Liste der zu exportierenden Felder"""
         if not hasattr(self, '_fields'):
             fields = []
-            # ndb & db compatibility
+            # ndb & db compatatibility
             props = getattr(self.model, '_properties', None)
             if not props:
                 props = self.model.properties()
             for prop in props.values():
-                # ndb & db compatibility
+                # ndb & db compatatibility
                 fields.append(getattr(prop, '_name', getattr(prop, 'name', '?')))
             if hasattr(self, 'additional_fields'):
                 fields.extend(self.additional_fields)

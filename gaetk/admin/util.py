@@ -23,6 +23,7 @@ def get_app_name(model):
     >>> get_app_name('frontend.news.models.NewsItem')
     'news'
     >>> get_app_name('common.models.Sparepart')
+    'Sparepart'
     """
     if not hasattr(model, '__module__'):
         return u''
@@ -31,17 +32,6 @@ def get_app_name(model):
         return components[-3]
     else:
         return components[-2]
-
-
-def get_kind(model_class):
-    """Get kind from db or ndb model class"""
-    if hasattr(model_class, '_get_kind'):
-        kind = model_class._get_kind()
-    elif hasattr(model_class, '_get_kind'):
-        kind = model_class.kind()
-    else:
-        kind = model_class.__name__
-    return kind
 
 
 def create_instance(klass, data):
