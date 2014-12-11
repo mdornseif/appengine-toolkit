@@ -480,7 +480,7 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
             htmldata.update(html_addon)
         htmlrender = lambda x: self.rendered(htmldata, html_template)
         mymappers = dict(xml=mydict2xml,
-                         json=huTools.hujson.dumps,
+                         json=huTools.hujson2.dumps,
                          html=htmlrender)
         if mappers:
             mymappers.update(mappers)
