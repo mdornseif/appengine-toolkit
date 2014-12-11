@@ -51,7 +51,7 @@ class ModelAdmin(object):
 
     blob_upload_fields = []
 
-    list_fields = ('__str__',)
+    list_fields = ()
     list_display_links = ()
     list_per_page = 25
 
@@ -65,6 +65,9 @@ class ModelAdmin(object):
     def __init__(self, model, admin_site):
         self.model = model
         self.admin_site = admin_site
+
+        if not self.list_fields:
+            self.list_fields = compat.xdb_properties(self.model).keys()
 
         if not self.list_display_links:
             self.list_display_links = [self.list_fields[0]]
@@ -303,7 +306,7 @@ class ModelAdmin(object):
         `extra_context` ist für die Signatur erforderlich, wird aber nicht genutzt.
         """
         exporter = ModelExporter(self.model)
-        filename = '%s-%s.cls' % (compat.xdb_kind(self.model), datetime.datetime.now())
+        filename = '%s-%s.xls' % (compat.xdb_kind(self.model), datetime.datetime.now())
         handler.response.headers['Content-Type'] = 'application/msexcel'
         handler.response.headers['content-disposition'] = \
             'attachment; filename=%s' % filename

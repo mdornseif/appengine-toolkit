@@ -54,6 +54,13 @@ def xdb_to_protobuf(instance):
         db.model_to_protobuf(instance).Encode()
 
 
+def xdb_properties(instance):
+    if xdb_is_ndb(instance):
+        return instance._properties
+    else:
+        instance.properties()
+
+
 def _get_queryset_db(model_class, ordering=None):
     """Queryset für Subklasse von db.Model"""
     query = model_class.all()

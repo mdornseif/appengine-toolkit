@@ -44,7 +44,8 @@
                         <th>{% if field in model_class._properties %}
                                 <a href="?ot=asc&amp;o={{ field }}">{{ field|title }}</a>
                             {% else %}
-                                {{ field(**fieldargs.get(field.name))|title }}
+                                {# {{ field(**fieldargs.get(field.name))|title }} #}
+                                {{ field|title }}
                             {% endif %}
                         </th>
                     {% endfor %}
