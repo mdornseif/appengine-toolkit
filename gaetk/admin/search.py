@@ -14,6 +14,7 @@ import logging
 from google.appengine.api import search
 from google.appengine.ext import db
 
+import gaetk.compat
 from gaetk.admin.sites import site
 from gaetk.admin.util import get_app_name
 
@@ -110,6 +111,6 @@ def remove_from_index(key):
 
     index = search.Index(name=INDEX_NAME)
     try:
-        index.delete(str(key))
+        index.delete(gaetk.compat.str_key(key))
     except search.Error:
         logging.info(u'Fehler beim Löschen von %s %s aus Suchindex', key.kind(), key)

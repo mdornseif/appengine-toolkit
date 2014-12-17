@@ -98,3 +98,11 @@ def xdb_queryset(model_class, ordering=None):
     else:
         query = _get_queryset_db(model_class, ordering)
     return query
+
+
+def str_key(key):
+    """Stringrepräsentation eines Keys"""
+    if isinstance(key, ndb.key.Key):
+        return key.urlsafe()
+    else:
+        return str(key)
