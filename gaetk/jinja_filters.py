@@ -224,6 +224,17 @@ def _formatint(value):
     return value
 
 
+@jinja2.contextfilter
+def urlencode_filter(_context, value):
+    """Encode string for usage in URLs"""
+    import urllib
+    if isinstance(value, Markup):
+        value = value.unescape()
+    value = value.encode('utf8')
+    value = urllib.quote(value)
+    return Markup(value)
+
+
 def register_custom_filters(jinjaenv):
     """Register the filters to the given Jinja environment."""
     jinjaenv.filters['ljustify'] = left_justify
@@ -241,3 +252,4 @@ def register_custom_filters(jinjaenv):
     jinjaenv.filters['percent'] = percent
     jinjaenv.filters['euroword'] = euroword
     jinjaenv.filters['intword'] = intword
+    jinjaenv.filters['urlencode'] = urlencode_filter
