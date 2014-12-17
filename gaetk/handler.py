@@ -251,7 +251,7 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
             else:
                 raise RuntimeError('unknown query class: %s' % type(query))
 
-        prev_objects = (start > 0) or cursor
+        prev_objects = bool((start > 0) or start_cursor.to_bytes())
         prev_start = max(start - limit - 1, 0)
         next_start = max(start + len(objects), 0)
         clean_qs = dict([(k, self.request.get(k)) for k in self.request.arguments()
