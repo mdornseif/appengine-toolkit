@@ -1,6 +1,10 @@
 {% set title = " Administration" %}
 {% extends "base_admin.html" %}
 
+{% macro display_id(obj) %}
+{% if obj.key is callable %}{{ obj.key().id_or_name()|e }}{% else %}{{ obj.key.id()|e }}{% endif %}
+{% endmacro %}
+
 {% block javascript %}
 <script src="/gaetk/static/bootstrap/2.3.x/js/bootstrap.min.js"></script> 
 {% endblock %}
@@ -43,20 +47,21 @@
           <button class="btn btn-danger" data-toggle="modal" data-target="#confirm-edit" data-keyboard="true" data-backdrop="static">Löschen</button>
         </div>
       </fieldset>
-
-      {# popup fuer den delete-button #}
-      <div id="confirm-edit" class="modal fade">
-          <div class="modal-header">
-              <a href="#" class="close">×</a>
-              <h3>Wirklich löschen?</h3>
-          </div>
-          <div class="modal-body">
-              <p>Wollen Sie <strong>{{ object|e }}</strong> wirklich löschen?</p>
-          </div>
-          <div class="modal-footer">
-            <a href="?delete=yesiwant" class="btn danger" id="confirmeddelete" type="submit">Löschen</button>
-            <a href="#" id="abort" class="btn secondary">Abbrechen</a>
-          </div>
-      </div>
     </form>
+
+    {# popup fuer den delete-button #}
+    <div id="confirm-edit" class="modal">
+        <div class="modal-header">
+            <a href="#" class="close">×</a>
+            <h3>Wirklich löschen?</h3>
+        </div>
+        <div class="modal-body">
+            <p>Wollen Sie <strong>{{ display_id(object)|e }}</strong> wirklich löschen?</p>
+        </div>
+        <div class="modal-footer">
+          <a href="?delete=yesiwant" class="btn danger" id="confirmeddelete" type="submit">Löschen</button>
+          <a href="#" id="abort" class="btn secondary">Abbrechen</a>
+        </div>
+    </div>
+
 {% endblock %}
