@@ -6,7 +6,8 @@
 {% endmacro %}
 
 {% block javascript %}
-<script src="/gaetk/static/bootstrap/2.3.x/js/bootstrap.min.js"></script> 
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script src="/gaetk/static/bootstrap/2.3.x/js/bootstrap.min.js"></script>
 {% endblock %}
 
 {% block breadcrumbs %}
@@ -44,13 +45,16 @@
 
         <div class="form-actions">
           <button class="btn btn-primary" type="submit">Speichern</button>
-          <button class="btn btn-danger" data-toggle="modal" data-target="#confirm-edit" data-keyboard="true" data-backdrop="static">Löschen</button>
+          {% if object is defined %}
+          <button class="btn btn-danger" data-toggle="modal" data-target="#confirm-edit" data-keyboard="true" data-backdrop="true">Löschen</button>
+          {% endif %}
         </div>
       </fieldset>
     </form>
 
+    {% if object is defined %}
     {# popup fuer den delete-button #}
-    <div id="confirm-edit" class="modal">
+    <div id="confirm-edit" class="modal hide">
         <div class="modal-header">
             <a href="#" class="close">×</a>
             <h3>Wirklich löschen?</h3>
@@ -63,5 +67,6 @@
           <a href="#" id="abort" class="btn secondary">Abbrechen</a>
         </div>
     </div>
+    {% endif %}
 
 {% endblock %}
