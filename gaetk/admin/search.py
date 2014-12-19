@@ -15,11 +15,16 @@ from google.appengine.api import search
 from google.appengine.ext import db
 
 import gaetk.compat
+from gaetk.admin import autodiscover
 from gaetk.admin.sites import site
 from gaetk.admin.util import get_app_name
 
 
 INDEX_NAME = 'gaetk-admin'
+
+
+# Füllt site._registry und kümmert sich um das Importieren der Modelklassen
+autodiscover()
 
 
 def fsearch(query_string, kind, limit=40, offset=0):
@@ -75,35 +80,42 @@ def perform_search(indexname, query_string, options=None):
 def add_to_index(key):
     """Füge Instanz dem Suchindex hinzu"""
 
-    obj = db.get(key)
+    obj = gaetk.compat.xdb_get(key)
+    if obj is None:
+        return
+    key = gaetk.compat.xdb_key(obj)
+    key_name = gaetk.compat.xdb_id_or_name(key)
+    skey = gaetk.compat.xdb_str_key(key)
+    kind = gaetk.compat.xdb_kind(obj)
+
     admin = site._registry.get(type(obj))
     if hasattr(admin, 'searchdoc'):
         data = admin.searchdoc(obj)
     elif hasattr(obj, 'as_dict'):
         data = obj.as_dict()
     else:
-        data = {'key_name': obj.key().id_or_name()}
+        key_name = gaetk.compat.xdb_id_or_name(key)
+        data = {'key_name': key_name}
 
-    key = str(obj.key())
     content = (value for value in data.itervalues() if isinstance(value, basestring))
 
     content = list(content)
     logging.debug(u'content: %s', content)
 
-    fields = [search.TextField(name='key', value=key),
-              search.TextField(name='key_name', value=unicode(obj.key().id_or_name())),
+    fields = [search.TextField(name='key', value=skey),
+              search.TextField(name='key_name', value=unicode(key_name)),
               search.TextField(name='str', value=unicode(obj)),
-              search.TextField(name='kind', value=obj.kind()),
+              search.TextField(name='kind', value=gaetk.compat.xdb_kind(obj)),
               search.TextField(name='app', value=get_app_name(obj)),
               search.TextField(name='content', value=' '.join(term for term in content if term)),
               ]
 
-    document = search.Document(doc_id=key, fields=fields)
+    document = search.Document(doc_id=skey, fields=fields)
     index = search.Index(name=INDEX_NAME)
     try:
         index.put(document)
     except search.Error:
-        logging.info(u'Fehler beim Hinzufügen von %s %s zum Suchindex', obj.kind(), key)
+        logging.info(u'Fehler beim Hinzufügen von %s %s zum Suchindex', kind, skey)
 
 
 def remove_from_index(key):
@@ -111,6 +123,6 @@ def remove_from_index(key):
 
     index = search.Index(name=INDEX_NAME)
     try:
-        index.delete(gaetk.compat.str_key(key))
+        index.delete(gaetk.compat.xdb_str_key(key))
     except search.Error:
         logging.info(u'Fehler beim Löschen von %s %s aus Suchindex', key.kind(), key)
