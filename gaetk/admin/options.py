@@ -123,7 +123,7 @@ class ModelAdmin(object):
 
     def get_object(self, encoded_key):
         """Ermittle die Instanz über den gegeben ID"""
-        return compat.xdb_get(self.model, encoded_key)
+        return compat.xdb_get_instance(self.model, encoded_key)
 
     def handle_blobstore_fields(self, handler, obj):
         """Upload für Blobs"""

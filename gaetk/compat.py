@@ -23,7 +23,7 @@ def xdb_kind(model_class):
     return kind()
 
 
-def xdb_get(model_class, encoded_key):
+def xdb_get_instance(model_class, encoded_key):
     """Ermittle die Instanz über den gegeben ID"""
     if issubclass(model_class, ndb.Model):
         key = ndb.Key(urlsafe=encoded_key)
@@ -31,6 +31,13 @@ def xdb_get(model_class, encoded_key):
     elif issubclass(model_class, db.Model):
         instance = model_class.get(unquote(encoded_key))
     return instance
+
+
+def xdb_get(key):
+    if isinstance(key, ndb.key.Key):
+        return key.get()
+    else:
+        return db.get(key)
 
 
 def xdb_is_ndb(model_class):
@@ -45,6 +52,13 @@ def xdb_key(instance):
         return instance.key
     else:
         return instance.key()
+
+
+def xdb_id_or_name(key):
+    if isinstance(key, ndb.key.Key):
+        return key.id()
+    else:
+        return key.id_or_name()
 
 
 def xdb_to_protobuf(instance):
@@ -100,7 +114,7 @@ def xdb_queryset(model_class, ordering=None):
     return query
 
 
-def str_key(key):
+def xdb_str_key(key):
     """Stringrepräsentation eines Keys"""
     if isinstance(key, ndb.key.Key):
         return key.urlsafe()
