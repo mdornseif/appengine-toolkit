@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-gaetk/comp.py compability layer for App Engine
+gaetk/compat.py compability layer for App Engine
 
 Created by Dr. Maximillian Dornseif on 2014-12-10.
 Copyright (c) 2014 HUDORA GmbH. All rights reserved.

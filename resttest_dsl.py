@@ -240,6 +240,7 @@ class TestClient(object):
         self.host = host
         self.authdict = {}
         self.responses = []
+        self.protocol = 'http'
 
     def add_credentials(self, auth, creds):
         """Stellt dem Client credentials zur Verfügung, die in GET genutzt werden können.
@@ -259,7 +260,7 @@ class TestClient(object):
         if accept:
             headers['Accept'] = accept
 
-        url = urlparse.urlunparse(('http', self.host, path, '', '', ''))
+        url = urlparse.urlunparse((self.protocol, self.host, path, '', '', ''))
 
         # try request several times if it is slow to get rid of network jitter
         counter = 0
@@ -276,7 +277,7 @@ class TestClient(object):
             status, responseheaders, content = fetch(
                 url, content='', method='GET',
                 credentials=self.authdict.get(auth),
-                headers=headers, multipart=False, ua='', timeout=30)
+                headers=headers, multipart=False, ua='resttest', timeout=30)
             duration = int((time.time() - start) * 1000)
             slowstats[url] = duration
             counter += 1

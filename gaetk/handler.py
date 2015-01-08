@@ -680,8 +680,9 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
                     # Hand over Authentication Processing to Google/OpenID
                     # TODO: save get parameters in session
                     try:
-                        location = users.create_login_url(self.request.path_url, None, openid_url)
-                        raise HTTP302_Found(location=str(location))
+                        absolute_url = users.create_login_url(self.request.path_url, None, openid_url)
+                        logging.debug('redirecting browser to OpenID %r', absolute_url)
+                        raise HTTP302_Found(location=str(absolute_url))
                     except users.NotAllowedError:
                         logging.info("OpenID failed")
                         # we assume the request came via a browser - redirect to the "nice" login page
@@ -689,9 +690,12 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
                         absolute_url = users.create_login_url(self.abs_url(self.request.url))
                         # absolute_url = self.abs_url("/_ah/login_required?continue=%s"
                         #                             % urllib.quote(self.request.url))
+                        logging.debug('redirecting browser because of difficult create_login_url %r',
+                                      absolute_url)
                         self.response.headers['Location'] = str(absolute_url)
                         raise HTTP302_Found(location=str(absolute_url))
             absolute_url = users.create_login_url(self.abs_url(self.request.url))
+            logging.debug('redirecting browser with session %r', absolute_url)
             raise HTTP302_Found(location=str(absolute_url))
 
         self.request._login_required_called = True
