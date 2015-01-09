@@ -229,7 +229,7 @@ class Response(object):
     def responds_normal(self, maxduration=DEFAULTFAST):
         """Normale Seite: Status 200, HTML, schnelle Antwort, keine kaputten Links"""
         self.responds_html()
-        self.responds_with_valid_html()
+        # self.responds_with_valid_html()
         self.responds_with_valid_links()
         self.responds_fast(maxduration)
         return self
