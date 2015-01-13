@@ -37,7 +37,7 @@ body {
 
   <body>
     <div class="container">
-
+      {% block container -%}
       {% block navbar -%}
       <!-- Static navbar -->
       <div class="navbar navbar-default" role="navigation">
@@ -122,10 +122,10 @@ body {
         </div>
       {%- endblock mainrow %}
       </div>
-    </div> <!-- /container -->
-
+    </div>
     {%- endblock content %}
-    </div> <!-- /container -->
+    {%- endblock container %}
+    </div>
 
     <!-- Le javascript
     ================================================== -->
