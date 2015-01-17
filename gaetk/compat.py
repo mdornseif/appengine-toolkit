@@ -113,6 +113,25 @@ def xdb_queryset(model_class, ordering=None):
         query = _get_queryset_db(model_class, ordering)
     return query
 
+def xdb_fetch_page(query, limit, offset=None, start_cursor=None):
+    if isinstance(query, ndb.Query):
+        if start_cursor:
+            objects, cursor, more_objects = query.fetch_page(limit, start_cursor=start_cursor)
+        else:
+            objects, cursor, more_objects = query.fetch_page(limit, offset=offset)
+    elif isinstance(query, db.Query):
+        if start_cursor:
+            query.with_cursor(start_cursor)
+            objects = query.fetch(limit)
+            cursor = query.cursor()
+            more_objects = len(objects) == limit
+        else:
+            objects = query.fetch(limit, offset=offset)
+            cursor = query.cursor()
+            more_objects = query.with_cursor(cursor).count(1) > 0
+    else:
+        raise RuntimeError('unknown query class: %s' % type(query))
+    return objects, cursor, more_objects
 
 def xdb_str_key(key):
     """Stringrepräsentation eines Keys"""

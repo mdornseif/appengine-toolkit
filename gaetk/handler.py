@@ -4,7 +4,7 @@
 handler.py - default Request Handler
 
 Created by Maximillian Dornseif on 2010-10-03.
-Copyright (c) 2010-2014 HUDORA. All rights reserved.
+Copyright (c) 2010-2015 HUDORA. All rights reserved.
 """
 
 # pylint can't handle google.appengine.api.memcache
@@ -154,7 +154,7 @@ def create_credential_from_federated_login(user, apps_domain):
 
 
 class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-methods
-    """Generischc Handler functionality.
+    """Generic Handler functionality.
 
     provides
 
@@ -229,27 +229,11 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
 
         start_cursor = Cursor(urlsafe=self.request.get('cursor'))
         if start_cursor:
-            if isinstance(query, db.Query):
-                query.with_cursor(start_cursor)
-                objects = query.fetch(limit)
-                more_objects = len(objects) == limit
-                cursor = query.cursor()
-            elif isinstance(query, ndb.Query):
-                objects, cursor, more_objects = query.fetch_page(limit, start_cursor=start_cursor)
+            objects, cursor, more_objects = gaetk.compat.xdb_fetch_page(query, limit, start_cursor=start_cursor)
             start = self.request.get_range('cursor_start', min_value=0, max_value=10000, default=0)
         else:
             start = self.request.get_range('start', min_value=0, max_value=10000, default=0)
-            # Attention: the order of these statements matter, because query.cursor() is used later.
-            # If the order is reversed, the client gets a cursor to the query to test for more objects,
-            # not a cursor to the actual objects
-            if isinstance(query, db.Query):
-                objects = query.fetch(limit, offset=start)
-                cursor = query.cursor()
-                more_objects = query.with_cursor(cursor).count(1) > 0
-            elif isinstance(query, ndb.Query):
-                objects, cursor, more_objects = query.fetch_page(limit, offset=start)
-            else:
-                raise RuntimeError('unknown query class: %s' % type(query))
+            objects, cursor, more_objects = gaetk.compat.xdb_fetch_page(query, limit, offset=start)
 
         prev_objects = bool((start > 0) or start_cursor.to_bytes())
         prev_start = max(start - limit - 1, 0)
