@@ -105,7 +105,8 @@ To [get OAuth2 Credentials](https://developers.google.com/accounts/docs/OpenIDCo
     ```
     https://example.appspot.com/gaetk/auth/oauth2callback
     https://www.example.de/gaetk/auth/oauth2callback
-    https://dev-md-dot-example.appspot.com/gaetk/auth/oauth2callback```
+    https://dev-md-dot-example.appspot.com/gaetk/auth/oauth2callback
+    ```
 7. Click on "Download JSON" to get something to put into your `config.py`
 
 Your config.py should now contain something like this:
