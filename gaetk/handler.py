@@ -7,9 +7,6 @@ Created by Maximillian Dornseif on 2010-10-03.
 Copyright (c) 2010-2015 HUDORA. All rights reserved.
 """
 
-# pylint can't handle google.appengine.api.memcache
-# pylint: disable=E1101
-
 
 import logging
 
@@ -37,6 +34,7 @@ from functools import partial
 from gaetk import webapp2
 
 from google.appengine.api import users
+from google.appengine.api import memcache
 from google.appengine.datastore.datastore_query import Cursor
 from google.appengine.ext import ndb
 from webob.exc import HTTPBadRequest as HTTP400_BadRequest
@@ -104,6 +102,7 @@ def _get_credential(username):
 
 
 class NdbCredential(ndb.Expando):
+    """Encodes a user and his permissions."""
     _default_indexed = False
     uid = ndb.StringProperty(required=True)  # == key.id()
     user = ndb.UserProperty(required=False)  # Google (?) User
@@ -141,12 +140,12 @@ class NdbCredential(ndb.Expando):
         return "<gaetk.NdbCredential %s>" % self.uid
 
 
-class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-methods
+class BasicHandler(webapp2.RequestHandler):
     """Generic Handler functionality.
 
     provides
 
-    * `self.session` which si based on https://github.com/dound/gae-sessions.
+    * `self.session` which is based on https://github.com/dound/gae-sessions.
     * `self.login_required()` and `self.is_admin()` for Authentication
     * `self.authchecker()` to be overwritten to fully customize authentication
     """
@@ -217,7 +216,8 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
 
         start_cursor = self.request.get('cursor', '')
         if start_cursor:
-            objects, cursor, more_objects = gaetk.compat.xdb_fetch_page(query, limit, start_cursor=start_cursor)
+            objects, cursor, more_objects = gaetk.compat.xdb_fetch_page(
+                query, limit, start_cursor=start_cursor)
             start = self.request.get_range('cursor_start', min_value=0, max_value=10000, default=0)
             prev_objects = True
         else:
@@ -284,31 +284,14 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
         """
         import jinja2
 
-        # Wir cachen das jinja2.Environment(). Dass ermögtlich es, dem internen Bytecode-Cache von
-        # jinja2 zu greifen. Ich bin mir nicht sicher, ob das nicht mit dem kommenden
-        # Mutlithreading-Support in GAE probleme machen wird - wir werden sehen.
-        # Es spart jedenfalls bei komplexen Seiten, wie
-        # http://hudora-de.appspot.com/shop/ersatzteil/95017 etwa 800 ms (!).
-        # Der Schlüssel für den Cache sind die angeforderten Extensions.
-        global _jinja_env_cache
-
-        # Die Extensions müssen ein Tupel sein, eine Liste ist nicht hashable:
-        # TypeError: unhashable type: 'list'
         key = tuple(extensions)
         if key not in _jinja_env_cache:
-            template_dirs = config.template_dirs
-
-            env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dirs),
+            env = jinja2.Environment(loader=jinja2.FileSystemLoader(config.template_dirs),
                                      extensions=extensions,
                                      auto_reload=True,  # do check if the source changed
                                      trim_blocks=True,  # first newline after a block is removed
-                                     # This does not work (yet):
-                                     # <type 'exceptions.RuntimeError'>: disallowed bytecode
-                                     # bytecode_cache=jinja2.MemcachedBytecodeCache(memcache, timeout=600)
+                                     bytecode_cache=jinja2.MemcachedBytecodeCache(memcache, timeout=600)
                                      )
-
-            # Eigene Filter
-            # env.filters['dateformat'] = filter_dateformat
             _jinja_env_cache[key] = env
         return _jinja_env_cache[key]
 
@@ -320,11 +303,11 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
         """
 
         import jinja2
-        import jinja_filters
+        import gaetk.jinja_filters as myfilters
 
         env = self.create_jinja2env()
         # TODO: do we need that here or in create_jinja2env?
-        jinja_filters.register_custom_filters(env)
+        myfilters.register_custom_filters(env)
         try:
             template = env.get_template(template_name)
         except jinja2.TemplateNotFound:
@@ -377,6 +360,7 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
         self.response.body = text + '\n'
 
     def _expire_messages(self):
+        """Remove Messages already displayed."""
         new = []
         for message in self.session.get('_gaetk_messages', []):
             if message.get('expires', 0) > time.time():
@@ -510,7 +494,7 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
             return permission in self.credential.permissions
         return False
 
-    def login_required(self, deny_localhost=False):
+    def login_required(self):
         """Returns the currently logged in user and forces login."""
 
         # Avoid beeing called twice
@@ -572,6 +556,7 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
         return self.credential
 
     def _parse_authorisation(self):
+        """Parse Authorization Header"""
         auth_type, encoded = self.request.headers.get('Authorization').split(None, 1)
         if auth_type.lower() != 'basic':
             raise HTTP400_BadRequest(
@@ -597,7 +582,8 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
         # simple sample implementation: check compliance for headers/wsgiref
         for name, val in self.response.headers.items():
             if not (isinstance(name, basestring) and isinstance(val, basestring)):
-                logging.error("Header names and values must be strings: {%r: %r}", name, val)
+                logging.error("Header names and values must be strings: {%r: %r} in %s(%r, %r) => %r",
+                              name, val, method, args, kwargs, ret)
 
     def dispatch(self):
         """Dispatches the requested method."""
@@ -668,6 +654,7 @@ class JsonResponseHandler(BasicHandler):
     default_cachingtime = 60
 
     def serialize(self, content):
+        """convert content to JSON."""
         import huTools.hujson2
         return huTools.hujson2.dumps(content)
 

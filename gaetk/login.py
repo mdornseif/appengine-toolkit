@@ -41,6 +41,7 @@ except AttributeError:
 
 
 def _create_credential(*args, **kwargs):
+    """Can be monkeypatched"""
     return gaetk.handler.NdbCredential.create(*args, **kwargs)
 
 
@@ -216,7 +217,6 @@ class OAuth2Callback(BasicHandler):
         jwt = json.loads(jwt)
         logging.info("jwt = %r", jwt)
         # email_verified True if the user's e-mail address has been verified
-        # TODO: check iat
         assert jwt['iss'] == 'accounts.google.com'
         assert jwt['aud'] == config.OAUTH['web']['client_id']
         assert jwt['hd'] in LOGIN_ALLOWED_DOMAINS
