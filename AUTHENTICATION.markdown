@@ -87,7 +87,7 @@ If you want to disable this functionality set `GAETK_AUTH_API_DISABLED = True` i
 This generates a new user. UserID and Password are choosen by the system and are not user settable.
 
 
-Authenticationg against Google Apps
+Authenticathing against Google Apps
 -----------------------------------
 
 Original gaetk used [OpenID with Google Apps](https://cloud.google.com/appengine/articles/openid) in "Federated Login" mode to authenticate users against one or more Google Apps domains. The general thinking is, that Clients are Authenticated via HTTP-Form-Auth and Staff is authenticated via Google Apps allowing staff to have a single-sign-on (SSO) experience.

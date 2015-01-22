@@ -181,7 +181,10 @@ class OAuth2Callback(BasicHandler):
     def create_credential_oauth2(self, jwt):
         """Create a new credential object for a newly logged in Google user."""
 
-        uid = jwt['sub'] + '#google.' + jwt['hd']
+        if jwt.get('email_verified'):
+           uid = jwt['email']
+        else:
+           uid = jwt['sub'] + '#google.' + jwt['hd']
         return _create_credential(
             tenant=jwt['hd'],
             uid=uid,
