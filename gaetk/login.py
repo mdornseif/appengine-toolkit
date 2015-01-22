@@ -199,8 +199,12 @@ class OAuth2Callback(BasicHandler):
         # https://dev-md-dot-hudoraexpress.appspot.com/oauth2callback?
 
         # 3. Confirm anti-forgery state token
-        assert self.request.get('state') == self.session['oauth_state']
-        assert self.request.get('hd') in LOGIN_ALLOWED_DOMAINS
+        if self.request.get('state') != self.session['oauth_state']:
+            raise RuntimeError("wrong state: %r != %r" % (
+                self.request.get('state'), self.session['oauth_state']))
+        if LOGIN_ALLOWED_DOMAINS and self.request.get('hd') not in LOGIN_ALLOWED_DOMAINS:
+            raise RuntimeError("wrong domain: %r not in %r" % (
+                self.request.get('hd'), LOGIN_ALLOWED_DOMAINS))
 
         # 4. Exchange code for access token and ID token
         url = config.OAUTH['web']['token_uri']
