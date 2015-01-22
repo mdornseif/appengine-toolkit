@@ -215,15 +215,16 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
             # We count up to maximum of 10000. Counting is a somewhat expensive operation on AppEngine
             total = query.count(10000)
 
-        start_cursor = Cursor(urlsafe=self.request.get('cursor'))
+        start_cursor = self.request.get('cursor', '')
         if start_cursor:
             objects, cursor, more_objects = gaetk.compat.xdb_fetch_page(query, limit, start_cursor=start_cursor)
             start = self.request.get_range('cursor_start', min_value=0, max_value=10000, default=0)
+            prev_objects = True
         else:
             start = self.request.get_range('start', min_value=0, max_value=10000, default=0)
             objects, cursor, more_objects = gaetk.compat.xdb_fetch_page(query, limit, offset=start)
+            prev_objects = start > 0
 
-        prev_objects = bool((start > 0) or start_cursor.to_bytes())
         prev_start = max(start - limit - 1, 0)
         next_start = max(start + len(objects), 0)
         clean_qs = dict([(k, self.request.get(k)) for k in self.request.arguments()
