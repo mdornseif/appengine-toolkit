@@ -32,6 +32,7 @@ import warnings
 
 from functools import partial
 from gaetk import webapp2
+import itsdangerous
 
 from google.appengine.api import users
 from google.appengine.api import memcache
@@ -79,7 +80,7 @@ _jinja_env_cache = {}
 WSGIApplication = webapp2.WSGIApplication
 
 
-def login_user(credential, session, via):
+def login_user(credential, session, via, response=None):
     """Ensure the system knows that a user has been logged in."""
     session['uid'] = credential.uid
     if 'login_via' not in session:
@@ -94,6 +95,17 @@ def login_user(credential, session, via):
             os.environ['USER_EMAIL'] = credential.email
         else:
             os.environ['USER_EMAIL'] = '%s@auth.hudora.de' % credential.uid
+    if response:
+        s = itsdangerous.URLSafeTimedSerializer(session.base_key)
+        uidcookie = s.dumps(dict(uid=credential.uid))
+        host = os.environ.get('HTTP_HOST', '')
+        if host.endswith('appspot.com'):
+            # setting cookies for .appspot.com does not work
+            domain = '.'.join(host.split('.')[-3:])
+        else:
+            domain = '.'.join(host.split('.')[-2:])
+        logging.info("domain %s", domain)
+        response.set_cookie('gaetkuid', uidcookie, domain='.%s' % domain, max_age=60*60*1)
 
 
 def _get_credential(username):
@@ -507,7 +519,7 @@ class BasicHandler(webapp2.RequestHandler):
         if self.session.get('uid'):
             self.credential = _get_credential(self.session['uid'])
             if self.credential:
-                login_user(self.credential, self.session, 'session')
+                login_user(self.credential, self.session, 'session', self.response)
 
         if not self.credential:
             # still no session information - try HTTP - Auth
@@ -519,7 +531,7 @@ class BasicHandler(webapp2.RequestHandler):
                 if credential and credential.secret == secret.strip():
                     # Successful login
                     self.credential = credential
-                    login_user(self.credential, self.session, 'HTTP')
+                    login_user(self.credential, self.session, 'HTTP', self.response)
                     logging.debug("HTTP-Login from %s/%s", uid, self.request.remote_addr)
                 else:
                     logging.error(

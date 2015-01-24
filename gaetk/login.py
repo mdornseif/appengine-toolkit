@@ -62,7 +62,7 @@ class LoginHandler(BasicHandler):
         """
         credential = gaetk.handler._get_credential(uid)
         if credential and credential.secret == secret:
-            gaetk.handler.login_user(credential, session)
+            gaetk.handler.login_user(credential, session, "uid:secret", self.response)
             return credential
 
     def get(self):
@@ -93,7 +93,7 @@ class LoginHandler(BasicHandler):
             if credential:
                 logging.debug(u'login: Login by %s/%s, redirect to %s',
                               username, self.request.remote_addr, continue_url)
-                gaetk.handler.login_user(credential, self.session, via)
+                gaetk.handler.login_user(credential, self.session, via, self.response)
                 raise gaetk.handler.HTTP302_Found(location=continue_url)
             else:
                 logging.warning(u'login: Invalid password for %s', username)
@@ -234,7 +234,7 @@ class OAuth2Callback(BasicHandler):
             logging.info("%s: %r", name, os.environ.get(name))
 
         credential = self.create_credential_oauth2(jwt)
-        gaetk.handler.login_user(credential, self.session, 'OAuth2')
+        gaetk.handler.login_user(credential, self.session, 'OAuth2', self.response)
         self.response.set_cookie('gaetkoauthmail', jwt['email'], max_age=7776000)
 
         continue_url = self.session['continue_url']
@@ -266,6 +266,7 @@ class LogoutHandler(gaetk.handler.BasicHandler):
         self.response.delete_cookie('SACSID')  # Appengine Login
         self.response.delete_cookie('ACSID')  # Appengine Login
         self.response.delete_cookie('gaetkoauthmail')  # gaetk Login
+        self.response.delete_cookie('gaetkuid')  # gaetk Login
 
         user = users.get_current_user()
         if user:
