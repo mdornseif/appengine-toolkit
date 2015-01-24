@@ -444,6 +444,9 @@ Licensed under the Apache License, Version 2.0
 Contains code from [gae_mini_profiler][7], Copyright 2011 Ben Kamens.
 Licensed under the MIT license
 
+Contains code from [itsdangerous][8], Copyright (c) 2011 by Armin Ronacher and the Django Software Foundation.
+Licensed under a Berkeley-style License
+
 gaetk code is Copyright 2010, 2011 Dr. Maximillian Dornseif & Hudora GmbH and dual licensed under GPLv3 and the Apache License Version 2.0.
 
 
@@ -454,5 +457,6 @@ gaetk code is Copyright 2010, 2011 Dr. Maximillian Dornseif & Hudora GmbH and du
 [5]: http://twitter.github.com/bootstrap/
 [6]: https://docs.djangoproject.com/en/dev/ref/contrib/flatpages/
 [7]: https://github.com/kamens/gae_mini_profiler
+[8]: https://github.com/mitsuhiko/itsdangerous
 
-[![Build Status](https://travis-ci.org/mdornseif/appengine-toolkit?branch=master)](https://travis-ci.org/mdornseif/appengine-toolkit) [![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/mdornseif/appengine-toolkit/trend.png)](https://bitdeli.com/free "Bitdeli Badge") [![Coverage Status](https://coveralls.io/repos/mdornseif/appengine-toolkit/badge.png)](https://coveralls.io/r/mdornseif/appengine-toolkit)
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/mdornseif/appengine-toolkit/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
