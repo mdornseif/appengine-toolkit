@@ -656,8 +656,8 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
                 else:
                     logging.debug('Accept: %s', self.request.headers.get('Accept', ''))
                     # We assume the access came via cURL et al, request Auth vie 401 Status code.
-                    logging.info("requesting HTTP-Auth %s %s", self.request.remote_addr,
-                                 self.request.headers.get('Authorization'))
+                    logging.info("requesting HTTP-Auth %s %s %r", self.request.remote_addr,
+                                 self.request.headers.get('Authorization'), self.request.headers)
                     raise HTTP401_Unauthorized(headers={'WWW-Authenticate': 'Basic realm="API Login"'})
 
         if self.credential.user and not users.get_current_user() and self.session.get('logintype') != 'HTTP':
