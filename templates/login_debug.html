@@ -1,12 +1,16 @@
 {% extends "base_admin3.html" %}
 
-{% block title %}huExpress Login{% endblock title %}
+{% block title %}Login Debugging{% endblock title %}
 
 {% block container %}
-  <h1>Login</h1>
+  <h1>Login Debugging</h1>
 
-  {{ env }},
-  {{ google_user }}
-  {{ credential }}
+  <pre>
+  {{ env }}<br>
+  {{ google_user|pprint }}<br>
+  {{ credential|pprint }}<br>
+  {{ credential.to_dict()|pprint }}<br>
+  {{ uid|pprint }}<br>
+  </pre>
 
 {% endblock container %}
