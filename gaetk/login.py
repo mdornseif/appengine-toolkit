@@ -70,6 +70,9 @@ class LoginHandler(BasicHandler):
 
         continue_url = self.request.GET.get('continue', '/').encode('ascii', 'ignore')
 
+        if not self.request.url.startswith("https://"):
+            raise gaetk.handler.HTTP302_Found(location=self.request.url.replace('http://', 'https://', 1))
+
         # the user is tried to be authenticated via a username-password based approach.
         # The data is either taken from the HTTP header `Authorization` or the provided (form) data.
         msg = ''
