@@ -4,11 +4,8 @@
 handler.py - default Request Handler
 
 Created by Maximillian Dornseif on 2010-10-03.
-Copyright (c) 2010-2014 HUDORA. All rights reserved.
+Copyright (c) 2010-2015 HUDORA. All rights reserved.
 """
-
-# pylint can't handle google.appengine.api.memcache
-# pylint: disable=E1101
 
 
 import logging
@@ -24,6 +21,7 @@ LOGIN_ALLOWED_DOMAINS = getattr(config, 'LOGIN_ALLOWED_DOMAINS', [])
 config.template_dirs = getattr(config, 'template_dirs', ['./templates'])
 
 import base64
+import datetime
 import hashlib
 import os
 import time
@@ -34,14 +32,11 @@ import warnings
 
 from functools import partial
 from gaetk import webapp2
-from gaetk._internal import lru_cache
+import itsdangerous
 
-from gaetk.gaesessions import get_current_session
-from google.appengine.api import memcache
 from google.appengine.api import users
-from google.appengine.datastore import entity_pb
+from google.appengine.api import memcache
 from google.appengine.datastore.datastore_query import Cursor
-from google.appengine.ext import db
 from google.appengine.ext import ndb
 from webob.exc import HTTPBadRequest as HTTP400_BadRequest
 from webob.exc import HTTPConflict as HTTP409_Conflict
@@ -60,6 +55,9 @@ from webob.exc import HTTPServiceUnavailable as HTTP503_ServiceUnavailable
 from webob.exc import HTTPTemporaryRedirect as HTTP307_TemporaryRedirect
 from webob.exc import HTTPUnauthorized as HTTP401_Unauthorized
 from webob.exc import HTTPUnsupportedMediaType as HTTP415_UnsupportedMediaType
+
+from gaetk.gaesessions import get_current_session
+import gaetk.compat
 
 
 warnings.filterwarnings(
@@ -82,83 +80,84 @@ _jinja_env_cache = {}
 WSGIApplication = webapp2.WSGIApplication
 
 
-@lru_cache(maxsize=4)
+def login_user(credential, session, via, response=None):
+    """Ensure the system knows that a user has been logged in."""
+    session['uid'] = credential.uid
+    if 'login_via' not in session:
+        session['login_via'] = via
+    if 'logintime' not in session:
+        session['login_time'] = datetime.datetime.now()
+    if not os.environ.get('USER_ID', None):
+        os.environ['USER_ID'] = credential.uid
+        os.environ['AUTH_DOMAIN'] = 'auth.hudora.de'
+        # os.environ['USER_IS_ADMIN'] = credential.admin
+        if credential.email:
+            os.environ['USER_EMAIL'] = credential.email
+        else:
+            os.environ['USER_EMAIL'] = '%s@auth.hudora.de' % credential.uid
+    if response:
+        s = itsdangerous.URLSafeTimedSerializer(session.base_key)
+        uidcookie = s.dumps(dict(uid=credential.uid))
+        host = os.environ.get('HTTP_HOST', '')
+        if host.endswith('appspot.com'):
+            # setting cookies for .appspot.com does not work
+            domain = '.'.join(host.split('.')[-3:])
+        else:
+            domain = '.'.join(host.split('.')[-2:])
+        logging.info("domain %s", domain)
+        response.set_cookie('gaetkuid', uidcookie, domain='.%s' % domain, max_age=60*60*1)
+
+
 def _get_credential(username):
-    """Gelper to read Credentials - can be monkey_patched"""
-    return Credential.get_by_key_name(username)
+    """Helper to read Credentials - can be monkey_patched"""
+    return NdbCredential.get_by_id(username)
 
 
-class Credential(db.Expando):
-    """Represents an access token and somebody who is allowed to use it.
-
-    Credentials MIGHT map to a google user object
-    """
-    tenant = db.StringProperty(required=False, default='_unknown')
-    email = db.EmailProperty(required=False)
-    user = db.UserProperty(required=False)
-    uid = db.StringProperty(required=True)
-    secret = db.StringProperty(required=True)
-    text = db.StringProperty(required=False)
-    admin = db.BooleanProperty(default=False)
-    permissions = db.StringListProperty(default=['generic_permission'])
-    created_at = db.DateTimeProperty(auto_now_add=True)
-    updated_at = db.DateTimeProperty(auto_now=True)
-    created_by = db.UserProperty(required=False, auto_current_user_add=True)
-    updated_by = db.UserProperty(required=False, auto_current_user=True)
+class NdbCredential(ndb.Expando):
+    """Encodes a user and his permissions."""
+    _default_indexed = False
+    uid = ndb.StringProperty(required=True)  # == key.id()
+    user = ndb.UserProperty(required=False)  # Google (?) User
+    tenant = ndb.StringProperty(required=False, default='_unknown', indexed=False)  # hudora.de
+    email = ndb.StringProperty(required=False)
+    secret = ndb.StringProperty(required=True, indexed=False)  # "Password" - NOT user-settable
+    admin = ndb.BooleanProperty(default=False, indexed=False)
+    text = ndb.StringProperty(required=False, indexed=False)
+    permissions = ndb.StringProperty(repeated=True, indexed=False)
+    created_at = ndb.DateTimeProperty(auto_now_add=True)
+    updated_at = ndb.DateTimeProperty(auto_now=True)
+    created_by = ndb.UserProperty(required=False, auto_current_user_add=True)
+    updated_by = ndb.UserProperty(required=False, auto_current_user=True)
 
     @classmethod
-    def create(cls, tenant='_unknown', user=None, uid=None, text='', email=None, admin=False):
+    def _get_kind(cls):
+        return 'Credential'
+
+    @classmethod
+    def create(cls, uid=None, tenant='_unknown', user=None, admin=False, **kwargs):
         """Creates a credential Object generating a random secret and a random uid if needed."""
         # secret hopfully contains about 64 bits of entropy - more than most passwords
-        data = u'%s%s%s%s%s%f%s' % (user, uuid.uuid1(), uid, text, email, time.time(),
-                                    os.environ.get('CURRENT_VERSION_ID', '?'))
+        data = u'%s%s%s%f%s' % (user, uuid.uuid1(), uid, time.time(),
+                                os.environ.get('CURRENT_VERSION_ID', '?'))
         digest = hashlib.md5(data.encode('utf-8')).digest()
         secret = str(base64.b32encode(digest).rstrip('='))[1:15]
         if not uid:
-            handmade_key = db.Key.from_path('Credential', 1)
-            uid = "u%s" % (db.allocate_ids(handmade_key, 1)[0])
-        if email:
-            return cls.get_or_insert(key_name=uid, uid=uid, secret=secret, tenant=tenant,
-                                     user=user, text=text, email=email, admin=admin)
-        else:
-            return cls.get_or_insert(key_name=uid, uid=uid, secret=secret, tenant=tenant,
-                                     user=user, text=text, admin=admin)
+            uid = "u%s" % (cls.allocate_ids(1)[0])
+        kwargs['permissions'] = ['generic_permission']
+        ret = cls.get_or_insert(uid, uid=uid, secret=secret, tenant=tenant,
+                                user=user, admin=admin, **kwargs)
+        return ret
 
     def __repr__(self):
-        return "<gaetk.Credential %s>" % self.uid
+        return "<gaetk.NdbCredential %s>" % self.uid
 
 
-def create_credential_from_federated_login(user, apps_domain):
-    """Create a new credential object for a newly logged in OpenID user.
-
-    This method provides a useful default implementation which should satisfy
-    most needs one might have for new OpenID credentials. If however an application
-    using the AppEngine toolkit does need to store more or different information
-    it should overwrite this method by settings the configuration variable
-    'LOGIN_OPENID_CREDENTIAL_CREATOR' in config.py to a custom method. The method
-    must accept the same two arguments this method received. For an example you
-    might want to look at HUDORA EDIhub, where an additional "receiver" gets written
-    to the credentials database model.
-    """
-    logging.info("Creating: %r %r %r %r", user, user.email(), user.nickname(), user.user_id())
-    uid = user.email() or user.nickname() or user.user_id()
-    # No insane user names
-    if len(str(uid)) > 35:
-        uid = hex(hash(str(uid)))
-    credential = Credential.create(
-        tenant=apps_domain, user=user, uid=uid, email=user.email(),
-        text="Automatically created via OpenID Provider %s" % user.federated_provider(),
-        # for accounts created via Google Apps domains we default to admin permissions
-        admin=False)
-    return credential
-
-
-class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-methods
-    """Generischc Handler functionality.
+class BasicHandler(webapp2.RequestHandler):
+    """Generic Handler functionality.
 
     provides
 
-    * `self.session` which si based on https://github.com/dound/gae-sessions.
+    * `self.session` which is based on https://github.com/dound/gae-sessions.
     * `self.login_required()` and `self.is_admin()` for Authentication
     * `self.authchecker()` to be overwritten to fully customize authentication
     """
@@ -227,31 +226,17 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
             # We count up to maximum of 10000. Counting is a somewhat expensive operation on AppEngine
             total = query.count(10000)
 
-        start_cursor = Cursor(urlsafe=self.request.get('cursor'))
+        start_cursor = self.request.get('cursor', '')
         if start_cursor:
-            if isinstance(query, db.Query):
-                query.with_cursor(start_cursor)
-                objects = query.fetch(limit)
-                more_objects = len(objects) == limit
-                cursor = query.cursor()
-            elif isinstance(query, ndb.Query):
-                objects, cursor, more_objects = query.fetch_page(limit, start_cursor=start_cursor)
+            objects, cursor, more_objects = gaetk.compat.xdb_fetch_page(
+                query, limit, start_cursor=start_cursor)
             start = self.request.get_range('cursor_start', min_value=0, max_value=10000, default=0)
+            prev_objects = True
         else:
             start = self.request.get_range('start', min_value=0, max_value=10000, default=0)
-            # Attention: the order of these statements matter, because query.cursor() is used later.
-            # If the order is reversed, the client gets a cursor to the query to test for more objects,
-            # not a cursor to the actual objects
-            if isinstance(query, db.Query):
-                objects = query.fetch(limit, offset=start)
-                cursor = query.cursor()
-                more_objects = query.with_cursor(cursor).count(1) > 0
-            elif isinstance(query, ndb.Query):
-                objects, cursor, more_objects = query.fetch_page(limit, offset=start)
-            else:
-                raise RuntimeError('unknown query class: %s' % type(query))
+            objects, cursor, more_objects = gaetk.compat.xdb_fetch_page(query, limit, offset=start)
+            prev_objects = start > 0
 
-        prev_objects = bool((start > 0) or start_cursor.to_bytes())
         prev_start = max(start - limit - 1, 0)
         next_start = max(start + len(objects), 0)
         clean_qs = dict([(k, self.request.get(k)) for k in self.request.arguments()
@@ -311,31 +296,14 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
         """
         import jinja2
 
-        # Wir cachen das jinja2.Environment(). Dass ermögtlich es, dem internen Bytecode-Cache von
-        # jinja2 zu greifen. Ich bin mir nicht sicher, ob das nicht mit dem kommenden
-        # Mutlithreading-Support in GAE probleme machen wird - wir werden sehen.
-        # Es spart jedenfalls bei komplexen Seiten, wie
-        # http://hudora-de.appspot.com/shop/ersatzteil/95017 etwa 800 ms (!).
-        # Der Schlüssel für den Cache sind die angeforderten Extensions.
-        global _jinja_env_cache
-
-        # Die Extensions müssen ein Tupel sein, eine Liste ist nicht hashable:
-        # TypeError: unhashable type: 'list'
         key = tuple(extensions)
         if key not in _jinja_env_cache:
-            template_dirs = config.template_dirs
-
-            env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dirs),
+            env = jinja2.Environment(loader=jinja2.FileSystemLoader(config.template_dirs),
                                      extensions=extensions,
                                      auto_reload=True,  # do check if the source changed
                                      trim_blocks=True,  # first newline after a block is removed
-                                     # This does not work (yet):
-                                     # <type 'exceptions.RuntimeError'>: disallowed bytecode
-                                     # bytecode_cache=jinja2.MemcachedBytecodeCache(memcache, timeout=600)
+                                     bytecode_cache=jinja2.MemcachedBytecodeCache(memcache, timeout=600)
                                      )
-
-            # Eigene Filter
-            # env.filters['dateformat'] = filter_dateformat
             _jinja_env_cache[key] = env
         return _jinja_env_cache[key]
 
@@ -347,11 +315,11 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
         """
 
         import jinja2
-        import jinja_filters
+        import gaetk.jinja_filters as myfilters
 
         env = self.create_jinja2env()
         # TODO: do we need that here or in create_jinja2env?
-        jinja_filters.register_custom_filters(env)
+        myfilters.register_custom_filters(env)
         try:
             template = env.get_template(template_name)
         except jinja2.TemplateNotFound:
@@ -404,6 +372,7 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
         self.response.body = text + '\n'
 
     def _expire_messages(self):
+        """Remove Messages already displayed."""
         new = []
         for message in self.session.get('_gaetk_messages', []):
             if message.get('expires', 0) > time.time():
@@ -537,11 +506,8 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
             return permission in self.credential.permissions
         return False
 
-    def login_required(self, deny_localhost=False):
-        """Returns the currently logged in user and forces login.
-
-        Access from 127.0.0.1 is allowed without authentication unless deny_localhost is `True`.
-        """
+    def login_required(self):
+        """Returns the currently logged in user and forces login."""
 
         # Avoid beeing called twice
         if getattr(self.request, '_login_required_called', False):
@@ -549,157 +515,73 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
 
         self.credential = None
 
-        # check if we are logged in via OpenID
-        user = users.get_current_user()
-        if user:
-            logging.info('Google user = %s', user)
-            # yes, active OpenID session
-            # user.federated_provider() == 'https://www.google.com/a/hudora.de/o8/ud?be=o8'
-            apps_domain = user.email().split('@')[-1].lower()
-            if apps_domain not in LOGIN_ALLOWED_DOMAINS:
-                raise HTTP403_Forbidden("Access denied!")
-            username = user.email() or user.nickname()
-
-            self.credential = _get_credential(username)
-            if not self.credential or not self.credential.uid == username:
-                # So far we have no Credential entity for that user, create one
-                if getattr(config, 'LOGIN_OPENID_CREDENTIAL_CREATOR', None):
-                    self.credential = config.LOGIN_OPENID_CREDENTIAL_CREATOR(user, apps_domain)
-                if not self.credential:
-                    self.credential = create_credential_from_federated_login(user, apps_domain)
-            self.session['uid'] = self.credential.uid
-            self.session['logintype'] = 'OAuth'
-            self.response.set_cookie('gaetkopid', apps_domain, max_age=7776000)
-            return self.credential
-
         # try if we have a session based login
-        if self.enableSessionAuth and self.session.get('uid'):
-            # we salt the cache object with the current app version, so data-migrations gets easier
-            cachekey = "%s_gaetk_cred_%s" % (os.environ.get('CURRENT_VERSION_ID', '?'), self.session['uid'])
-            try:
-                # try to read from memcache
-                self.credential = memcache.get(cachekey)
-            except AttributeError:
-                # Unpickeling from memcache might fail because of incompatible app versions etc.
-                self.credential = None
+        if self.session.get('uid'):
+            self.credential = _get_credential(self.session['uid'])
             if self.credential:
-                self.credential = db.model_from_protobuf(entity_pb.EntityProto(self.credential))
-
-            if self.credential is None:
-                self.credential = Credential.get_by_key_name(self.session['uid'])
-                if self.credential:
-                    memcache.set(cachekey,
-                                 db.model_to_protobuf(self.credential).Encode(),
-                                 CREDENTIAL_CACHE_TIMEOUT)
-                self.session['logintype'] = 'session'
+                login_user(self.credential, self.session, 'session', self.response)
 
         if not self.credential:
             # still no session information - try HTTP - Auth
             uid, secret = None, None
             # see if we have HTTP-Basic Auth Data
             if self.request.headers.get('Authorization'):
-                auth_type, encoded = self.request.headers.get('Authorization').split(None, 1)
-                if auth_type.lower() == 'basic':
-                    decoded = encoded.decode('base64')
-                    # If the Client send us invalid credentials, let him know , else parse into
-                    # username and password
-                    if ':' not in decoded:
-                        raise HTTP400_BadRequest("invalid credentials %r" % decoded)
-                    uid, secret = decoded.split(':', 1)
-                    # Pull credential out of memcache or datastore
-                    credential = memcache.get("cred_%s" % uid)
-                    if not credential:
-                        credential = Credential.get_by_key_name(uid.strip() or ' *invalid* ')
-                        memcache.add("cred_%s" % uid, credential, CREDENTIAL_CACHE_TIMEOUT)
-                    if credential and credential.secret == secret.strip():
-                        # Successful login
-                        self.credential = credential
-                        self.session['uid'] = credential.uid
-                        self.session['email'] = credential.email
-                        self.session['logintype'] = 'HTTP'
-                        logging.info("HTTP-Login from %s/%s", uid, self.request.remote_addr)
-                    else:
-                        logging.error(
-                            "failed HTTP-Login from %s/%s %s", uid, self.request.remote_addr,
-                            self.request.headers.get('Authorization'))
-                        raise HTTP401_Unauthorized(
-                            "Invalid HTTP-Auth",
-                            headers={'WWW-Authenticate': 'Basic realm="API Login"'})
-
+                secret, uid = self._parse_authorisation()
+                credential = _get_credential(uid.strip() or ' *invalid* ')
+                if credential and credential.secret == secret.strip():
+                    # Successful login
+                    self.credential = credential
+                    login_user(self.credential, self.session, 'HTTP', self.response)
+                    logging.debug("HTTP-Login from %s/%s", uid, self.request.remote_addr)
                 else:
                     logging.error(
-                        "unknown HTTP-Login type %r %s %s", auth_type, self.request.remote_addr,
+                        "failed HTTP-Login from %s/%s %s", uid, self.request.remote_addr,
                         self.request.headers.get('Authorization'))
+                    raise HTTP401_Unauthorized(
+                        "Invalid HTTP-Auth",
+                        headers={'WWW-Authenticate': 'Basic realm="API Login"'})
 
         # HTTP Basic Auth failed
+        # we don't accept login based soley on Google Infrastructure login
+        # and channel users through OAuth2 Connect via login.py to get session
+        # authentication
         if not self.credential:
-            if (self.request.remote_addr == '127.0.0.1') and not deny_localhost:
-                logging.info('for testing we allow unauthenticated access from localhost')
-                # create credential
-                self.credential = Credential.create(tenant='localhost.', uid='0x7f000001', admin=True,
-                                                    text='Automatically created for testing')
+            # Login not successful
+            is_browser = (
+                'text/' in self.request.headers.get('Accept', '')
+                or 'image/' in self.request.headers.get('Accept', '')
+                or self.request.is_xhr
+                or self.request.referer)
+            if is_browser:
+                # we assume the request came via a browser - redirect to the "nice" login page
+                # let login.py handle it from there
+                absolute_url = self.abs_url(
+                    "/_ah/login_required?continue=%s" % urllib.quote(self.request.url))
+                raise HTTP302_Found(location=absolute_url)
             else:
-                # Login not successful
-                is_browser = (
-                    'text/' in self.request.headers.get('Accept', '')
-                    or 'image/' in self.request.headers.get('Accept', '')
-                    or self.request.is_xhr
-                    or self.request.referer)
-                if is_browser:
-                    # we assume the request came via a browser - redirect to the "nice" login page
-                    self.response.set_status(302)
-                    absolute_url = self.abs_url(
-                        "/_ah/login_required?continue=%s" % urllib.quote(self.request.url))
-                    logging.debug('redirecting browser to nice login page at %r', absolute_url)
-                    self.response.headers['Location'] = absolute_url
-                    raise HTTP302_Found(location=absolute_url)
-                else:
-                    logging.debug('Accept: %s', self.request.headers.get('Accept', ''))
-                    # We assume the access came via cURL et al, request Auth vie 401 Status code.
-                    logging.info("requesting HTTP-Auth %s %s %r", self.request.remote_addr,
-                                 self.request.headers.get('Authorization'), self.request.headers)
-                    raise HTTP401_Unauthorized(headers={'WWW-Authenticate': 'Basic realm="API Login"'})
-
-        if self.credential.user and not users.get_current_user() and self.session.get('logintype') != 'HTTP':
-            # We have an active session and the credential is associated with an Federated/OpenID
-            # Account, but the user is not logged in via OpenID on the GAE Infrastructure anymore.
-            # If we are given tie desired domain via a cookie and this is a GET request
-            # without parameters we try automatic login
-
-            logging.info("Session without gae! %s:%s", self.credential.user, self.request.cookies)
-
-            may_force_openid = (
-                self.request.cookies.get('gaetkopid', '')
-                and self.request.method == 'GET'
-                and not self.request.query_string)
-            if may_force_openid:
-                domain = self.request.cookies.get('gaetkopid', '')
-                if domain and domain in LOGIN_ALLOWED_DOMAINS:
-                    openid_url = 'https://www.google.com/accounts/o8/site-xrds?hd=%s' % domain
-                    logging.info('login: automatically OpenID login to %s', openid_url)
-                    # Hand over Authentication Processing to Google/OpenID
-                    # TODO: save get parameters in session
-                    try:
-                        absolute_url = users.create_login_url(self.request.path_url, None, openid_url)
-                        logging.debug('redirecting browser to OpenID %r', absolute_url)
-                        raise HTTP302_Found(location=str(absolute_url))
-                    except users.NotAllowedError:
-                        logging.info("OpenID failed")
-                        # we assume the request came via a browser - redirect to the "nice" login page
-                        self.response.set_status(302)
-                        absolute_url = users.create_login_url(self.abs_url(self.request.url))
-                        # absolute_url = self.abs_url("/_ah/login_required?continue=%s"
-                        #                             % urllib.quote(self.request.url))
-                        logging.debug('redirecting browser because of difficult create_login_url %r',
-                                      absolute_url)
-                        self.response.headers['Location'] = str(absolute_url)
-                        raise HTTP302_Found(location=str(absolute_url))
-            absolute_url = users.create_login_url(self.abs_url(self.request.url))
-            logging.debug('redirecting browser with session %r', absolute_url)
-            raise HTTP302_Found(location=str(absolute_url))
+                # We assume the access came via cURL et al, request Auth via 401 Status code.
+                logging.info("requesting HTTP-Auth %s %s", self.request.remote_addr,
+                             self.request.headers.get('Authorization'))
+                raise HTTP401_Unauthorized(headers={'WWW-Authenticate': 'Basic realm="API Login"'})
 
         self.request._login_required_called = True
         return self.credential
+
+    def _parse_authorisation(self):
+        """Parse Authorization Header"""
+        auth_type, encoded = self.request.headers.get('Authorization').split(None, 1)
+        if auth_type.lower() != 'basic':
+            raise HTTP400_BadRequest(
+                "unknown HTTP-Login type %r %s %s", auth_type, self.request.remote_addr,
+                self.request.headers.get('Authorization'))
+
+        decoded = encoded.decode('base64')
+        # If the Client send us invalid credentials, let him know , else parse into
+        # username and password
+        if ':' not in decoded:
+            raise HTTP400_BadRequest("invalid credentials %r" % decoded)
+        uid, secret = decoded.split(':', 1)
+        return secret, uid
 
     def authchecker(self, method, *args, **kwargs):
         """Function to allow implementing authentication for all subclasses. To be overwritten."""
@@ -712,7 +594,8 @@ class BasicHandler(webapp2.RequestHandler):  # pylint: disable=too-many-public-m
         # simple sample implementation: check compliance for headers/wsgiref
         for name, val in self.response.headers.items():
             if not (isinstance(name, basestring) and isinstance(val, basestring)):
-                logging.error("Header names and values must be strings: {%r: %r}", name, val)
+                logging.error("Header names and values must be strings: {%r: %r} in %s(%r, %r) => %r",
+                              name, val, method, args, kwargs, ret)
 
     def dispatch(self):
         """Dispatches the requested method."""
@@ -783,6 +666,7 @@ class JsonResponseHandler(BasicHandler):
     default_cachingtime = 60
 
     def serialize(self, content):
+        """convert content to JSON."""
         import huTools.hujson2
         return huTools.hujson2.dumps(content)
 

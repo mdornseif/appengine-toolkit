@@ -1,0 +1,16 @@
+{% extends "base_admin3.html" %}
+
+{% block title %}Login Debugging{% endblock title %}
+
+{% block container %}
+  <h1>Login Debugging</h1>
+
+  <pre>
+  {{ env }}<br>
+  {{ google_user|pprint }}<br>
+  {{ credential|pprint }}<br>
+  {{ credential.to_dict()|pprint }}<br>
+  {{ uid|pprint }}<br>
+  </pre>
+
+{% endblock container %}
