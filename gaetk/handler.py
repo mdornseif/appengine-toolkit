@@ -37,7 +37,7 @@ import itsdangerous
 from google.appengine.api import users
 from google.appengine.api import memcache
 from google.appengine.datastore.datastore_query import Cursor
-from google.appengine.ext import ndb
+from google.appengine.ext import db, ndb
 from webob.exc import HTTPBadRequest as HTTP400_BadRequest
 from webob.exc import HTTPConflict as HTTP409_Conflict
 from webob.exc import HTTPForbidden as HTTP403_Forbidden
@@ -111,6 +111,10 @@ def login_user(credential, session, via, response=None):
 def _get_credential(username):
     """Helper to read Credentials - can be monkey_patched"""
     return NdbCredential.get_by_id(username)
+
+
+class Credential(db.Expando):
+    """Bildet eine Zugriffsberechtigung ab. Legacy"""
 
 
 class NdbCredential(ndb.Expando):
