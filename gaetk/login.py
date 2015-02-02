@@ -240,10 +240,7 @@ class OAuth2Callback(BasicHandler):
         gaetk.handler.login_user(credential, self.session, 'OAuth2', self.response)
         self.response.set_cookie('gaetkoauthmail', jwt['email'], max_age=7776000)
 
-        continue_url = self.session['continue_url']
-        if not continue_url:
-            continue_url = '/'
-        del self.session['continue_url']
+        continue_url = self.session.pop('continue_url', '/')
         raise HTTP302_Found(location=users.create_login_url(continue_url))
 
 
