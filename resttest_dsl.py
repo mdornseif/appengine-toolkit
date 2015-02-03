@@ -267,6 +267,8 @@ class TestClient(object):
         duration = 100001
         while counter < 5 and duration >= DEFAULTFAST:
             if counter > 1:
+                if duration > 10:
+                    break  # solw API pages etc we test only once
                 if DEBUG:
                     print "retry request because of %d ms duration" % duration
                 else:

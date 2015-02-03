@@ -36,7 +36,6 @@ import itsdangerous
 
 from google.appengine.api import users
 from google.appengine.api import memcache
-from google.appengine.datastore.datastore_query import Cursor
 from google.appengine.ext import db, ndb
 from webob.exc import HTTPBadRequest as HTTP400_BadRequest
 from webob.exc import HTTPConflict as HTTP409_Conflict
@@ -104,8 +103,7 @@ def login_user(credential, session, via, response=None):
             domain = '.'.join(host.split('.')[-3:])
         else:
             domain = '.'.join(host.split('.')[-2:])
-        logging.info("domain %s", domain)
-        response.set_cookie('gaetkuid', uidcookie, domain='.%s' % domain, max_age=60*60*1)
+        response.set_cookie('gaetkuid', uidcookie, domain='.%s' % domain, max_age=60 * 60 * 2)
 
 
 def _get_credential(username):
@@ -555,7 +553,7 @@ class BasicHandler(webapp2.RequestHandler):
                 'text/' in self.request.headers.get('Accept', '')
                 or 'image/' in self.request.headers.get('Accept', '')
                 or self.request.is_xhr
-                or self.request.referer)
+                or 'Mozilla' in self.request.headers.get('User-Agent', ''))
             if is_browser:
                 # we assume the request came via a browser - redirect to the "nice" login page
                 # let login.py handle it from there
