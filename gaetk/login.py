@@ -1,33 +1,38 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-login.py - login handler for appengine. See handler.py and README.markdown/Authentication
-for further Information.
+spezifische Login und Logout Funktionalität.
 
-In app.yaml add:
-
-    handlers:
-    - url: /_ah/login_required
-      script: lib/gaetk/gaetk/login.py
-    - url: /logout
-      script: lib/gaetk/gaetk/login.py
+based on EDIhub:login.py
 
 Created by Maximillian Dornseif on 2010-09-24.
-Copyright (c) 2010, 2014 HUDORA. All rights reserved.
+Copyright (c) 2010, 2014, 2015 HUDORA. All rights reserved.
 """
 
-import config
+
+config = object()
+try:
+    import config
+except ImportError:
+    pass
 config.imported = True
 
 import logging
+import random
+import string
+import urllib
+import base64
+import unicodedata
+import json
+import os
 
-import gaetk
-import huTools.hujson
-from gaetk.handler import Credential, create_credential_from_federated_login
-from gaetk.gaesessions import get_current_session
-from gaetk.handler import BasicHandler
+import huTools.http
+import huTools.hujson2
 from google.appengine.api import users
 
+import gaetk.handler
+from gaetk.handler import BasicHandler
+from gaetk.handler import HTTP302_Found
 
 try:
     LOGIN_ALLOWED_DOMAINS = config.LOGIN_ALLOWED_DOMAINS
@@ -35,125 +40,79 @@ except AttributeError:
     LOGIN_ALLOWED_DOMAINS = []
 
 
-def get_verified_credential(username, password, session=None):
-    """Get a credential object
-
-    The credential object for the given username...
-    Otherwise, None is returned.
-    """
-    # TODO: Add memcache layer, like in gaetk.handler.BasicHandler.login_required
-    credential = Credential.get_by_key_name(username)
-    if credential and credential.secret == password:
-        if session:
-            session['uid'] = credential.uid
-            session['email'] = credential.email
-        return credential
+def _create_credential(*args, **kwargs):
+    """Can be monkeypatched"""
+    return gaetk.handler.NdbCredential.create(*args, **kwargs)
 
 
-class OpenIdLoginHandler(BasicHandler):
+class LoginHandler(BasicHandler):
     """Handler for Login"""
 
     def __init__(self, *args, **kwargs):
         """Initialize handler instance"""
 
-        super(OpenIdLoginHandler, self).__init__(*args, **kwargs)
+        super(LoginHandler, self).__init__(*args, **kwargs)
 
-        # clean previous session
-        self.session = get_current_session()
-        self.session.regenerate_id()
-        if self.session.is_active():
-            self.session.terminate()
+    def get_verified_credential(self, uid, secret, session):
+        """Get a credential object
+
+        The credential object for the given `uid` matching
+        `secret`.
+        Otherwise, None is returned.
+        """
+        credential = gaetk.handler._get_credential(uid)
+        if credential and credential.secret == secret:
+            gaetk.handler.login_user(credential, session, "uid:secret", self.response)
+            return credential
 
     def get(self):
-        """Handler for Federated login consumer (OpenID) AND HTTP-Basic-Auth.
-
-        For information on OpenID, see http://code.google.com/appengine/articles/openid.html"""
+        """Handler for Form and HTTP-Basic-Auth."""
 
         continue_url = self.request.GET.get('continue', '/').encode('ascii', 'ignore')
 
-        # check if we are logged in via OpenID
-        user = users.get_current_user()
-        if user:
-            # yes, there is an active OpenID session
-            # user.federated_provider() == 'https://www.google.com/a/hudora.de/o8/ud?be=o8'
-            logging.info(u'login: User logged in via OpenID: %s', user)
-            if not user.federated_provider():
-                # development server
-                apps_domain = user.email().split('@')[-1].lower()
-            else:
-                apps_domain = user.federated_provider().split('/')[4].lower()
+        if not self.request.url.startswith("https://"):
+            raise gaetk.handler.HTTP302_Found(location=self.request.url.replace('http://', 'https://', 1))
 
-            if not apps_domain in LOGIN_ALLOWED_DOMAINS:
-                self.response.set_status(403)
-                return
-
-            username = user.email()
-            credential = Credential.get_by_key_name(username)
-            if not credential or not credential.uid == username:
-                # So far we have no Credential entity for that user, create one by calling a factory function
-                fnc = getattr(config, 'LOGIN_OPENID_CREDENTIAL_CREATOR',
-                              create_credential_from_federated_login)
-                credential = fnc(user, apps_domain)
-
-            self.session['uid'] = credential.uid
-            self.session['email'] = username
-            self.response.set_cookie('gaetkopid', apps_domain, max_age=7776000)
-            self.redirect(continue_url)
-            return
-
-        # If the form data contains hints about an allowed (OpenID) domain, try to login the user via OpenID
-        for domain in LOGIN_ALLOWED_DOMAINS:
-            if self.request.GET.get('%s.x' % domain):
-                openid_url = 'https://www.google.com/accounts/o8/site-xrds?hd=%s' % domain
-                logging.info(u'login: OpenID login requested to %s', openid_url)
-                # Hand over Authentication Processing to Google/OpenID
-                self.redirect(users.create_login_url(continue_url, None, openid_url))
-                return
-
-        # If it was impossible to authenticate via OpenID so far,
         # the user is tried to be authenticated via a username-password based approach.
         # The data is either taken from the HTTP header `Authorization` or the provided (form) data.
-
         msg = ''
+        via = '?'
         username, password = None, None
         # First, try HTTP basic auth (see RFC 2617)
         if self.request.headers.get('Authorization'):
             auth_type, encoded = self.request.headers.get('Authorization').split(None, 1)
             if auth_type.lower() == 'basic':
                 username, password = encoded.decode('base64').split(':', 1)
+                via = 'HTTP'
         # Next, try to get data from the request parameters (form data)
         else:
             username = self.request.get('username', '').strip()
             password = self.request.get('password', '').strip()
+            via = 'FORM'
 
         # Verify submitted username and password
         if username:
-            credential = get_verified_credential(username, password, session=self.session)
+            credential = self.get_verified_credential(username, password, self.session)
             if credential:
-                logging.info(u'login: Login by %s/%s, redirect to %s',
-                             username, self.request.remote_addr, continue_url)
-                self.redirect(continue_url)
-                return
+                logging.debug(u'login: Login by %s/%s, redirect to %s',
+                              username, self.request.remote_addr, continue_url)
+                gaetk.handler.login_user(credential, self.session, via, self.response)
+                raise gaetk.handler.HTTP302_Found(location=continue_url)
             else:
                 logging.warning(u'login: Invalid password for %s', username)
-                msg = u'Anmeldung fehlgeschlagen'
-
-        # Last attempt: If there's a cookie which contains the OpenID domain, try to login the user
-        domain = self.request.cookies.get('gaetkopid', '')
-        if domain and domain in LOGIN_ALLOWED_DOMAINS:
-            logging.info(u'login: automatically OpenID login to %s', domain)
-            openid_url = 'https://www.google.com/accounts/o8/site-xrds?hd=%s' % domain
-            # Hand over Authentication Processing to Google/OpenID
-            self.redirect(users.create_login_url(continue_url, None, openid_url))
-            return
+                msg = u'Anmeldung fehlgeschlagen, versuchen Sie es erneut.'
 
         # Render template with login form
-        self.render({'continue': continue_url, 'domains': LOGIN_ALLOWED_DOMAINS, 'msg': msg}, 'login.html')
+        self.session['continue_url'] = continue_url
+        self.render({'continue': continue_url,
+                     'domains': LOGIN_ALLOWED_DOMAINS,
+                     'oauth_url': get_oauth_url(self.session, self.request),
+                     'msg': msg}, 'login.html')
 
     def post(self):
         """Login via Form POST
 
-        Unline the handler for the GET method, this handler only tries
+        Unlike the handler for the GET method, this handler only tries
         to authenticate a 'user' by checking a username/password combination
         that was submitted through a form.
         Returns a JSON encoded object with the attribute 'success'.
@@ -162,7 +121,7 @@ class OpenIdLoginHandler(BasicHandler):
         if 'username' in self.request.params:
             username = self.request.get('username', '').strip()
             password = self.request.get('password', '').strip()
-            credential = get_verified_credential(username, password, self.session)
+            credential = self.get_verified_credential(username, password, self.session)
             if credential:
                 logging.info(u'Login by %s/%s', username, self.request.remote_addr)
                 response = {'success': True}
@@ -171,28 +130,151 @@ class OpenIdLoginHandler(BasicHandler):
                 response = {'success': False}
         else:
             response = {'success': False}
-        self.response.out.write(huTools.hujson.dumps(response))
+        self.response.out.write(huTools.hujson2.dumps(response))
 
 
-class LogoutHandler(OpenIdLoginHandler):
+def get_oauth_url(session, request):
+    # Create a state token to prevent request forgery.
+    # Store it in the session for later validation.
+    state = ''.join(random.choice(string.ascii_uppercase + string.digits)
+                    for x in xrange(32))
+    session['oauth_state'] = state
+    # Set the client ID, token state, and application name in the HTML while
+    # serving it.
+    url = config.OAUTH['web']['auth_uri']
+    params = dict(
+        client_id=config.OAUTH['web']['client_id'],
+        response_type="code",
+        scope="openid email profile",
+        redirect_uri=get_oauth_callback_url(request),
+        state=state,
+        # login_hint="jsmith@example.com", TODO: gaetkoauthmail
+    )
+    if len(LOGIN_ALLOWED_DOMAINS) == 1:
+        params['hd'] = LOGIN_ALLOWED_DOMAINS[0]
+
+    # intf you know the user's email address, include it in the authentication
+    # URI as the value of the login_hint parameter. If you do not include a
+    # login_hint and the user is signed into Google with multiple accounts,
+    # they will see an "account chooser" asking them to select one account.
+    # This might be surprising to them, and they might select an account other
+    # than the one your application is trying to authorize, which could
+    # increase the complexity of your task.
+
+    return '?'.join([url, urllib.urlencode(params)])
+
+
+def get_oauth_callback_url(request):
+    url = request.host_url + '/gaetk/auth/oauth2callback'
+    if url not in config.OAUTH['web']['redirect_uris']:
+        logging.debug("%s not valid", url)
+        url = 'https://' + os.environ.get('SERVER_NAME') + '/gaetk/auth/oauth2callback'
+    if url not in config.OAUTH['web']['redirect_uris']:
+        logging.debug("%s not valid", url)
+        url = 'https://' + os.environ.get('DEFAULT_VERSION_HOSTNAME') + '/gaetk/auth/oauth2callback'
+    if url not in config.OAUTH['web']['redirect_uris']:
+        logging.debug("%s not valid", url)
+        url = config.OAUTH['web']['redirect_uris'][0]
+    return url
+
+
+class OAuth2Callback(BasicHandler):
+    """Handler for Login"""
+
+    def create_credential_oauth2(self, jwt):
+        """Create a new credential object for a newly logged in Google user."""
+
+        if jwt.get('email_verified'):
+            uid = jwt['email']
+        else:
+            uid = jwt['sub'] + '#google.' + jwt['hd']
+        return _create_credential(
+            tenant=jwt['hd'],
+            uid=uid,
+            admin=True,
+            text='created via OAuth2',
+            email=jwt['email'],
+        )
+
+    def get(self):
+        # see http://filez.foxel.org/0F1Z1m282B1M
+        # logging.debug("p = %r", self.request.params)
+        # https://dev-md-dot-hudoraexpress.appspot.com/oauth2callback?
+
+        # 3. Confirm anti-forgery state token
+        if self.request.get('state') != self.session.get('oauth_state'):
+            raise RuntimeError("wrong state: %r != %r" % (
+                self.request.get('state'), self.session.get('oauth_state')))
+        if LOGIN_ALLOWED_DOMAINS and self.request.get('hd') not in LOGIN_ALLOWED_DOMAINS:
+            raise RuntimeError("wrong domain: %r not in %r" % (
+                self.request.get('hd'), LOGIN_ALLOWED_DOMAINS))
+
+        # 4. Exchange code for access token and ID token
+        url = config.OAUTH['web']['token_uri']
+        # get token
+        params = dict(
+            code=self.request.get('code'),
+            client_id=config.OAUTH['web']['client_id'],
+            client_secret=config.OAUTH['web']['client_secret'],
+            redirect_uri=get_oauth_callback_url(self.request),
+            grant_type="authorization_code")
+        data = huTools.http.fetch_json2xx(url, method='POST', content=params)
+        input_jwt = data['id_token'].split('.')[1]
+        input_jwt = unicodedata.normalize('NFKD', input_jwt).encode('ascii', 'ignore')
+        # Append extra characters to make original string base 64 decodable.
+        input_jwt += '=' * (4 - (len(input_jwt) % 4))
+        jwt = base64.urlsafe_b64decode(input_jwt)
+        jwt = json.loads(jwt)
+        logging.info("jwt = %r", jwt)
+        # email_verified True if the user's e-mail address has been verified
+        assert jwt['iss'] == 'accounts.google.com'
+        assert jwt['aud'] == config.OAUTH['web']['client_id']
+        assert jwt['hd'] in LOGIN_ALLOWED_DOMAINS
+        # note that the user is logged in
+
+        # hd FEDERATED_IDENTITY FEDERATED_PROVIDER
+        for name in 'USER_EMAIL USER_ID USER_IS_ADMIN USER_NICKNAME USER_ORGANIZATION'.split():
+            logging.info("%s: %r", name, os.environ.get(name))
+
+        credential = self.create_credential_oauth2(jwt)
+        gaetk.handler.login_user(credential, self.session, 'OAuth2', self.response)
+        self.response.set_cookie('gaetkoauthmail', jwt['email'], max_age=7776000)
+
+        continue_url = self.session.pop('continue_url', '/')
+        raise HTTP302_Found(location=users.create_login_url(continue_url))
+
+
+class LogoutHandler(gaetk.handler.BasicHandler):
     """Handler for Logout functionality"""
 
     def get(self):
         """Logout user and terminate the current session"""
 
-        session = get_current_session()
-        session['uid'] = None
-        if session.is_active():
-            session.terminate()
+        logging.info("forcing logout")
+        self.session['uid'] = None
+        if self.session.is_active():
+            self.session.terminate()
+        self.session.regenerate_id()
 
-        # log out OpenID and either redirect to 'continue' or display
+        # log out Google and either redirect to 'continue' or display
         # the default logout confirmation page
-        continue_url = self.request.get('continue')
+        continue_url = self.request.get('continue', '')
+
+        # delete coockies
+        self.response.delete_cookie('_ga')  # Appengine Login?
+        self.response.delete_cookie('_gat')  # Appengine Login?
+        self.response.delete_cookie('SACSID')  # Appengine Login
+        self.response.delete_cookie('ACSID')  # Appengine Login
+        self.response.delete_cookie('gaetkoauthmail')  # gaetk Login
+        self.response.delete_cookie('gaetkuid')  # gaetk Login
 
         user = users.get_current_user()
         if user:
+            logging.info("Google User %s", user)
             path = self.request.path
-            self.redirect(users.create_logout_url(path))
+            logout_url = users.create_logout_url(path)
+            logging.info("logging out via %s", logout_url)
+            self.redirect(logout_url)
         else:
             if continue_url:
                 self.redirect(continue_url)
@@ -200,15 +282,122 @@ class LogoutHandler(OpenIdLoginHandler):
                 self.render({}, 'logout.html')
 
 
-application = gaetk.webapp2.WSGIApplication([('.*/logout', LogoutHandler),
-                                             ('.*', OpenIdLoginHandler),
-                                             ])
+class Debug(gaetk.handler.BasicHandler):
+    """Handler for Logout functionality"""
+
+    def get(self):
+        """Logout user and terminate the current session"""
+        self.login_required()
+        env = {}
+        attrs = ['AUTH_DOMAIN',
+                 'USER_EMAIL', 'USER_ID', 'USER_IS_ADMIN',
+                 'USER_NICKNAME', 'USER_ORGANIZATION',
+                 'FEDERATED_IDENTITY', 'FEDERATED_PROVIDER']
+        for name in attrs:
+            env[name] = os.environ.get(name)
+            logging.info("%s: %r", name, os.environ.get(name))
+
+        self.render(dict(
+            env=env,
+            google_user=users.get_current_user(),
+            credential=self.credential,
+            uid=self.session.get('uid'),
+        ), 'login_debug.html')
 
 
-def main():
-    """WSGI Main Entry Point"""
-    application.run()
+class CredentialsHandler(gaetk.handler.BasicHandler):
+    """Credentials - generate or update"""
+
+    def authchecker(self, *args, **kwargs):
+        """Only admin users are allowed to access credentials"""
+        self.login_required()
+        if not self.credential.admin:
+            gaetk.handler.HTTP403_Forbidden()
+
+    def get(self):
+        """Returns information about the credential referenced by parameter `uid`"""
+        uid = self.request.get('uid')
+        if not uid:
+            raise gaetk.handler.HTTP404_NotFound
+
+        credential = gaetk.handler._get_credential(uid)
+        if credential is None:
+            raise gaetk.handler.HTTP404_NotFound
+
+        self.response.headers["Content-Type"] = "application/json"
+        self.response.out.write(huTools.hujson2.dumps(dict(uid=credential.uid,
+                                                           admin=credential.admin, text=credential.text,
+                                                           tenant=credential.tenant, email=credential.email,
+                                                           permissions=credential.permissions,
+                                                           created_at=credential.created_at,
+                                                           updated_at=credential.updated_at)))
+
+    def post(self):
+        """Use it like this
+
+            curl -u $uid:$secret -X POST -F admin=True \
+                -F text='fuer das Einspeisen von SoftM Daten' -F email='edv@shpuadmora.de' \
+                http://example.appspot.com/gaetk/credentials
+            {
+             "secret": "aJNKCDUZW5PIBT23LYX7XXVFENA",
+             "uid": "u66666o26ec4b"
+            }
+        """
+
+        # The data can be submitted either as a json encoded body or form encoded
+        if self.request.headers.get('Content-Type', '').startswith('application/json'):
+            data = huTools.hujson2.loads(self.request.body)
+        else:
+            data = self.request
+
+        admin = str(data.get('admin', '')).lower() == 'true'
+        text = data.get('text', '')
+        uid = data.get('uid')
+        email = data.get('email')
+        tenant = data.get('tenant')
+        permissions = data.get('permissions', '')
+        if isinstance(permissions, basestring):
+            permissions = permissions.split(',')
+
+        if uid:
+            credential = gaetk.handler._get_credential(uid)
+        else:
+            credential = None
+
+        if credential:
+            # if a credential already exists we only have to modify it
+            credential.admin = admin
+            credential.text = text
+            credential.tenant = tenant
+            credential.email = email
+            credential.permissions = []
+            for permission in permissions:
+                if permission not in getattr(config, 'ALLOWED_PERMISSIONS', []):
+                    raise gaetk.handler.HTTP400_BadRequest("invalid permission %r" % permission)
+                credential.permissions.append(permission)
+            credential.put()
+        else:
+            # if not, we generate a new one
+            credential = gaetk.handler.NdbCredential.create(
+                admin=admin, text=text,
+                tenant=tenant, email=email)
+
+        self.response.headers["Content-Type"] = "application/json"
+        self.response.set_status(201)
+        self.response.out.write(huTools.hujson.dumps(dict(
+            uid=credential.uid, secret=credential.secret,
+            admin=credential.admin, text=credential.text,
+            tenant=credential.tenant, email=credential.email,
+            permissions=credential.permissions,
+            created_at=credential.created_at,
+            updated_at=credential.updated_at)))
 
 
-if __name__ == '__main__':
-    main()
+# die URL-Handler fuer's Login/ Logout
+application = gaetk.webapp2.WSGIApplication([
+    ('/gaetk/auth/logout', LogoutHandler),
+    ('/gaetk/auth/oauth2callback', OAuth2Callback),
+    ('/gaetk/auth/debug', Debug),
+    ('/gaetk/auth/credentials', CredentialsHandler),
+    ('.*', LoginHandler),
+], debug=False)

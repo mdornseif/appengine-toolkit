@@ -1,0 +1,81 @@
+{% set title = model + " Administration" %}
+{% extends "base_admin.html" %}
+
+{% macro display_key(obj) %}
+{% if obj.key is callable %}{{ obj.key()|e }}{% else %}{{ obj.key.urlsafe()|e }}{% endif %}
+{% endmacro %}
+
+{% macro display_id(obj) %}
+{% if obj.key is callable %}{{ obj.key().id_or_name()|e }}{% else %}{{ obj.key.id()|e }}{% endif %}
+{% endmacro %}
+
+{% block breadcrumbs %}
+<ul class="breadcrumb">
+  <li><a href="/">Backend</a> <span class="divider">/backend/</span></li>
+  <li><a href="/admin/">Administration</a> <span class="divider">/</span></li>
+  <li class="active">{{ model }}</li>
+</ul>
+{% endblock %}
+
+{% block maincontent %}
+    <form class="form-search" method="GET" action="search/">
+      <input id="q" class="input-large search-query" placeholder="Suchbegriffe" name="q" {% if term is defined %}value="{{ term }}"{% endif %}>
+    </form>
+
+        <div class="form-actions">
+                <button class="btn btg-action" onClick="parent.location='add/'">Neu</button>
+
+            <div class="btn-group">
+                <button class="btn dropdown-toggle" data-toggle="dropdown">Export <span class="caret"></span></button>
+                <ul class="dropdown-menu">
+                  <li><a href="export_xls/">XLS</a></li>
+                  <li><a href="export_csv/">CSV</a></li>
+                </ul>
+            </div>
+        </div>
+    <form action="delete/" method="POST">
+        <table class="table table-bordered table-condensed table-striped">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Key/ID</th>
+                    {% for field in list_fields %}
+                        {# This is a little bit hackish. Django now uses a class ChangeList to display this table #}
+                        <th>{% if field in model_class._properties %}
+                                <a href="?ot=asc&amp;o={{ field }}">{{ field|title }}</a>
+                            {% else %}
+                                {# {{ field(**fieldargs.get(field.name))|title }} #}
+                                {{ field|title }}
+                            {% endif %}
+                        </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for obj in object_list %}
+                <tr>
+                    <td>
+                        <input name="object_id" type="checkbox" value="{{ display_key(obj) }}">
+                    </td>
+                    <td><a href="/admin/{{ app }}/{{ model }}/{{ display_key(obj) }}/">{{ display_id(obj)|e }}</a></td>
+                    {% for field in list_fields %}
+                    <td>{{ obj|attr(field) }}</td>
+                        {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="form-actions">
+            <button class="btn btn-danger" type="submit">Löschen</button>
+        </div>
+    </form>
+
+    <div class="pagination">
+      <ul>
+        <li class="prev {% if not prev_objects %}disabled{% endif %}"><a href="?{{ prev_qs }}">&larr; Zurück</a></li>
+        <li class="next {% if not more_objects %}disabled{% endif %}"><a href="?{{ next_qs }}">Vor &rarr;</a></li>
+      </ul>
+    </div>
+{% endblock %}
+{% block secondarycontent %}
+{% endblock %}

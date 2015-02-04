@@ -98,7 +98,7 @@ Also entities are expected to have an `as_dict(abs_url=lambda x: x)` method whic
 
 #### Errors and Redirections
 
-BasicHandler currently provides an `error()` method to send error codes to the client. USers are encouraged to use raising of HTTP-Status codes instead. This results in much easier program flow and clearly documents a function ending wit e.g. a redirect.
+BasicHandler currently provides an `error()` method to send error codes to the client. Users are encouraged to use raising of HTTP-Status codes instead. This results in much easier program flow and clearly documents a function ending wit e.g. a redirect.
 
 Typical usage is like this:
 
@@ -180,6 +180,7 @@ gaetk has some authentication functionality which is described in a chapter belo
         def authcecker(self, method, *args, **kwargs):
             self.login_required()
 
+TBD: ALLOWED_PERMISSIONS
 
 ### Messages
 
@@ -201,47 +202,6 @@ JSONviews
             return (ret, 200, 60)
 
 This will generate a JSON reply with 60 Second caching and a 200 status code. The reply will support [JSONP](http://en.wikipedia.org/wiki/JSONP#JSONP) via an optional `callback` parameter in the URL.
-
-
-Login / Authentication
-======================
-
-gaetk offers a hybrid Google Apps / Credential based authentication via session Cookies and HTTP Auth. This approach tries to accommodate command-line/API clients like `curl` and browser based clients. If a client does provide an `Accept`-Header containing `text/html` (all Browsers do) the client is redirected to `/_ah/login_required` where the user can Enter `uid` and `secret` (Session-Based Authentication) or login via OpenID/Google Apps. If there is no `Accept: text/html` the client is presented with a 401 status code, inviting the client to offer HTTP-Basic-Auth.
-
-To use OpenID with Google Apps configure your Application to use "Federated Login":
-
-![Federated Login](http://static.23.nu/md/Pictures/ZZ77D022D0.png)
-
-For us this allows our Staff to do Single Sign-On via Google Apps, while external users with credentials can can access the application by entering their credentials in the browser. Automated scrips can access the system via HTTP-Auth.
-
-Users are represented by `gaetk.handler.Credential` objects. For OpenID users a uid ("Username") and secret ("Password") are auto generated. For Session or HTTP-Auth based users uid and secret should also be auto generated but can also be given. I *strongly* advise against user  selectable passwords and suggest you might also consider avoiding user  selectable usernames. Use `Credential.create()` to create new Crdentials including auto-generated uid and secret. If you want to set the `uid` mannually, give the `uid` parameter.
-
-    gaetk.handler.Credential.create(text='API Auth for Schulze Server', email='ops@example.com')
-    gaetk.handler.Credential.create(uid='user5711', text='...', email='ops@example.com')
-
-
-
-To use it add the following to `app.yaml`:
-
-    handlers:
-    - url: /_ah/login_required
-      script: lib/gaetk/gaetk/login.py
-
-    - url: /logout
-      script: lib/gaetk/gaetk/login.py
-
-
-Now in your views/handlers you can easyly force authentication like this:
-
-    from gaetk.handler import BasicHandler
-
-    class HomepageHandler(BasicHandler):
-        def get(self):
-            user = self.login_required() # results in 401/403 if can't login
-            ...
-
-
-Unless you call `login_required(deny_localhost=False)` access from localhost is always considered authenticated.
 
 
 Sequence generation
@@ -317,29 +277,6 @@ You might want to use Munin to graph these values. In addition the statistics ar
 `RobotTxtHandler` allows serving a robots.txt file that disables crawler access to all app versions except the default version.
 
 `VersionHandler` allows clients to read the git revision. When deploying we do something like `git show-ref --hash=7 HEAD > version.txt` just before `appcfg.py update` and `VersionHandler lets you retive that information.
-
-`CredentialsHandler` at `/gaetk/credentials` allows you to create new access credentials:
-
-    $ curl -u $uid:$secret -X POST -F admin=True \
-        -F text='new user for API access' -F email='edv@ShPuAdMora.de' -F tenant='hudora.de' \
-        -F permissions='einkaufspreise,wertschoepfung' http://example.com/gaetk/credentials
-    {
-        "admin": true,
-        "created_at": "2011-10-26 13:00:28.024000",
-        "email": "m.dornseif@hudora.de",
-        "permissions": [
-         "einkaufspreise",
-         "wertschoepfung"
-        ],
-        "secret": "GIFBOQCC123G",
-        "tenant": "hudora.de",
-        "text": "",
-        "uid": "edv@ShPuAdMora.de"
-    }
-
-This generates a new user. UserID and Password are choosen by the system and are not user settable.
-To get an initial `$uid:$secret` to generate new credentials login via the browser and via OpenID and
-then check the "Credentials" Model in the App Engine Admin Console.
 
 
 LoggedModel
@@ -507,6 +444,9 @@ Licensed under the Apache License, Version 2.0
 Contains code from [gae_mini_profiler][7], Copyright 2011 Ben Kamens.
 Licensed under the MIT license
 
+Contains code from [itsdangerous][8], Copyright (c) 2011 by Armin Ronacher and the Django Software Foundation.
+Licensed under a Berkeley-style License
+
 gaetk code is Copyright 2010, 2011 Dr. Maximillian Dornseif & Hudora GmbH and dual licensed under GPLv3 and the Apache License Version 2.0.
 
 
@@ -517,5 +457,6 @@ gaetk code is Copyright 2010, 2011 Dr. Maximillian Dornseif & Hudora GmbH and du
 [5]: http://twitter.github.com/bootstrap/
 [6]: https://docs.djangoproject.com/en/dev/ref/contrib/flatpages/
 [7]: https://github.com/kamens/gae_mini_profiler
+[8]: https://github.com/mitsuhiko/itsdangerous
 
-[![Build Status](https://travis-ci.org/mdornseif/appengine-toolkit?branch=master)](https://travis-ci.org/mdornseif/appengine-toolkit) [![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/mdornseif/appengine-toolkit/trend.png)](https://bitdeli.com/free "Bitdeli Badge") [![Coverage Status](https://coveralls.io/repos/mdornseif/appengine-toolkit/badge.png)](https://coveralls.io/r/mdornseif/appengine-toolkit)
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/mdornseif/appengine-toolkit/trend.png)](https://bitdeli.com/free "Bitdeli Badge")

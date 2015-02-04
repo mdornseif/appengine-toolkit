@@ -1,0 +1,12 @@
+{% extends "base_admin.html" %}
+{% block content %}
+
+    {% if model is defined %}
+        <div>{{ count }} Instanzen von {{ app }}.{{ model }} angelegt.</div>
+    {% endif %}
+
+    <form action="." method="POST" enctype="multipart/form-data">
+        <label for="fixture">Fixtures:</label><input type="file" name="fixture" id="fixture">
+        <p><input type="submit"></p>
+    </form>
+{% endblock %}

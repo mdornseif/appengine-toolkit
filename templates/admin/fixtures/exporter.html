@@ -1,0 +1,12 @@
+{% extends "base_admin.html" %}
+{% block content %}
+
+    <form action="." method="POST">
+        <ul>
+        {% for name, model_class in models.items() %}
+            <li><input type="checkbox" name="{{ name }}">{{ name }} ({{ model_class.__module__ }})</li>
+        {% endfor %}
+        </ul>
+        <p><input type="submit"></p>
+    </form>
+{% endblock %}

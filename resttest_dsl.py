@@ -229,7 +229,7 @@ class Response(object):
     def responds_normal(self, maxduration=DEFAULTFAST):
         """Normale Seite: Status 200, HTML, schnelle Antwort, keine kaputten Links"""
         self.responds_html()
-        self.responds_with_valid_html()
+        # self.responds_with_valid_html()
         self.responds_with_valid_links()
         self.responds_fast(maxduration)
         return self
@@ -240,6 +240,7 @@ class TestClient(object):
         self.host = host
         self.authdict = {}
         self.responses = []
+        self.protocol = 'http'
 
     def add_credentials(self, auth, creds):
         """Stellt dem Client credentials zur Verfügung, die in GET genutzt werden können.
@@ -259,13 +260,15 @@ class TestClient(object):
         if accept:
             headers['Accept'] = accept
 
-        url = urlparse.urlunparse(('http', self.host, path, '', '', ''))
+        url = urlparse.urlunparse((self.protocol, self.host, path, '', '', ''))
 
         # try request several times if it is slow to get rid of network jitter
         counter = 0
         duration = 100001
         while counter < 5 and duration >= DEFAULTFAST:
             if counter > 1:
+                if duration > 10:
+                    break  # solw API pages etc we test only once
                 if DEBUG:
                     print "retry request because of %d ms duration" % duration
                 else:
@@ -276,7 +279,7 @@ class TestClient(object):
             status, responseheaders, content = fetch(
                 url, content='', method='GET',
                 credentials=self.authdict.get(auth),
-                headers=headers, multipart=False, ua='', timeout=30)
+                headers=headers, multipart=False, ua='resttest', timeout=30)
             duration = int((time.time() - start) * 1000)
             slowstats[url] = duration
             counter += 1

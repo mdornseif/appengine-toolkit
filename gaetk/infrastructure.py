@@ -66,8 +66,8 @@ def query_iterator(query, limit=50):
 
 
 def copy_entity(entity, **kwargs):
-  """Copy entity"""
-  klass = type(entity)
-  properties = dict((key, value.__get__(entity, klass)) for (key, value) in klass.properties().iteritems())
-  properties.update(**kwargs)
-  return klass(**properties)
+    """Copy entity"""
+    klass = type(entity)
+    properties = dict((key, value.__get__(entity, klass)) for (key, value) in klass.properties().iteritems())
+    properties.update(**kwargs)
+    return klass(**properties)

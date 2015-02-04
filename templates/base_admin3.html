@@ -6,7 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}{% if title is defined %}{{ title|e }}{% else %}gaetk{% endif %}{% endblock %}</title>
 
-    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+    <script src="//code.jquery.com/ui/1.11.2/jquery-ui.min.js"></script>
     <!-- Bootstrap -->
     <link href="/gaetk/static/bootstrap/3.3.x/css/bootstrap.min.css" rel="stylesheet">
     <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
@@ -36,7 +37,7 @@ body {
 
   <body>
     <div class="container">
-
+      {% block container -%}
       {% block navbar -%}
       <!-- Static navbar -->
       <div class="navbar navbar-default" role="navigation">
@@ -98,7 +99,9 @@ body {
 
       {% block firstheading -%}<h1>{% if title is defined %}{{ title|e }}{% endif %}</h1>{%- endblock firstheading %}
 
+      <div class="row mainrow">
       {% block mainrow -%}
+        <div class="col-sm-8 maincontent">
         {% block maincontent -%}
           {% if content is defined -%}
             {{ content }}
@@ -106,7 +109,9 @@ body {
             {#<h3>Main content</h3>#}
           {%- endif %}
         {%- endblock maincontent %}
+        </div>
 
+        <div class="col-sm-3 col-sm-offset-1 blog-sidebar">
         {% block secondarycontent -%}
           {% if secondarycontent is defined -%}
             {{ secondarycontent }}
@@ -114,16 +119,21 @@ body {
             {# <h3>Secondary content</h3> #}
           {%- endif %}
         {%- endblock secondarycontent %}
+        </div>
       {%- endblock mainrow %}
-    </div> <!-- /container -->
-
+      </div>
+    </div>
     {%- endblock content %}
-    </div> <!-- /container -->
+    {%- endblock container %}
+    </div>
 
     <!-- Le javascript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script src="/gaetk/static/bootstrap/3.3.x/js/bootstrap.min.js"></script>
+    {% block basejavascript -%}{%- endblock basejavascript %}
     {% block javascript -%}{%- endblock javascript %}
+    {% block analytics_tracking -%}{%- endblock analytics_tracking %}
+    {% block footer -%}{%- endblock footer %}
   </body>
 </html>

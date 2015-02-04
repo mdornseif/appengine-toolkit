@@ -1,4 +1,4 @@
-GAE_VERSION=1.8.6
+GAE_VERSION=1.9.15
 
 LINT_LINE_LENGTH= 110
 LINT_FLAKE8_ARGS= --max-complexity=27 --builtins=_ --max-line-length=$(LINT_LINE_LENGTH) --exclude=mywebapp2.py,gaesessions.py,gaetk/__init__.py
@@ -77,7 +77,7 @@ check: google_appengine pythonenv
 dependencies: pythonenv google_appengine
 
 google_appengine:
-	curl -s -O http://googleappengine.googlecode.com/files/google_appengine_$(GAE_VERSION).zip
+	curl -s -O https://storage.googleapis.com/appengine-sdks/featured/google_appengine_$(GAE_VERSION).zip
 	#/google/__init__.py:
 	unzip -q google_appengine_$(GAE_VERSION).zip
 	rm -Rf google_appengine_$(GAE_VERSION).zip

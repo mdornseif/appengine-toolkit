@@ -139,7 +139,7 @@ class LoggedModel(db.Model):
             return []
 
         queryset = AuditLog.all().filter('object =', self)
-        if not event is None:
+        if event is not None:
             queryset.filter('event =', event)
         return queryset
 

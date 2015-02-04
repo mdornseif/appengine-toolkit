@@ -9,6 +9,7 @@ Copyright (c) 2011, 2014 HUDORA. All rights reserved.
 
 
 import config
+config.imported = True
 
 import gaetk.handler
 import gaetk
@@ -20,7 +21,7 @@ class AuthenticatedHandler(gaetk.handler.BasicHandler):
 
     def authchecker(self, method, *args, **kwargs):
         """Force login for all pages"""
-        self.login_required(True)
+        self.login_required()
 
 
 
