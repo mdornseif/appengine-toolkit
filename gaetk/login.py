@@ -201,10 +201,15 @@ class OAuth2Callback(BasicHandler):
         # logging.debug("p = %r", self.request.params)
         # https://dev-md-dot-hudoraexpress.appspot.com/oauth2callback?
 
+        continue_url = self.session.pop('continue_url', '/')
+
         # 3. Confirm anti-forgery state token
         if self.request.get('state') != self.session.get('oauth_state'):
-            raise RuntimeError("wrong state: %r != %r" % (
+            logging.warn("wrong state: %r != %r" % (
                 self.request.get('state'), self.session.get('oauth_state')))
+            self.session.terminate()
+            raise HTTP302_Found(location=continue_url)
+
         if LOGIN_ALLOWED_DOMAINS and self.request.get('hd') not in LOGIN_ALLOWED_DOMAINS:
             raise RuntimeError("wrong domain: %r not in %r" % (
                 self.request.get('hd'), LOGIN_ALLOWED_DOMAINS))
@@ -240,7 +245,6 @@ class OAuth2Callback(BasicHandler):
         gaetk.handler.login_user(credential, self.session, 'OAuth2', self.response)
         self.response.set_cookie('gaetkoauthmail', jwt['email'], max_age=7776000)
 
-        continue_url = self.session.pop('continue_url', '/')
         raise HTTP302_Found(location=users.create_login_url(continue_url))
 
 
