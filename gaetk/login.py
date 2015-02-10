@@ -136,9 +136,10 @@ class LoginHandler(BasicHandler):
 def get_oauth_url(session, request):
     # Create a state token to prevent request forgery.
     # Store it in the session for later validation.
-    state = ''.join(random.choice(string.ascii_uppercase + string.digits)
-                    for x in xrange(32))
-    session['oauth_state'] = state
+    if 'oauth_state' not in session:
+        state = ''.join(random.choice(string.ascii_uppercase + string.digits)
+                        for x in xrange(32))
+        session['oauth_state'] = state
     # Set the client ID, token state, and application name in the HTML while
     # serving it.
     url = config.OAUTH['web']['auth_uri']
