@@ -514,20 +514,18 @@ class BasicHandler(webapp2.RequestHandler):
         # This funcion is somewhat involved. We allow
         # a) Login via HTTP-Auth
         # b) Login via Username and Password in a Web-Form
-        # c) Login via OpenID with speciffic domains registered at Google Apps
-        # d) Login via OpenID with all Google/GMail Accounts
+        # c) Login via OAuth with speciffic domains registered at Google Apps
         # d) automatic creation of HTTP-Credentials for OpenID accounts
         #
-        # This is to allow Single Sign on for Browser USers while still allowing simple
+        # This is to allow Single Sign on for Browser Users while still allowing simple
         # Authentication for API-Calls.
         #
-        # Once everythong set up you just call `self.login_Required()` in your handlers.
+        # Once everythong set up you just call `self.login_required()` in your handlers.
         # Overwriting authchecker is the easiest way:
         #
         #     class ProtectedHandlerHandler(gaetk.handler.BasicHandler):
         #         def authchecker(self, method, *args, **kwargs):
         #             self.login_required()
-
 
         # Avoid beeing called twice
         if getattr(self.request, '_login_required_called', False):
