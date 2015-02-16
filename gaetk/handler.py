@@ -386,7 +386,8 @@ class BasicHandler(webapp2.RequestHandler):
 
     def multirender(self, fmt, data, mappers=None, contenttypes=None, filename='download',
                     defaultfmt='html', html_template='data', html_addon=None,
-                    xml_root='data', xml_lists=None):
+                    xml_root='data', xml_lists=None,
+                    tabular_datanodename='objects'):
         r"""Multirender is meant to provide rendering for a variety of formats with minimal code.
         For the three major formats HTML, XML und JSON you can get away with virtually no code.
         Some real-world view method might look like this:
@@ -397,7 +398,8 @@ class BasicHandler(webapp2.RequestHandler):
                 values = self.paginate(query, 25, datanodename='rechnungen')
                 self.multirender(fmt, values,
                                  filename='rechnungen-%s' % kundennr,
-                                 html_template='rechnungen.html')
+                                 html_template='rechnungen.html',
+                                 tabular_datanodename='rechnungen')
 
         `/empfaenger/12345/rechnungen` and `/empfaenger/12345/rechnungen.html` will result in
         `rechnungen.html` beeing rendered.
@@ -409,12 +411,15 @@ class BasicHandler(webapp2.RequestHandler):
         If you use fmt=json with a `callback` parameter, JSONP is generated. See
         http://en.wikipedia.org/wiki/JSONP#JSONP for details.
 
-        IF you give a dict in `html_addon` this dict is additionaly passed the the HTML rendering function
+        If you give a dict in `html_addon` this dict is additionaly passed the the HTML rendering function
         (but not to the rendering functions of other formats).
 
         You can give the `xml_root` and `xml_lists` parameters to provide `huTools.structured.dict2xml()`
         with defenitions on how to name elements. See the documentation of `roottag` and `listnames` in
         dict2xml documentation.
+
+        For tabular formats like XLS and CSV we assume that `data[tabular_datanodename]` contains
+        a list of dicts to be rendered.
 
         For more sophisticated layout you can give customized mappers. Using functools.partial
         is very helpfiull for thiss. E.g.
@@ -439,6 +444,7 @@ class BasicHandler(webapp2.RequestHandler):
                               json="application/json; encoding=utf-8",
                               html="text/html; encoding=utf-8",
                               csv="text/csv; encoding=utf-8",
+                              xls="application/vnd.ms-excel",
                               invoic="application/edifact; encoding=iso-8859-1",
                               desadv="application/edifact; encoding=iso-8859-1")
         if contenttypes:
@@ -447,6 +453,8 @@ class BasicHandler(webapp2.RequestHandler):
         # Default mappers are there for XML and JSON (provided by huTools) and HTML provided by Jinja2
         # we provide a default dict2xml renderer based on the xml_* parameters given
         mydict2xml = partial(huTools.structured.dict2xml, roottag=xml_root, listnames=xml_lists, pretty=True)
+        mydict2csv = partial(huTools.structured.dict2csv, datanodename=tabular_datanodename)
+        mydict2xls = partial(huTools.structured.dict2xls, datanodename=tabular_datanodename)
         # The HTML Render integrates additional data via html_addon
         htmldata = data.copy()
         if html_addon:
@@ -454,6 +462,8 @@ class BasicHandler(webapp2.RequestHandler):
         htmlrender = lambda x: self.rendered(htmldata, html_template)
         mymappers = dict(xml=mydict2xml,
                          json=huTools.hujson2.dumps,
+                         csv=mydict2csv,
+                         xls=mydict2xls,
                          html=htmlrender)
         if mappers:
             mymappers.update(mappers)
