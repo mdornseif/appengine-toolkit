@@ -542,7 +542,6 @@ class BasicHandler(webapp2.RequestHandler):
         # Avoid beeing called twice
         if getattr(self.request, '_login_required_called', False):
             return self.credential
-
         self.credential = None
 
         # try if we have a session based login
@@ -550,6 +549,8 @@ class BasicHandler(webapp2.RequestHandler):
             self.credential = _get_credential(self.session['uid'])
             if self.credential:
                 login_user(self.credential, self.session, 'session', self.response)
+            else:
+                logging.warn("kein credential zur session: %s", self.session.get('uid'))
 
         if not self.credential:
             # still no session information - try HTTP - Auth
