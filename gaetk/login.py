@@ -148,7 +148,7 @@ def get_oauth_url(session, request):
         response_type="code",
         scope="openid email profile",
         redirect_uri=get_oauth_callback_url(request),
-        state=state,
+        state=session['oauth_state'],
         # login_hint="jsmith@example.com", TODO: gaetkoauthmail
     )
     if len(LOGIN_ALLOWED_DOMAINS) == 1:
