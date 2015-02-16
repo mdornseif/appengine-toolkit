@@ -106,11 +106,19 @@ def login_user(credential, session, via, response=None):
             domain = '.'.join(host.split('.')[-2:])
         response.set_cookie('gaetkuid', uidcookie, domain='.%s' % domain, max_age=60 * 60 * 2)
 
-
-@lru_cache(maxsize=5)
+_local_credential_cache = {}
 def _get_credential(username):
     """Helper to read Credentials - can be monkey_patched"""
-    return NdbCredential.get_by_id(username)
+    global _local_credential_cache
+    if username in _local_credential_cache:
+        return _local_credential_cache[username]
+    credential = NdbCredential.get_by_id(username)
+    if not credential:
+        return None
+    if len(_local_credential_cache) > 5:
+        _local_credential_cache = {}
+    _local_credential_cache[username] = credential
+    return credential
 
 
 class Credential(db.Expando):
