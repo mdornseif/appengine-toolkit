@@ -268,8 +268,6 @@ class OAuth2Callback(BasicHandler):
 
         credential = self.create_credential_oauth2(jwt)
         gaetk.handler.login_user(credential, self.session, 'OAuth2', self.response)
-        self.response.set_cookie('gaetkoauthmail', jwt['email'], max_age=7776000)
-
         raise HTTP302_Found(location=users.create_login_url(continue_url))
 
 
@@ -326,7 +324,7 @@ class Debug(gaetk.handler.BasicHandler):
             env[name] = os.environ.get(name)
             logging.info("%s: %r", name, os.environ.get(name))
 
-        self.debug("headers=%s", self.request.headers)
+        logging.debug("headers=%s", self.request.headers)
 
         self.render(dict(
             env=env,
