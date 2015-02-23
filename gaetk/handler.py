@@ -32,7 +32,6 @@ import warnings
 
 from functools import partial
 from gaetk import webapp2
-from gaetk._internal import lru_cache
 import itsdangerous
 
 from google.appengine.api import users
@@ -97,16 +96,19 @@ def login_user(credential, session, via, response=None):
             os.environ['USER_EMAIL'] = '%s@auth.hudora.de' % credential.uid
     if response:
         s = itsdangerous.URLSafeTimedSerializer(session.base_key)
-        uidcookie = s.dumps(dict(uid=credential.uid))
         host = os.environ.get('HTTP_HOST', '')
         if host.endswith('appspot.com'):
             # setting cookies for .appspot.com does not work
             domain = '.'.join(host.split('.')[-3:])
         else:
             domain = '.'.join(host.split('.')[-2:])
-        response.set_cookie('gaetkuid', uidcookie, domain='.%s' % domain, max_age=60 * 60 * 2)
+        uidcookie = s.dumps(dict(uid=credential.uid,
+                                 provider=host))
+        response.set_cookie('gaetkuid', uidcookie, domain='.%s' % domain, max_age=60 * 5)
 
 _local_credential_cache = {}
+
+
 def _get_credential(username):
     """Helper to read Credentials - can be monkey_patched"""
     global _local_credential_cache
