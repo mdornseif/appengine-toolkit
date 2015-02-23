@@ -32,7 +32,6 @@ import warnings
 
 from functools import partial
 from gaetk import webapp2
-from gaetk._internal import lru_cache
 import itsdangerous
 
 from google.appengine.api import users
@@ -108,6 +107,8 @@ def login_user(credential, session, via, response=None):
         response.set_cookie('gaetkuid', uidcookie, domain='.%s' % domain, max_age=60 * 60 * 2)
 
 _local_credential_cache = {}
+
+
 def _get_credential(username):
     """Helper to read Credentials - can be monkey_patched"""
     global _local_credential_cache

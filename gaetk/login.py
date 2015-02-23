@@ -73,7 +73,6 @@ class LoginHandler(BasicHandler):
         if not self.request.url.startswith("https://"):
             raise gaetk.handler.HTTP302_Found(location=self.request.url.replace('http://', 'https://', 1))
 
-
         if self.request.cookies.get('gaetkuid', None):
             # try single sign on via a different hudora.de domain
             logging.debug("gaetkuid = %r", self.request.cookies.get('gaetkuid', None))
@@ -83,7 +82,7 @@ class LoginHandler(BasicHandler):
             try:
                 decoded_payload = s.loads(
                     self.request.cookies.get('gaetkuid', None),
-                    max_age=60 * 60 * 2)
+                    max_age=60 * 30)
                 # This payload is decoded and safe
                 logging.info("%r", decoded_payload)
             except itsdangerous.BadSignature:
@@ -91,11 +90,13 @@ class LoginHandler(BasicHandler):
             except itsdangerous.SignatureExpired:
                 logging.warn("SignatureExpired")
             if decoded_payload and 'uid' in decoded_payload:
-                credential = gaetk.handler._get_credential(decoded_payload['uid'])
-                if credential:
-                    logging.info("logged in wia SSO %s", decoded_payload.get('provider', '?'))
-                    gaetk.handler.login_user(credential, self.session, 'SSO', self.response)
-                    raise gaetk.handler.HTTP302_Found(location=continue_url)
+                if not os.environ.get('HTTP_HOST', '').endswith(decoded_payload.get('provider', '?')):
+                    # we don't use SSO on our own domain
+                    credential = gaetk.handler._get_credential(decoded_payload['uid'])
+                    if credential:
+                        logging.info("logged in wia SSO %s", decoded_payload.get('provider', '?'))
+                        gaetk.handler.login_user(credential, self.session, 'SSO', self.response)
+                        raise gaetk.handler.HTTP302_Found(location=continue_url)
 
         # the user is tried to be authenticated via a username-password based approach.
         # The data is either taken from the HTTP header `Authorization` or the provided (form) data.
@@ -294,6 +295,13 @@ class LogoutHandler(gaetk.handler.BasicHandler):
         self.response.delete_cookie('ACSID')  # Appengine Login
         self.response.delete_cookie('gaetkoauthmail')  # gaetk Login
         self.response.delete_cookie('gaetkuid')  # gaetk Login
+        host = os.environ.get('HTTP_HOST', '')
+        if host.endswith('appspot.com'):
+            # setting cookies for .appspot.com does not work
+            domain = '.'.join(host.split('.')[-3:])
+        else:
+            domain = '.'.join(host.split('.')[-2:])
+        self.response.delete_cookie('gaetkuid', domain='.%s' % domain)  # gaetk Login
 
         user = users.get_current_user()
         if user:
