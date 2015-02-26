@@ -19,6 +19,7 @@ except (ImportError), msg:
 
 LOGIN_ALLOWED_DOMAINS = getattr(config, 'LOGIN_ALLOWED_DOMAINS', [])
 config.template_dirs = getattr(config, 'template_dirs', ['./templates'])
+config.DEBUG = getattr(config, 'DEBUG', False)
 
 import base64
 import datetime
@@ -106,9 +107,13 @@ def login_user(credential, session, via, response=None):
                                  provider=host))
         response.set_cookie('gaetkuid', uidcookie, domain='.%s' % domain, max_age=60 * 60 * 2)
 
+    if config.DEBUG:
+        logging.debug("%s logged in via %s since %s sid:%s", credential.uid, session['login_via'], session['login_time'], session.sid)
+
 _local_credential_cache = {}
 
 
+# TODO this needs expiry
 def _get_credential(username):
     """Helper to read Credentials - can be monkey_patched"""
     global _local_credential_cache
