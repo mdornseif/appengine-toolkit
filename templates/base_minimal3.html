@@ -44,10 +44,11 @@
         {%- endif %}
         {%- endblock gaetk_messages %}
 
-        {% block firstheading -%}<h1>{% if title is defined %}{{ title|e }}{% endif %}</h1>{%- endblock firstheading %}
-
         <div class="row mainrow">
           {% block maincontent -%}
+
+          {% block firstheading -%}<h1>{% if title is defined %}{{ title|e }}{% endif %}</h1>{%- endblock firstheading %}
+
           {% block mainrow -%}
             {% if content is defined -%}
               {{ content }}
