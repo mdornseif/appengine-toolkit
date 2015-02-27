@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}{% if title is defined %}{{ title|e }}{% else %}gaetk{% endif %}{% endblock %}</title>
+
+    <script src="//code.jquery.com/jquery-1.11.2.min.js"></script>
+    <script src="//code.jquery.com/ui/1.11.2/jquery-ui.min.js"></script>
+    <!-- Bootstrap -->
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+    {% block gaetkstyle %}
+    {% endblock gaetkstyle %}
+    {% block extrastyle %}
+    {% endblock extrastyle %}
+  </head>
+
+  <body>
+    <div class="container">
+    {% block container -%}
+      {% block navbar -%}
+      {%- endblock navbar %}
+
+      {% block content -%}
+        {# display session specific messages #}
+        {% block gaetk_messages -%}
+        {% if _gaetk_messages is defined -%}
+          {% for message in _gaetk_messages -%}
+            <div class="alert alert-{{ message.type }}">
+              <button type="button" class="close" data-dismiss="alert">&times;</button>
+              <p>{{ message.html }}</p>
+            </div>
+          {%- endfor %}
+        {%- endif %}
+        {%- endblock gaetk_messages %}
+
+        {% block firstheading -%}<h1>{% if title is defined %}{{ title|e }}{% endif %}</h1>{%- endblock firstheading %}
+
+        <div class="row mainrow">
+          {% block maincontent -%}
+          {% block mainrow -%}
+            {% if content is defined -%}
+              {{ content }}
+            {%- else -%}
+              {#<h3>Main content</h3>#}
+            {%- endif %}
+          {%- endblock mainrow %}
+          {%- endblock maincontent %}
+        </div>
+      </div>
+    </div>
+    {%- endblock content %}
+    {%- endblock container %}
+    </div>
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="/gaetk/static/bootstrap/3.3.x/js/bootstrap.min.js"></script>
+    {% block basejavascript -%}{%- endblock basejavascript %}
+    {% block javascript -%}{%- endblock javascript %}
+    {% block analytics_tracking -%}{%- endblock analytics_tracking %}
+    {% block footer -%}{%- endblock footer %}
+  </body>
+</html>
