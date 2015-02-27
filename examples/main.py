@@ -9,15 +9,12 @@ Copyright (c) 2015 HUDORA. All rights reserved.
 
 import config
 
-import cgi
 import codecs
+import datetime
 import logging
 import re
 
 from google.appengine.api import memcache
-from huTools import async
-import cs.huwawi_local
-import cs.huwawi_a_models
 import gae_mini_profiler.templatetags
 import gaetk
 import gaetk.defaulthandlers
@@ -80,8 +77,8 @@ class wwwHandler(gaetk.handler.BasicHandler):
         values = super(wwwHandler, self).default_template_vars(values)
         values.update(
             request=self.request,
-            #show_snippet=snippets.show_snippet,
-            )
+            # show_snippet=snippets.show_snippet,
+        )
         self.title = values.get('title')
         return values
 
@@ -92,24 +89,24 @@ class MarkdownFileHandler(wwwHandler):
 
     def get(self, path, *_args, **_kwargs):
         """Markdown File einlesen und rendern."""
-        logging.info("path=%s", path)
         path = path.strip('/')
         path = re.sub(r'[^a-z/]', '', path)
         if not path:
             path = 'index'
         path = path + '.markdown'
-        logging.info("path=%s", path)
         textfile = 'text/%s' % path
 
-        with codecs.open(textfile, 'r', 'utf-8') as fileobj:
-            text = fileobj.read()
-            # wir gehen davon aus, dass die erste Zeile, die mit `# ` beginnt, der Titel ist
-            for line in text.split('\n'):
-                if line.startswith('# '):
-                    self.title = line.lstrip('# ')
-                    break
-        self.render({'text': text, 'title': self.title}, self.template_name)
-
+        try:
+            with codecs.open(textfile, 'r', 'utf-8') as fileobj:
+                text = fileobj.read()
+                # wir gehen davon aus, dass die erste Zeile, die mit `# ` beginnt, der Titel ist
+                for line in text.split('\n'):
+                    if line.startswith('# '):
+                        self.title = line.lstrip('# ')
+                        break
+            self.render({'text': text, 'title': self.title}, self.template_name)
+        except IOError:
+            raise gaetk.handler.HTTP404_NotFound("%s not available" % textfile)
 
 
 class Warmup(wwwHandler):
@@ -139,6 +136,6 @@ application = make_app([
     (r'^/version\.txt$', gaetk.defaulthandlers.VersionHandler),
     (r'^/robots\.txt$', gaetk.defaulthandlers.RobotTxtHandler),
     (r'^/_ah/warmup$', Warmup),
-    #(r'^/$', Homepage),
+    # (r'^/$', Homepage),
     (r'^(.*)$', MarkdownFileHandler),
 ])

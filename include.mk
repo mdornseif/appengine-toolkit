@@ -26,7 +26,7 @@ PYLINT_ARGS= "--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
              --disable=R0201,R0903,R0904 \
              --disable=W0142,W0201,W0212,W0221,W0232,W0232,W0703
 
-LINT_FILES= modules/ *.py lib/appengine-toolkit/gaetk/login.py lib/appengine-toolkit/gaetk/handler.py lib/appengine-toolkit/gaetk/defaulthandlers.py lib/CentralServices/cs/huwawi.py lib/CentralServices/cs/huwawi_local.py
+LINT_FILES= modules/ tests/ *.py lib/appengine-toolkit/gaetk/login.py lib/appengine-toolkit/gaetk/handler.py lib/appengine-toolkit/gaetk/defaulthandlers.py lib/CentralServices/cs/huwawi.py lib/CentralServices/cs/huwawi_local.py
 
 LINT_LINE_LENGTH= 110
 LINT_FLAKE8_ARGS= --max-complexity=12 --builtins=_ --exclude=appengine_config.py --max-line-length=$(LINT_LINE_LENGTH) --ignore=E711,E712
