@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-config.py - general configuration sample for gaetk
+config.py - general configuration for www.hudora.de 
 
-Created by Maximillian Dornseif on 2010-09-28.
-Copyright (c) 2010, 2011, 2014 HUDORA. All rights reserved.
+Created by Maximillian Dornseif on 2015-02-28.
+Copyright (c) 2015 HUDORA. All rights reserved.
 """
 
 import os
@@ -15,15 +15,12 @@ lib.imported = True
 template_dirs = []
 template_dirs.append(os.path.join(os.path.dirname(__file__), './templates'))
 template_dirs.append(os.path.join(os.path.dirname(__file__), './lib/appengine-toolkit/templates'))
+template_dirs.append(os.path.join(os.path.dirname(__file__), './lib/CentralServices/templates'))
 
 # Domains to allow OpenID auth on
 LOGIN_ALLOWED_DOMAINS = ['hudora.de']
-
-ALLOWED_PERMISSIONS = [
-  'einkaufspreise',  # Der Nutzer darf Einkaufspreise und den Materialeinsatz 1 & 4 sehen
-  'wertschoepfung',  # Der Benutzer darf die Wertschöpfung für alle Kunden sehen
-]
-
+OAUTH = {"web": {
+}}
 
 def main():
     """show path for usage in scripts"""

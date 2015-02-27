@@ -1,0 +1,19 @@
+cron:
+# Syncronisation
+- description: Artikelpass taeglich
+  url: /huwawi_local/auto/SyncDaily
+  schedule: every 24 hours
+  timezone: Europe/Paris
+- description: Artikelpass woechentlich
+  url: /huwawi_local/auto/SyncWeekly
+  schedule: every 168 hours
+  timezone: Europe/Paris
+- description: Artikelpass monatlich
+  url: /huwawi_local/auto/SyncMonthly
+  schedule: every 720 hours
+  timezone: Europe/Paris
+
+- description: Replikation zu CloudSQL
+  url: /gaetk_replication/cloudsql/cron
+  schedule: every day 19:00
+  timezone: Europe/Paris
