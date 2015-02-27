@@ -88,7 +88,6 @@ class MarkdownFileHandler(wwwHandler):
     template_name = 'gaetk_markdown.html'
 
     def get(self, path, *_args, **_kwargs):
-        """Markdown File einlesen und rendern."""
         path = path.strip('/')
         path = re.sub(r'[^a-z/]', '', path)
         if not path:
@@ -117,7 +116,6 @@ class Warmup(wwwHandler):
         pass
 
     def get(self):
-        """No parameters are accepted."""
         # _strptime importieren. hilft gegen
         # http://groups.google.com/group/google-appengine-python/browse_thread/thread/efbcffa181c32f33
         datetime.datetime.strptime('2000-01-01', '%Y-%m-%d').date()
@@ -138,4 +136,4 @@ application = make_app([
     (r'^/_ah/warmup$', Warmup),
     # (r'^/$', Homepage),
     (r'^(.*)$', MarkdownFileHandler),
-])
+], config.DEBUG)

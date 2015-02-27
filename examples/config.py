@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-config.py - general configuration for www.hudora.de 
+config.py - general configuration for www.hudora.de
 
 Created by Maximillian Dornseif on 2015-02-28.
 Copyright (c) 2015 HUDORA. All rights reserved.
@@ -12,6 +12,8 @@ import sys
 import lib
 lib.imported = True
 
+DEBUG = True
+
 template_dirs = []
 template_dirs.append(os.path.join(os.path.dirname(__file__), './templates'))
 template_dirs.append(os.path.join(os.path.dirname(__file__), './lib/appengine-toolkit/templates'))
@@ -21,6 +23,7 @@ template_dirs.append(os.path.join(os.path.dirname(__file__), './lib/CentralServi
 LOGIN_ALLOWED_DOMAINS = ['hudora.de']
 OAUTH = {"web": {
 }}
+
 
 def main():
     """show path for usage in scripts"""
