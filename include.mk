@@ -59,7 +59,7 @@ deploy_production:
 	rm -Rf tmp
 	mkdir tmp
 	(cd tmp ; git clone git@github.com:hudora/$(REPOSNAME).git)
-	(cd tmp/$(REPOSNAME) ; git checkout production ; make dependencies)
+	(cd tmp/$(REPOSNAME) ; git checkout production ; make boot dependencies)
 	(cd tmp/$(REPOSNAME) ; git show-ref --hash=7 refs/remotes/origin/production > version.txt)
 	# Erst getaggte Version hochladen
 	-appcfg.py --oauth2 update -V "v`cat tmp/$(REPOSNAME)/version.txt`" -A $(APPID) tmp/$(REPOSNAME)
@@ -72,9 +72,14 @@ deploy_production:
 fixup:
 	# Tailing Whitespace
 	find modules -name '*.py' -print0 | xargs -0 perl -pe 's/[\t ]+$$//g' -i
-	perl -pe 's/[\t ]+$$//g' -i templates/*.html
+	find templates -name '*.html' -print0 | xargs -0 perl -pe 's/[\t ]+$$//g' -i
+	find text -name '*.markdown' -print0 | xargs -0 perl -pe 's/[\t ]+$$//g' -i
 	# Tabs in Templates
-	perl -MText::Tabs -ne 'print expand $$_' -i templates/*.html
+	find templates -name '*.html' -print0 | xargs -0 perl -pi -e 'print expand $$_' -i
+	find text -name '*.markdown' -print0 | xargs -0 perl -pi -e 'print expand $$_' -i
+	# line endings
+	find templates -name '*.html' -print0 | xargs -0 perl -pi -e 's/\r\n/\n/g;s/\r/\n/g'
+	find text -name '*.markdown' -print0 | xargs -0 perl -pi -e 's/\r\n/\n/g;s/\r/\n/g'
 
 dependencies: clean
 	git submodule update --init
