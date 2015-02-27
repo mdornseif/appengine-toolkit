@@ -8,7 +8,17 @@ Copyright (c) 2010-2015 HUDORA. All rights reserved.
 """
 
 
+import base64
+import datetime
+import hashlib
 import logging
+import os
+import time
+import urllib
+import urlparse
+import uuid
+import warnings
+from functools import partial
 
 # Wenn es ein `config` Modul gibt, verwenden wir es, wenn nicht haben wir ein default.
 try:
@@ -16,24 +26,6 @@ try:
 except (ImportError), msg:
     logging.debug('no config file used because of %s', msg)
     config = object()
-
-LOGIN_ALLOWED_DOMAINS = getattr(config, 'LOGIN_ALLOWED_DOMAINS', [])
-config.template_dirs = getattr(config, 'template_dirs', ['./templates'])
-config.DEBUG = getattr(config, 'DEBUG', False)
-
-import base64
-import datetime
-import hashlib
-import os
-import time
-import urllib
-import urlparse
-import uuid
-import warnings
-
-from functools import partial
-from gaetk import webapp2
-import itsdangerous
 
 from google.appengine.api import users
 from google.appengine.api import memcache
@@ -58,6 +50,12 @@ from webob.exc import HTTPUnsupportedMediaType as HTTP415_UnsupportedMediaType
 
 from gaetk.gaesessions import get_current_session
 import gaetk.compat
+from gaetk import webapp2
+import itsdangerous
+
+LOGIN_ALLOWED_DOMAINS = getattr(config, 'LOGIN_ALLOWED_DOMAINS', [])
+config.template_dirs = getattr(config, 'template_dirs', ['./templates'])
+config.DEBUG = getattr(config, 'DEBUG', False)
 
 
 warnings.filterwarnings(
@@ -108,7 +106,9 @@ def login_user(credential, session, via, response=None):
         response.set_cookie('gaetkuid', uidcookie, domain='.%s' % domain, max_age=60 * 60 * 2)
 
     if config.DEBUG:
-        logging.debug("%s logged in via %s since %s sid:%s", credential.uid, session['login_via'], session['login_time'], session.sid)
+        logging.debug(
+            "%s logged in via %s since %s sid:%s",
+            credential.uid, session['login_via'], session['login_time'], session.sid)
 
 _local_credential_cache = {}
 
@@ -474,7 +474,10 @@ class BasicHandler(webapp2.RequestHandler):
         htmldata = data.copy()
         if html_addon:
             htmldata.update(html_addon)
-        htmlrender = lambda x: self.rendered(htmldata, html_template)
+
+        def htmlrender(x):
+            self.rendered(htmldata, html_template)
+
         mymappers = dict(xml=mydict2xml,
                          json=huTools.hujson2.dumps,
                          csv=mydict2csv,
@@ -594,10 +597,10 @@ class BasicHandler(webapp2.RequestHandler):
         if not self.credential:
             # Login not successful
             is_browser = (
-                'text/' in self.request.headers.get('Accept', '')
-                or 'image/' in self.request.headers.get('Accept', '')
-                or self.request.is_xhr
-                or 'Mozilla' in self.request.headers.get('User-Agent', ''))
+                'text/' in self.request.headers.get('Accept', '') or
+                'image/' in self.request.headers.get('Accept', '') or
+                self.request.is_xhr or
+                'Mozilla' in self.request.headers.get('User-Agent', ''))
             if is_browser:
                 # we assume the request came via a browser - redirect to the "nice" login page
                 # let login.py handle it from there
@@ -773,3 +776,28 @@ class JsonResponseHandler(BasicHandler):
         self.response.set_status(statuscode)
         self.response.out.write(response)
         self.response.out.write('\n')
+
+
+class CachedHandler(BasicHandler):
+    """
+
+    Cached handler assumes that data generation is somewhat static
+    while rendering must happen dynamically due to displaying of usernames
+    etc."""
+    default_cachingtime = 60 * 60 * 12
+    template_name = 'base_minimal3.html'
+
+    def get_data(self, *args, **kwargs):
+        # raise NotImplementedError
+        return dict()
+
+    def get_render(self, values, *_args, **_kwargs):
+        self.render(values, self.template_name)
+
+    def get(self, *args, **kwargs):
+        key = "%s %s %s" % (args, kwargs, os.environ.get('CURRENT_VERSION_ID', '?'))
+        values = memcache.get(key)
+        if not values:
+            values = self.get_data(*args, **kwargs)
+            memcache.set(key, values, time=self.default_cachingtime)
+        return self.get_render(values, *args, **kwargs)

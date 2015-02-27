@@ -29,7 +29,7 @@ PYLINT_ARGS= "--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
 LINT_FILES= modules/ *.py lib/appengine-toolkit/gaetk/login.py lib/appengine-toolkit/gaetk/handler.py lib/appengine-toolkit/gaetk/defaulthandlers.py lib/CentralServices/cs/huwawi.py lib/CentralServices/cs/huwawi_local.py
 
 LINT_LINE_LENGTH= 110
-LINT_FLAKE8_ARGS= --max-complexity=12 --builtins=_ --max-line-length=$(LINT_LINE_LENGTH) --ignore=E711,E712
+LINT_FLAKE8_ARGS= --max-complexity=12 --builtins=_ --exclude=appengine_config.py --max-line-length=$(LINT_LINE_LENGTH) --ignore=E711,E712
 MYPYTHONPATH= lib/google_appengine:lib/google_appengine/lib/jinja2-2.6:./lib/google_appengine/lib/webob-1.2.3
 
 default: check

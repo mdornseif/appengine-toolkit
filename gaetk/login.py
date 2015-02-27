@@ -10,12 +10,7 @@ Copyright (c) 2010, 2014, 2015 HUDORA. All rights reserved.
 """
 
 
-config = object()
-try:
-    import config
-except ImportError:
-    pass
-config.imported = True
+import config
 
 import logging
 import random
