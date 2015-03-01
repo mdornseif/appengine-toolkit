@@ -51,7 +51,7 @@ from webob.exc import HTTPUnsupportedMediaType as HTTP415_UnsupportedMediaType
 from gaetk.gaesessions import get_current_session
 import gaetk.compat
 from gaetk import webapp2
-import itsdangerous
+from gaetk import itsdangerous
 
 LOGIN_ALLOWED_DOMAINS = getattr(config, 'LOGIN_ALLOWED_DOMAINS', [])
 config.template_dirs = getattr(config, 'template_dirs', ['./templates'])
@@ -317,12 +317,13 @@ class BasicHandler(webapp2.RequestHandler):
 
         key = tuple(extensions)
         if key not in _jinja_env_cache:
-            env = jinja2.Environment(loader=jinja2.FileSystemLoader(config.template_dirs),
-                                     extensions=extensions,
-                                     auto_reload=True,  # do check if the source changed
-                                     trim_blocks=True,  # first newline after a block is removed
-                                     bytecode_cache=jinja2.MemcachedBytecodeCache(memcache, timeout=600)
-                                     )
+            env = jinja2.Environment(
+                loader=jinja2.FileSystemLoader(config.template_dirs),
+                extensions=extensions,
+                auto_reload=True,  # do check if the source changed
+                trim_blocks=True,  # first newline after a block is removed
+                bytecode_cache=jinja2.MemcachedBytecodeCache(memcache, timeout=600)
+            )
             _jinja_env_cache[key] = env
         return _jinja_env_cache[key]
 
@@ -475,7 +476,8 @@ class BasicHandler(webapp2.RequestHandler):
         if html_addon:
             htmldata.update(html_addon)
 
-        def htmlrender(x):
+        def htmlrender(_x):
+            "Create HTML via jinja2."
             self.rendered(htmldata, html_template)
 
         mymappers = dict(xml=mydict2xml,
@@ -779,15 +781,17 @@ class JsonResponseHandler(BasicHandler):
 
 
 class CachedHandler(BasicHandler):
-    """
+    """Allows you to cache data denetation.
 
     Cached handler assumes that data generation is somewhat static
     while rendering must happen dynamically due to displaying of usernames
-    etc."""
+    etc.
+    Usually you just have to override `get_data()`and `template_name`."""
+
     default_cachingtime = 60 * 60 * 12
     template_name = 'base_minimal3.html'
 
-    def get_data(self, *args, **kwargs):
+    def get_data(self, *_args, **_kwargs):
         # raise NotImplementedError
         return dict()
 
