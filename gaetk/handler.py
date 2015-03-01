@@ -799,7 +799,8 @@ class CachedHandler(BasicHandler):
         self.render(values, self.template_name)
 
     def get(self, *args, **kwargs):
-        key = "gaetk:%s(%s, %s).%s" % (self.__class__, args, kwargs, os.environ.get('CURRENT_VERSION_ID', '?'))
+        key = "gaetk:%s(%s, %s).%s" % (
+            self.__class__, args, kwargs, os.environ.get('CURRENT_VERSION_ID', '?'))
         values = memcache.get(key)
         if not values:
             values = self.get_data(*args, **kwargs)

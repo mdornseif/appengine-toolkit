@@ -194,16 +194,20 @@ class Response(object):
                 try:
                     status, _responseheaders, _content = fetch(
                         link,
-                        headers=dict(referer=self.url),
+                        headers=dict(referer=self.url, Cookie=self.headers['set-cookie']),
                         content='', method='GET', multipart=False, ua='', timeout=30)
                 except (IOError, huTools.http._httplib2.ServerNotFoundError):
                     status = 600
+                except (huTools.http._httplib2.RedirectLimit):
+                    status = 700
 
                 if status == 200:
                     oklinks.add(link)
                 else:
                     brokenlinks.setdefault(link, set()).add(self.url)
-                #self.expect_condition(status == '200', 'invalid link to %r' % (link))
+                if status == 700:
+                    print 'too many redirects on %s' % link
+                self.expect_condition(status in (200, 700), 'invalid (%r) link to %r' % (status, link))
 
     def responds_with_valid_html(self):
         if NO_HTML_VALIDATION:
