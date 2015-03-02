@@ -207,7 +207,7 @@ class Response(object):
                     brokenlinks.setdefault(link, set()).add(self.url)
                 if status == 700:
                     print 'too many redirects on %s' % link
-                self.expect_condition(status in (200, 700), 'invalid (%r) link to %r' % (status, link))
+                self.expect_condition(status in (200, 401, 405, 700), 'invalid (%r) link to %r' % (status, link))
 
     def responds_with_valid_html(self):
         if NO_HTML_VALIDATION:
