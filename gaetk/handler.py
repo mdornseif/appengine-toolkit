@@ -478,7 +478,7 @@ class BasicHandler(webapp2.RequestHandler):
 
         def htmlrender(_x):
             "Create HTML via jinja2."
-            self.rendered(htmldata, html_template)
+            return self.rendered(htmldata, html_template)
 
         mymappers = dict(xml=mydict2xml,
                          json=huTools.hujson2.dumps,
@@ -788,7 +788,7 @@ class CachedHandler(BasicHandler):
     etc.
     Usually you just have to override `get_data()`and `template_name`."""
 
-    default_cachingtime = 60 * 60 * 12
+    default_cachingtime = 60 * 60 * 2
     template_name = 'base_minimal3.html'
 
     def get_data(self, *_args, **_kwargs):
