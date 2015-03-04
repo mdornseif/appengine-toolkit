@@ -92,7 +92,7 @@ class LoginHandler(BasicHandler):
             raise gaetk.handler.HTTP302_Found(location=self.request.url.replace('http://', 'https://', 1))
 
         if self.request.cookies.get('gaetkuid', None):
-            self.hande_sso(continue_url)
+            self.handle_sso(continue_url)
 
         # the user is tried to be authenticated via a username-password based approach.
         # The data is either taken from the HTTP header `Authorization` or the provided (form) data.
