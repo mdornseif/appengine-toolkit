@@ -26,7 +26,7 @@ COLOR_SEQ = "\033[1;%dm"
 # print success messages
 DEBUG = False
 
-DEFAULTFAST = int(os.environ.get('DEFAULTFAST_MS', 1000))
+DEFAULTFAST = int(os.environ.get('DEFAULTFAST_MS', 1500))
 
 NO_LINK_VALIDATION = False  # superss LINK validation
 NO_HTML_VALIDATION = False  # superss HTML validation
