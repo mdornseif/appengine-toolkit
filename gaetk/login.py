@@ -326,7 +326,7 @@ class Debug(gaetk.handler.BasicHandler):
             env[name] = os.environ.get(name)
             logging.info("%s: %r", name, os.environ.get(name))
 
-        self.debug("headers=%s", self.request.headers)
+        logging.debug("headers=%s", self.request.headers)
 
         self.render(dict(
             env=env,
