@@ -6,9 +6,7 @@ admin/views.py - administrationsinterface - inspieriert von Django.
 Created by Christian Klein on 2011-08-10.
 Copyright (c) 2011, 2013, 2014 HUDORA GmbH. All rights reserved.
 """
-
 import config
-config.imported = True
 
 import datetime
 import gaetk.handler
