@@ -27,7 +27,7 @@ PYLINT_ARGS= "--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
              --disable=R0201,R0903,R0904 \
              --disable=W0142,W0201,W0212,W0221,W0232,W0232,W0703
 
-LINT_FILES= modules/ tests/ *.py lib/appengine-toolkit/gaetk/login.py lib/appengine-toolkit/gaetk/handler.py lib/appengine-toolkit/gaetk/defaulthandlers.py lib/CentralServices/cs/huwawi*.py
+LINT_FILES= modules/ tests/*.py *.py lib/appengine-toolkit/gaetk/login.py lib/appengine-toolkit/gaetk/handler.py lib/appengine-toolkit/gaetk/defaulthandlers.py lib/CentralServices/cs/huwawi*
 
 LINT_LINE_LENGTH= 110
 LINT_FLAKE8_ARGS= --max-complexity=12 --builtins=_ --exclude=appengine_config.py --max-line-length=$(LINT_LINE_LENGTH) --ignore=E711,E712
@@ -51,7 +51,7 @@ check: lib/google_appengine/google/__init__.py checknodeps
 
 deploy:
 	# appcfg.py update .
-	appcfg.py --oauth2 update -V dev-`whoami` -A $(APPID) .
+	appcfg.py --oauth2 update -A $(APPID) -V dev-`whoami` .
 	TESTHOST=dev-`whoami`-dot-$(OPENAPPID).appspot.com make resttest
 	make opendev
 
@@ -62,13 +62,15 @@ deploy_production:
 	(cd tmp ; git clone git@github.com:hudora/$(REPOSNAME).git)
 	(cd tmp/$(REPOSNAME) ; git checkout production ; make boot; make dependencies)
 	(cd tmp/$(REPOSNAME) ; git show-ref --hash=7 refs/remotes/origin/production > version.txt)
+	(cd tmp/$(REPOSNAME) ; curl http://$(OPENAPPID).appspot.com > lastversion.txt)
 	# Erst getaggte Version hochladen
-	-appcfg.py --oauth2 update -V "v`cat tmp/$(REPOSNAME)/version.txt`" -A $(APPID) tmp/$(REPOSNAME)
+	-appcfg.py --oauth2 update -A $(APPID) -V "v`cat tmp/$(REPOSNAME)/version.txt`" tmp/$(REPOSNAME)
 	# Dann testen
 	(cd tmp/$(REPOSNAME) ; TESTHOST="v`cat version.txt`"-dot-$(OPENAPPID).appspot.com make resttest)
 	# Wenn das geklappt hat: produktionsversion aktivieren.
-	appcfg.py --oauth2 update -V production -A $(APPID) tmp/$(REPOSNAME)
-	curl -X POST --data-urlencode 'payload={"channel": "#general", "username": "webhookbot", "text": "<http://express.hudora.de> neu deployed"}' https://hooks.slack.com/services/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
+	appcfg.py --oauth2 update -A $(APPID) -V production tmp/$(REPOSNAME)
+	curl -X POST --data-urlencode 'payload={"channel": "#general", "username": "webhookbot", "text": "<http://$(OPENAPPID).appspot.com> neu deployed"}' https://hooks.slack.com/services/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
+	(cd tmp/$(REPOSNAME) ; git log --pretty='%ae %s' `cat lastversion.txt`..`cat version.txt`)
 
 fixup:
 	# Tailing Whitespace
