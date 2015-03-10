@@ -7,6 +7,7 @@ GAE_VERSION=1.9.18
 # [R0201(no-self-use), ArtikelMultiStammdatenHandler.get] Method could be a function
 # [R0903(too-few-public-methods), gaetk_Snippet] Too few public methods (0/2)
 # [R0904(too-many-public-methods), ShowKategorie] Too many public methods (22/20)
+#  R0913(too-many-arguments),
 # [W0142(star-args), CheckoutHandler.get] Used * or ** magic
 # [W0201(attribute-defined-outside-init), wwwHandler.default_template_vars] Attribute 'title' defined outside __init__
 # [W0212(protected-access)] we know what we are doing
@@ -24,14 +25,14 @@ PYLINT_ARGS= "--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
              --good-names=application \
              --disable=C0103,C0330 \
              --disable=E1103 \
-             --disable=R0201,R0903,R0904 \
+             --disable=R0201,R0903,R0904,R0913 \
              --disable=W0142,W0201,W0212,W0221,W0232,W0232,W0703
 
 LINT_FILES= modules/ tests/*.py *.py lib/appengine-toolkit/gaetk/login.py lib/appengine-toolkit/gaetk/handler.py lib/appengine-toolkit/gaetk/defaulthandlers.py lib/CentralServices/cs/huwawi*
 
 LINT_LINE_LENGTH= 110
 LINT_FLAKE8_ARGS= --max-complexity=12 --builtins=_ --exclude=appengine_config.py --max-line-length=$(LINT_LINE_LENGTH) --ignore=E711,E712
-MYPYTHONPATH= lib/google_appengine:lib/google_appengine/lib/jinja2-2.6:./lib/google_appengine/lib/webob-1.2.3:./lib/google_appengine//lib/django-1.5/django
+MYPYTHONPATH= lib/google_appengine:lib/google_appengine/lib/jinja2-2.6:./lib/google_appengine/lib/webob-1.2.3:./lib/google_appengine//lib/django-1.5
 
 default: check
 

@@ -450,13 +450,55 @@ class BasicHandler(webapp2.RequestHandler):
                                      html=lambda x: '<body><head><title>%s</title></head></body>' % x))
         """
 
+        # If no format is given, we assume HTML (or whatever is given in defaultfmt)
+        # We also provide a list of convinient default content types and encodings.
+        fmt = fmt or defaultfmt
+
+        mapper = self._get_mapper(mappers, fmt, html_template, html_addon, xml_lists,
+                                  data, xml_root, tabular_datanodename)
+        contenttype = self._generate_content_headers(fmt, filename, contenttypes)
+        # If we have gotten a `callback` parameter, we expect that this is a
+        # [JSONP](http://en.wikipedia.org/wiki/JSONP#JSONP) can and therefore add the padding
+        if self.request.get('callback', None) and fmt == 'json':
+            self.response.headers['Content-Type'] = 'text/javascript'
+            self.response.write("%s (%s)" % (self.request.get('callback', None), mapper(data)))
+        else:
+            self.response.headers['Content-Type'] = contenttype
+            self.response.write(mapper(data))
+
+    def _get_mapper(self, mappers, fmt, html_template, html_addon, xml_lists, data,
+                    xml_root, tabular_datanodename):
+        "Return the correct mapper for `fmt`."
         # We lazy import huTools to keep gaetk usable without hutools
         import huTools.hujson
         import huTools.structured
 
-        # If no format is given, we assume HTML (or whatever is given in defaultfmt)
-        # We also provide a list of convinient default content types and encodings.
-        fmt = fmt or defaultfmt
+        # Default mappers are there for XML and JSON (provided by huTools) and HTML provided by Jinja2
+        # we provide a default dict2xml renderer based on the xml_* parameters given
+        # The HTML Render integrates additional data via html_addon
+        def htmlrender(_x):
+            "Create HTML via jinja2."
+            htmldata = data.copy()
+            if html_addon:
+                htmldata.update(html_addon)
+            return self.rendered(htmldata, html_template)
+
+        mymappers = dict(
+            xml=partial(huTools.structured.dict2xml, roottag=xml_root, listnames=xml_lists, pretty=True),
+            json=huTools.hujson2.dumps,
+            csv=partial(huTools.structured.dict2csv, datanodename=tabular_datanodename),
+            xls=partial(huTools.structured.dict2xls, datanodename=tabular_datanodename),
+            html=htmlrender)
+        if mappers:
+            mymappers.update(mappers)
+
+        # Check early if we have no corospondending configuration to provide more meaningful error messages.
+        if fmt not in mymappers:
+            raise ValueError('No mapper for format "%r"' % fmt)
+        return mymappers[fmt]
+
+    def _generate_content_headers(self, fmt, filename, contenttypes):
+        """Generate `Content-Disposition` and `Content-Type`headers."""
         mycontenttypes = dict(pdf='application/pdf',
                               xml="application/xml; encoding=utf-8",
                               json="application/json; encoding=utf-8",
@@ -467,34 +509,6 @@ class BasicHandler(webapp2.RequestHandler):
                               desadv="application/edifact; encoding=iso-8859-1")
         if contenttypes:
             mycontenttypes.update(contenttypes)
-
-        # Default mappers are there for XML and JSON (provided by huTools) and HTML provided by Jinja2
-        # we provide a default dict2xml renderer based on the xml_* parameters given
-        mydict2xml = partial(huTools.structured.dict2xml, roottag=xml_root, listnames=xml_lists, pretty=True)
-        mydict2csv = partial(huTools.structured.dict2csv, datanodename=tabular_datanodename)
-        mydict2xls = partial(huTools.structured.dict2xls, datanodename=tabular_datanodename)
-        # The HTML Render integrates additional data via html_addon
-        htmldata = data.copy()
-        if html_addon:
-            htmldata.update(html_addon)
-
-        def htmlrender(_x):
-            "Create HTML via jinja2."
-            return self.rendered(htmldata, html_template)
-
-        mymappers = dict(xml=mydict2xml,
-                         json=huTools.hujson2.dumps,
-                         csv=mydict2csv,
-                         xls=mydict2xls,
-                         html=htmlrender)
-        if mappers:
-            mymappers.update(mappers)
-
-        # Check early if we have no corospondending configuration to provide more meaningful error messages.
-        if fmt not in mycontenttypes:
-            raise ValueError('No content-type for format "%r"' % contenttypes)
-        if fmt not in mymappers:
-            raise ValueError('No mapper for format "%r"' % fmt)
 
         # Disposition helps the browser to decide if something should be downloaded to disk or
         # if it should displayed in the browser window. It also can provide a filename.
@@ -507,15 +521,10 @@ class BasicHandler(webapp2.RequestHandler):
         if fmt not in ['html', 'json']:
             self.response.headers["Content-Disposition"] = str("%s; filename=%s.%s" % (
                 disposition, filename, fmt))
-        # If we have gotten a `callback` parameter, we expect that this is a
-        # [JSONP](http://en.wikipedia.org/wiki/JSONP#JSONP) can and therefore add the padding
-        if self.request.get('callback', None) and fmt == 'json':
-            response = "%s (%s)" % (self.request.get('callback', None), mymappers[fmt](data))
-            self.response.headers['Content-Type'] = 'text/javascript'
-        else:
-            self.response.headers['Content-Type'] = mycontenttypes[fmt]
-            response = mymappers[fmt](data)
-        self.response.out.write(response)
+
+        if fmt not in mycontenttypes:
+            raise ValueError('No content-type for format "%r"' % contenttypes)
+        return mycontenttypes[fmt]
 
     def is_admin(self):
         """Returns if the currently logged in user is admin"""
