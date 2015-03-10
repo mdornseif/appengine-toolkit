@@ -9,11 +9,13 @@ Copyright (c) 2010-2015 HUDORA. All rights reserved.
 
 
 import base64
+import codecs
 import datetime
 import hashlib
 import logging
 import os
 import time
+import re
 import urllib
 import urlparse
 import uuid
@@ -806,3 +808,28 @@ class CachedHandler(BasicHandler):
             values = self.get_data(*args, **kwargs)
             memcache.set(key, values, time=self.default_cachingtime)
         return self.get_render(values, *args, **kwargs)
+
+
+class MarkdownFileHandler(BasicHandler):
+    """Zeigt beliebige Markdown Files an."""
+    template_name = 'gaetk_markdown.html'
+
+    def get(self, path, *_args, **_kwargs):
+        path = path.strip('/')
+        path = re.sub(r'[^a-z/]', '', path)
+        if not path:
+            path = 'index'
+        path = path + '.markdown'
+        textfile = 'text/%s' % path
+        title = ''
+        try:
+            with codecs.open(textfile, 'r', 'utf-8') as fileobj:
+                text = fileobj.read()
+                # wir gehen davon aus, dass die erste Zeile, die mit `# ` beginnt, der Titel ist
+                for line in text.split('\n'):
+                    if line.startswith('# '):
+                        title = line.lstrip('# ')
+                        break
+            self.render({'text': text, 'title': title}, self.template_name)
+        except IOError:
+            raise gaetk.handler.HTTP404_NotFound("%s not available" % textfile)
