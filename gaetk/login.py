@@ -10,7 +10,12 @@ Copyright (c) 2010, 2014, 2015 HUDORA. All rights reserved.
 """
 
 
-import config
+config = object()
+try:
+    import config
+except ImportError:
+    pass
+config.imported = True
 
 import logging
 import random
@@ -60,29 +65,6 @@ class LoginHandler(BasicHandler):
             gaetk.handler.login_user(credential, session, "uid:secret", self.response)
             return credential
 
-    def handle_sso(self, continue_url):
-        "Try single sign on via a different hudora.de domain."
-        from gaetk import itsdangerous
-        s = itsdangerous.URLSafeTimedSerializer(self.session.base_key)
-        decoded_payload = None
-        try:
-            decoded_payload = s.loads(
-                self.request.cookies.get('gaetkuid', None),
-                max_age=60 * 30)
-            # This payload is decoded and safe
-        except itsdangerous.SignatureExpired:
-            logging.warn("SignatureExpired")
-        except itsdangerous.BadSignature:
-            logging.warn("BadSignature")
-        if decoded_payload and 'uid' in decoded_payload:
-            if not os.environ.get('HTTP_HOST', '').endswith(decoded_payload.get('provider', '?')):
-                # we don't use SSO on our own domain
-                credential = gaetk.handler._get_credential(decoded_payload['uid'])
-                if credential:
-                    logging.info("logged in wia SSO %s", decoded_payload.get('provider', '?'))
-                    gaetk.handler.login_user(credential, self.session, 'SSO', self.response)
-                    raise gaetk.handler.HTTP302_Found(location=continue_url)
-
     def get(self):
         """Handler for Form and HTTP-Basic-Auth."""
 
@@ -92,7 +74,29 @@ class LoginHandler(BasicHandler):
             raise gaetk.handler.HTTP302_Found(location=self.request.url.replace('http://', 'https://', 1))
 
         if self.request.cookies.get('gaetkuid', None):
-            self.handle_sso(continue_url)
+            # try single sign on via a different hudora.de domain
+            logging.debug("gaetkuid = %r", self.request.cookies.get('gaetkuid', None))
+            import itsdangerous
+            s = itsdangerous.URLSafeTimedSerializer(self.session.base_key)
+            decoded_payload = None
+            try:
+                decoded_payload = s.loads(
+                    self.request.cookies.get('gaetkuid', None),
+                    max_age=60 * 60 * 2)
+                # This payload is decoded and safe
+                logging.info("%r", decoded_payload)
+            except itsdangerous.BadSignature:
+                logging.warn("BadSignature")
+            except itsdangerous.SignatureExpired:
+                logging.warn("SignatureExpired")
+            if decoded_payload and 'uid' in decoded_payload:
+                if not os.environ.get('HTTP_HOST', '').endswith(decoded_payload.get('provider', '?')):
+                    # we don't use SSO on our own domain
+                    credential = gaetk.handler._get_credential(decoded_payload['uid'])
+                    if credential:
+                        logging.info("logged in wia SSO %s", decoded_payload.get('provider', '?'))
+                        gaetk.handler.login_user(credential, self.session, 'SSO', self.response)
+                        raise gaetk.handler.HTTP302_Found(location=continue_url)
 
         # the user is tried to be authenticated via a username-password based approach.
         # The data is either taken from the HTTP header `Authorization` or the provided (form) data.
@@ -227,8 +231,8 @@ class OAuth2Callback(BasicHandler):
 
         # 3. Confirm anti-forgery state token
         if self.request.get('state') != self.session.get('oauth_state'):
-            logging.warn(
-                "wrong state: %r != %r", self.request.get('state'), self.session.get('oauth_state'))
+            logging.warn("wrong state: %r != %r" % (
+                self.request.get('state'), self.session.get('oauth_state')))
             self.session.terminate()
             raise HTTP302_Found(location=continue_url)
 
@@ -265,6 +269,8 @@ class OAuth2Callback(BasicHandler):
 
         credential = self.create_credential_oauth2(jwt)
         gaetk.handler.login_user(credential, self.session, 'OAuth2', self.response)
+        self.response.set_cookie('gaetkoauthmail', jwt['email'], max_age=7776000)
+
         raise HTTP302_Found(location=users.create_login_url(continue_url))
 
 
@@ -328,7 +334,7 @@ class Debug(gaetk.handler.BasicHandler):
             env[name] = os.environ.get(name)
             logging.info("%s: %r", name, os.environ.get(name))
 
-        logging.debug("headers=%s", self.request.headers)
+        self.debug("headers=%s", self.request.headers)
 
         self.render(dict(
             env=env,
