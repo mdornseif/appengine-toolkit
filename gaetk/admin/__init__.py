@@ -28,7 +28,7 @@ def autodiscover(appsdir=None):
     """
 
     if appsdir is None:
-        appsdir = ['modules']
+        appsdir = getattr(config, 'ADMIN_APPS_DIR', ['modules'])
 
     basedir = os.path.dirname(config.__file__)
     for directory in appsdir:
