@@ -15,6 +15,7 @@ import logging
 import re
 
 from google.appengine.api import memcache
+from google.appengine.ext import ndb
 import gae_mini_profiler.templatetags
 import gaetk
 import gaetk.defaulthandlers
@@ -124,7 +125,7 @@ class Warmup(wwwHandler):
 
 def make_app(url_mapping, debug=config.DEBUG):
     """Generate a WSGI-App"""
-    app = gaetk.webapp2.WSGIApplication(url_mapping, debug=debug)
+    app = ndb.toplevel(gaetk.webapp2.WSGIApplication(url_mapping, debug=debug))
     # hier werden wir auch das Error-Handling verankern. aber noch nicht ...
     # app.error_handlers[500] = ErrorHandler
     return app

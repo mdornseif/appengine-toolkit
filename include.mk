@@ -1,4 +1,5 @@
 GAE_VERSION=1.9.18
+PRODUCTIONURL?= https://$(OPENAPPID).appspot.com/
 
 # we don't want to know about:
 # [C0103(invalid-name), ] Invalid constant name "application"
@@ -63,14 +64,14 @@ deploy_production:
 	(cd tmp ; git clone git@github.com:hudora/$(REPOSNAME).git)
 	(cd tmp/$(REPOSNAME) ; git checkout production ; make boot; make dependencies)
 	(cd tmp/$(REPOSNAME) ; git show-ref --hash=7 refs/remotes/origin/production > version.txt)
-	(cd tmp/$(REPOSNAME) ; curl http://$(OPENAPPID).appspot.com > lastversion.txt)
+	(cd tmp/$(REPOSNAME) ; curl https://$(OPENAPPID).appspot.com/version.txt > lastversion.txt)
 	# Erst getaggte Version hochladen
 	-appcfg.py --oauth2 update -A $(APPID) -V "v`cat tmp/$(REPOSNAME)/version.txt`" tmp/$(REPOSNAME)
 	# Dann testen
 	(cd tmp/$(REPOSNAME) ; TESTHOST="v`cat version.txt`"-dot-$(OPENAPPID).appspot.com make resttest)
 	# Wenn das geklappt hat: produktionsversion aktivieren.
 	appcfg.py --oauth2 update -A $(APPID) -V production tmp/$(REPOSNAME)
-	curl -X POST --data-urlencode 'payload={"channel": "#general", "username": "webhookbot", "text": "<http://$(OPENAPPID).appspot.com> neu deployed"}' https://hooks.slack.com/services/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
+	curl -X POST --data-urlencode 'payload={"channel": "#general", "username": "webhookbot", "text": "<$(PRODUCTIONURL)> neu deployed"}' https://hooks.slack.com/services/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
 	(cd tmp/$(REPOSNAME) ; git log --pretty='%ae %s' `cat lastversion.txt`..`cat version.txt`)
 
 fixup:
