@@ -52,8 +52,10 @@ from webob.exc import HTTPUnsupportedMediaType as HTTP415_UnsupportedMediaType
 
 from gaetk.gaesessions import get_current_session
 import gaetk.compat
+import gaetk.tools
 from gaetk import webapp2
 from gaetk import itsdangerous
+
 
 LOGIN_ALLOWED_DOMAINS = getattr(config, 'LOGIN_ALLOWED_DOMAINS', [])
 config.template_dirs = getattr(config, 'template_dirs', ['./templates'])
@@ -97,14 +99,8 @@ def login_user(credential, session, via, response=None):
             os.environ['USER_EMAIL'] = '%s@auth.hudora.de' % credential.uid
     if response:
         s = itsdangerous.URLSafeTimedSerializer(session.base_key)
-        host = os.environ.get('HTTP_HOST', '')
-        if host.endswith('appspot.com'):
-            # setting cookies for .appspot.com does not work
-            domain = '.'.join(host.split('.')[-3:])
-        else:
-            domain = '.'.join(host.split('.')[-2:])
-        uidcookie = s.dumps(dict(uid=credential.uid,
-                                 provider=host))
+        domain = gaetk.tools.get_cookie_domain()
+        uidcookie = s.dumps(dict(uid=credential.uid, provider=os.environ.get('HTTP_HOST', '')))
         response.set_cookie('gaetkuid', uidcookie, domain='.%s' % domain, max_age=60 * 60 * 2)
 
     if config.DEBUG:
@@ -115,18 +111,18 @@ def login_user(credential, session, via, response=None):
 _local_credential_cache = {}
 
 
-# TODO this needs expiry
 def _get_credential(username):
     """Helper to read Credentials - can be monkey_patched"""
-    global _local_credential_cache
     if username in _local_credential_cache:
-        return _local_credential_cache[username]
+        credential, ts = _local_credential_cache[username]
+        if ts + 600 < time.time():  # 10 Minutes caching
+            return credential
+        else:
+            del _local_credential_cache[username]
     credential = NdbCredential.get_by_id(username)
     if not credential:
         return None
-    if len(_local_credential_cache) > 5:
-        _local_credential_cache = {}
-    _local_credential_cache[username] = credential
+    _local_credential_cache[username] = (credential, time.time())
     return credential
 
 
@@ -240,14 +236,39 @@ class BasicHandler(webapp2.RequestHandler):
         http://code.google.com/appengine/docs/python/datastore/queryclass.html#Query_cursor for
         further Information.
         """
-        limit = self.request.get_range('limit', min_value=1, max_value=1000, default=defaultcount)
+        clean_qs = dict([(k, self.request.get(k)) for k in self.request.arguments()
+                         if k not in ['start', 'cursor', 'cursor_start']])
+        objects, cursor, start, ret = self._paginate_query(query, defaultcount)
 
-        total = None
+        ret['total'] = None
         if calctotal:
             # We count up to maximum of 10000. Counting is a somewhat expensive operation on AppEngine
-            total = query.count(10000)
+            ret['total'] = query.count(10000)
 
+        if ret['more_objects']:
+            ret['cursor'] = cursor.urlsafe()
+            ret['cursor_start'] = start + ret['limit']
+            # query string to get to the next page
+            qs = dict(cursor=ret['cursor'], cursor_start=ret['cursor_start'])
+            qs.update(clean_qs)
+            ret['next_qs'] = urllib.urlencode(qs)
+        if ret['prev_objects']:
+            # query string to get to the next previous page
+            qs = dict(start=ret['prev_start'])
+            qs.update(clean_qs)
+            ret['prev_qs'] = urllib.urlencode(qs)
+        if formatter:
+            ret[datanodename] = [formatter(x) for x in objects]
+        else:
+            ret[datanodename] = []
+            for obj in objects:
+                ret[datanodename].append(obj)
+        return ret
+
+    def _paginate_query(self, query, defaultcount):
+        """Help paginate to construct queries."""
         start_cursor = self.request.get('cursor', '')
+        limit = self.request.get_range('limit', min_value=1, max_value=1000, default=defaultcount)
         if start_cursor:
             objects, cursor, more_objects = gaetk.compat.xdb_fetch_page(
                 query, limit, start_cursor=start_cursor)
@@ -260,30 +281,11 @@ class BasicHandler(webapp2.RequestHandler):
 
         prev_start = max(start - limit - 1, 0)
         next_start = max(start + len(objects), 0)
-        clean_qs = dict([(k, self.request.get(k)) for k in self.request.arguments()
-                         if k not in ['start', 'cursor', 'cursor_start']])
+
         ret = dict(more_objects=more_objects, prev_objects=prev_objects,
                    prev_start=prev_start, next_start=next_start,
-                   total=total)
-        if more_objects:
-            ret['cursor'] = cursor.urlsafe()
-            ret['cursor_start'] = start + limit
-            # query string to get to the next page
-            qs = dict(cursor=ret['cursor'], cursor_start=ret['cursor_start'])
-            qs.update(clean_qs)
-            ret['next_qs'] = urllib.urlencode(qs)
-        if prev_objects:
-            # query string to get to the next previous page
-            qs = dict(start=ret['prev_start'])
-            qs.update(clean_qs)
-            ret['prev_qs'] = urllib.urlencode(qs)
-        if formatter:
-            ret[datanodename] = [formatter(x) for x in objects]
-        else:
-            ret[datanodename] = []
-            for obj in objects:
-                ret[datanodename].append(obj)
-        return ret
+                   limit=limit)
+        return objects, cursor, start, ret
 
     def default_template_vars(self, values):
         """Helper to provide additional values to HTML Templates. To be overwritten in subclasses. E.g.
@@ -316,18 +318,33 @@ class BasicHandler(webapp2.RequestHandler):
                     return env
         """
         import jinja2
+        import gaetk.jinja_filters as myfilters
 
         key = tuple(extensions)
         if key not in _jinja_env_cache:
             env = jinja2.Environment(
                 loader=jinja2.FileSystemLoader(config.template_dirs),
                 extensions=extensions,
-                auto_reload=True,  # do check if the source changed
+                auto_reload=False,  # do not check if the source changed
                 trim_blocks=True,  # first newline after a block is removed
                 bytecode_cache=jinja2.MemcachedBytecodeCache(memcache, timeout=600)
             )
+            myfilters.register_custom_filters(env)
+            self.add_jinja2env_globals(env)
             _jinja_env_cache[key] = env
         return _jinja_env_cache[key]
+
+    def add_jinja2env_globals(self, env):
+        """To be everwritten  by subclasses.
+
+        Eg:
+
+            env.globals['bottommenuurl'] = '/admin/'
+            env.globals['bottommenuaddon'] = '<i class="fa fa-area-chart"></i> Admin'
+            env.globals['profiler_includes'] = gae_mini_profiler.templatetags.profiler_includes
+
+        """
+        pass
 
     def rendered(self, values, template_name):
         """Return the rendered content of a Jinja2 Template.
@@ -337,11 +354,8 @@ class BasicHandler(webapp2.RequestHandler):
         """
 
         import jinja2
-        import gaetk.jinja_filters as myfilters
 
         env = self.create_jinja2env()
-        # TODO: do we need that here or in create_jinja2env?
-        myfilters.register_custom_filters(env)
         try:
             template = env.get_template(template_name)
         except jinja2.TemplateNotFound:

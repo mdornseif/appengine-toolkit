@@ -4,10 +4,10 @@
 defaulthandlers.py - handlers implementing common functionality for gaetk
 
 Created by Maximillian Dornseif on 2011-01-09.
-Copyright (c) 2011 HUDORA. All rights reserved.
+Copyright (c) 2011, 2015 HUDORA. All rights reserved.
 """
-
 import datetime
+import json
 import os
 
 import google.appengine.api.app_identity
@@ -17,11 +17,6 @@ import gaetk
 import gaetk.handler
 from google.appengine.ext import db
 from google.appengine.ext.db import stats
-
-try:
-    import json
-except ImportError:
-    from django.utils import json
 
 
 # you can add to plugins to extend the stat handler

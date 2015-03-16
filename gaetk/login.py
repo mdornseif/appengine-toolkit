@@ -26,8 +26,7 @@ import huTools.hujson2
 from google.appengine.api import users
 
 import gaetk.handler
-from gaetk.handler import BasicHandler
-from gaetk.handler import HTTP302_Found
+import gaetk.tools
 
 try:
     LOGIN_ALLOWED_DOMAINS = config.LOGIN_ALLOWED_DOMAINS
@@ -40,7 +39,7 @@ def _create_credential(*args, **kwargs):
     return gaetk.handler.NdbCredential.create(*args, **kwargs)
 
 
-class LoginHandler(BasicHandler):
+class LoginHandler(gaetk.handler.BasicHandler):
     """Handler for Login"""
 
     def __init__(self, *args, **kwargs):
@@ -200,7 +199,7 @@ def get_oauth_callback_url(request):
     return url
 
 
-class OAuth2Callback(BasicHandler):
+class OAuth2Callback(gaetk.handler.BasicHandler):
     """Handler for Login"""
 
     def create_credential_oauth2(self, jwt):
@@ -230,7 +229,7 @@ class OAuth2Callback(BasicHandler):
             logging.warn(
                 "wrong state: %r != %r", self.request.get('state'), self.session.get('oauth_state'))
             self.session.terminate()
-            raise HTTP302_Found(location=continue_url)
+            raise gaetk.handler.HTTP302_Found(location=continue_url)
 
         if LOGIN_ALLOWED_DOMAINS and self.request.get('hd') not in LOGIN_ALLOWED_DOMAINS:
             raise RuntimeError("wrong domain: %r not in %r" % (
@@ -265,7 +264,7 @@ class OAuth2Callback(BasicHandler):
 
         credential = self.create_credential_oauth2(jwt)
         gaetk.handler.login_user(credential, self.session, 'OAuth2', self.response)
-        raise HTTP302_Found(location=users.create_login_url(continue_url))
+        raise gaetk.handler.HTTP302_Found(location=users.create_login_url(continue_url))
 
 
 class LogoutHandler(gaetk.handler.BasicHandler):
@@ -291,12 +290,7 @@ class LogoutHandler(gaetk.handler.BasicHandler):
         self.response.delete_cookie('ACSID')  # Appengine Login
         self.response.delete_cookie('gaetkoauthmail')  # gaetk Login
         self.response.delete_cookie('gaetkuid')  # gaetk Login
-        host = os.environ.get('HTTP_HOST', '')
-        if host.endswith('appspot.com'):
-            # setting cookies for .appspot.com does not work
-            domain = '.'.join(host.split('.')[-3:])
-        else:
-            domain = '.'.join(host.split('.')[-2:])
+        domain = gaetk.tools.get_cookie_domain()
         self.response.delete_cookie('gaetkuid', domain='.%s' % domain)  # gaetk Login
 
         user = users.get_current_user()
