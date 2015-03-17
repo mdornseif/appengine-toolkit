@@ -117,11 +117,7 @@ def filter_dateformat(value, formatstring='%Y-%m-%d'):
     """Formates a date"""
 
     from huTools.calendar.formats import convert_to_date
-    from babel import dates
-    date = convert_to_date(value)
-    # We do not want locale specific formating, clamp on ISO 8601
-    # TODO: why use babel then?
-    return dates.format_date(date, formatstring, locale='de_DE')
+    return convert_to_date(value).isoformat()
 
 
 def filter_markdown(value):
