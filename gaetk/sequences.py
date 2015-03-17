@@ -38,10 +38,6 @@ Example::
 # problem space.
 #
 # Created 2010-11 by Sam Jansen for HUDORA
-
-# pylint: disable-msg=E1103
-
-
 from google.appengine.ext import db
 
 
@@ -61,6 +57,7 @@ class gaetkSequence(db.Model):
 
 
 def _init_sequence_helper(typ, start, end, root):
+    """Transaction for `init_sequence()`."""
     # ensure there are no overlapping ranges
     query1 = gaetkSequence.all().ancestor(root).filter('type = ', typ).filter(
         'start >= ', start).filter('start <', end).fetch(1)
@@ -74,6 +71,7 @@ def _init_sequence_helper(typ, start, end, root):
 
 
 def init_sequence(typ, start, end):
+    """Generate a Sequence for the first time. Idempotent."""
     assert start < end
     root = gaetkSequence.get_by_key_name('_%s_root' % typ)
     if not root:

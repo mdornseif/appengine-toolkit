@@ -6,9 +6,6 @@ gaetk/admin/options.py
 Created by Christian Klein on 2011-08-22.
 Copyright (c) 2011, 2014 HUDORA GmbH. All rights reserved.
 """
-import config
-config.imported = True
-
 import cgi
 import logging
 
@@ -160,7 +157,7 @@ class ModelAdmin(object):
             exclude = list(self.exclude)
 
         defaults = {
-            'base_class': self.form,  # pylint: disable=E1101
+            'base_class': self.form,
             'only': self.fields,
             'exclude': (exclude + kwargs.get('exclude', [])) or None,
         }
@@ -250,7 +247,6 @@ class ModelAdmin(object):
 
     def add_view(self, handler, extra_context=None):
         """View zum Hinzufügen eines neuen Objekts"""
-
         form_class = self.get_form()
 
         # Standardmaessig lassen wir die App Engine fuer das Model automatisch einen
@@ -383,6 +379,7 @@ import csv
 
 
 class ModelExporter(object):
+    """Exports models as CSV, XLS, etc."""
     def __init__(self, model, query=None):
         self.model = model
         self.query = query
@@ -431,6 +428,7 @@ class ModelExporter(object):
         return csv.writer(fileobj, dialect='excel', delimiter='\t')
 
     def to_csv(self, fileobj):
+        """Generate CSV Output."""
         csvwriter = csv.writer(fileobj, dialect='excel', delimiter='\t')
         fixer = lambda row: [unicode(x).encode('utf-8') for x in row]
         self.create_header(csvwriter, fixer)
@@ -438,6 +436,7 @@ class ModelExporter(object):
             self.create_row(csvwriter, row, fixer)
 
     def to_xls(self, fileobj):
+        """Generate XLS Output."""
         # we create a fake writer object to do buffering
         # because xlwt cant do streaming writes.
 
@@ -449,6 +448,7 @@ class ModelExporter(object):
 
 
 class XlsWriter(object):
+    """Compatible to the CSV module writer implementation."""
     def __init__(self):
         from xlwt import Workbook
         self.buff = []
@@ -457,6 +457,7 @@ class XlsWriter(object):
         self.rownum = 0
 
     def writerow(self, row):
+        """Write a row of Values."""
         col = 0
         for coldata in row:
             self.sheet.write(self.rownum, col, coldata)
@@ -464,4 +465,5 @@ class XlsWriter(object):
         self.rownum += 1
 
     def save(self, fd):
+        """Write the XLS to fd."""
         self.book.save(fd)

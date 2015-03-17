@@ -9,16 +9,18 @@ DEVPAGE?= /
 # [R0201(no-self-use), ArtikelMultiStammdatenHandler.get] Method could be a function
 # [R0903(too-few-public-methods), gaetk_Snippet] Too few public methods (0/2)
 # [R0904(too-many-public-methods), ShowKategorie] Too many public methods (22/20)
-#  R0913(too-many-arguments),
+# [R0913(too-many-arguments),
+# [R0921(abstract-class-not-used), AuditLog] Abstract class not referenced#
 # [W0142(star-args), CheckoutHandler.get] Used * or ** magic
 # [W0201(attribute-defined-outside-init), wwwHandler.default_template_vars] Attribute 'title' defined outside __init__
 # [W0212(protected-access)] we know what we are doing
 # [W0221(arguments-differ), ShowLieferschein.get] Arguments number differs from overridden method
 # [W0232(no-init), gaetk_Snippet] Class has no __init__ method
 # [W0703(broad-except), show_snippet] Catching too general exception Exception]
+# [I0011(locally-disabled), ] Locally disabling unused-argument (W0613)
 
 PYLINT_ARGS= "--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
-			 -rn --ignore=config.py \
+			 -rn --ignore=config.py,_itsdangerous.py,_gaesessions.py,_internal.py \
              --dummy-variables-rgx="_|dummy" \
              --generated-members=request,response,data,_fields,errors \
              --ignored-classes=Struct,Model,google.appengine.api.memcache,google.appengine.api.files,google.appengine.ext.ndb \
@@ -27,14 +29,16 @@ PYLINT_ARGS= "--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
              --good-names=application \
              --disable=C0103,C0330 \
              --disable=E1103 \
-             --disable=R0201,R0903,R0904,R0913 \
-             --disable=W0142,W0201,W0212,W0221,W0232,W0232,W0703
+             --disable=R0201,R0903,R0904,R0913,R0921 \
+             --disable=W0142,W0201,W0212,W0221,W0232,W0232,W0703 \
+             --disable=I0011
 
-LINT_FILES= modules/ tests/*.py *.py lib/appengine-toolkit/gaetk/login.py lib/appengine-toolkit/gaetk/handler.py lib/appengine-toolkit/gaetk/defaulthandlers.py lib/CentralServices/cs/huwawi/*
+# PYLINT_ARGS_ADDON?= --import-graph=import.dot -ry
+LINT_FILES?= modules/ tests/*.py *.py lib/CentralServices/cs/huwawi/ lib/appengine-toolkit/gaetk
 
 LINT_LINE_LENGTH= 110
-LINT_FLAKE8_ARGS= --max-complexity=12 --builtins=_ --exclude=appengine_config.py,lib/CentralServices/cs/huwawi/_porterde.py --max-line-length=$(LINT_LINE_LENGTH) --ignore=E711,E712
-MYPYTHONPATH= lib/google_appengine:lib/google_appengine/lib/jinja2-2.6:./lib/google_appengine/lib/webob-1.2.3:./lib/google_appengine//lib/django-1.5
+LINT_FLAKE8_ARGS= --max-complexity=12 --builtins=_ --exclude=appengine_config.py,lib/*.py --max-line-length=$(LINT_LINE_LENGTH) --ignore=E711,E712
+MYPYTHONPATH= lib/google_appengine:lib/google_appengine/lib/jinja2-2.6:./lib/google_appengine/lib/webob-1.2.3:./lib/google_appengine/lib/django-1.5:./lib/google_appengine/lib/webapp2-2.5.2
 
 default: check
 
@@ -48,7 +52,7 @@ lib/google_appengine/google/__init__.py:
 
 checknodeps:
 	flake8 $(LINT_FLAKE8_ARGS) $(LINT_FILES)
-	sh -c 'PYTHONUNBUFFERED=1 LC_ALL=en_US.UTF-8 PYTHONPATH=`python config.py`:$(MYPYTHONPATH) pylint $(PYLINT_ARGS) $(LINT_FILES)'
+	sh -c 'PYTHONUNBUFFERED=1 LC_ALL=en_US.UTF-8 PYTHONPATH=`python config.py`:$(MYPYTHONPATH) pylint $(PYLINT_ARGS) $(PYLINT_ARGS_ADDON) $(LINT_FILES)'
 
 check: lib/google_appengine/google/__init__.py checknodeps
 

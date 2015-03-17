@@ -6,13 +6,9 @@ gaetk/admin/search.py
 Created by Christian Klein on 2013-12-25.
 Copyright (c) 2013 HUDORA GmbH. All rights reserved.
 """
-import config
-config.imported = True
-
 import logging
 
 from google.appengine.api import search
-from google.appengine.ext import db
 
 import gaetk.compat
 from gaetk.admin import autodiscover
@@ -78,7 +74,6 @@ def perform_search(indexname, query_string, options=None):
 
 def add_to_index(key):
     """Füge Instanz dem Suchindex hinzu"""
-
     obj = gaetk.compat.xdb_get(key)
     if obj is None:
         return

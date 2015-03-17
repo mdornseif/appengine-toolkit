@@ -61,17 +61,17 @@ class LoginHandler(gaetk.handler.BasicHandler):
 
     def handle_sso(self, continue_url):
         "Try single sign on via a different hudora.de domain."
-        from gaetk import itsdangerous
-        s = itsdangerous.URLSafeTimedSerializer(self.session.base_key)
+        from gaetk.lib import _itsdangerous
+        s = _itsdangerous.URLSafeTimedSerializer(self.session.base_key)
         decoded_payload = None
         try:
             decoded_payload = s.loads(
                 self.request.cookies.get('gaetkuid', None),
                 max_age=60 * 30)
             # This payload is decoded and safe
-        except itsdangerous.SignatureExpired:
+        except _itsdangerous.SignatureExpired:
             logging.warn("SignatureExpired")
-        except itsdangerous.BadSignature:
+        except _itsdangerous.BadSignature:
             logging.warn("BadSignature")
         if decoded_payload and 'uid' in decoded_payload:
             if not os.environ.get('HTTP_HOST', '').endswith(decoded_payload.get('provider', '?')):

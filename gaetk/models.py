@@ -14,8 +14,7 @@ There is no support for logging of read actions yet.
 Created by Christian Klein on 2011-01-22.
 Copyright (c) 2011 HUDORA. All rights reserved.
 """
-
-from gaetk.gaesessions import get_current_session
+from gaetk.lib._gaesessions import get_current_session
 from google.appengine.ext import blobstore
 from google.appengine.api import users
 from google.appengine.ext import db
@@ -102,7 +101,7 @@ class LoggedModel(db.Model):
                 if current_value is None:
                     current_value = new_value
             elif isinstance(prop, blobstore.BlobReferenceProperty):
-                # TODO: Compare BlobInfo
+                # Nice to have, but missing: Compare BlobInfo
                 current_value = new_value
 
             if current_value != new_value:

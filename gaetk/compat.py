@@ -34,6 +34,7 @@ def xdb_get_instance(model_class, encoded_key):
 
 
 def xdb_get(key):
+    """Gent an entity."""
     if isinstance(key, ndb.key.Key):
         return key.get()
     else:
@@ -41,6 +42,7 @@ def xdb_get(key):
 
 
 def xdb_is_ndb(model_class):
+    """Check if instance is ndb or db."""
     if hasattr(model_class, 'all'):
         return False
     else:
@@ -48,6 +50,7 @@ def xdb_is_ndb(model_class):
 
 
 def xdb_key(instance):
+    """Return key."""
     if xdb_is_ndb(instance):
         return instance.key
     else:
@@ -55,6 +58,7 @@ def xdb_key(instance):
 
 
 def xdb_id_or_name(key):
+    """Return key-name (or id)."""
     if isinstance(key, ndb.key.Key):
         return key.id()
     else:
@@ -62,6 +66,7 @@ def xdb_id_or_name(key):
 
 
 def xdb_to_protobuf(instance):
+    """Convert an instance to a protobuuf."""
     if xdb_is_ndb(instance):
         return ndb.ModelAdapter().entity_to_pb(instance).Encode()
     else:
@@ -69,17 +74,18 @@ def xdb_to_protobuf(instance):
 
 
 def xdb_properties(instance):
+    """Properties einer Entity."""
     if xdb_is_ndb(instance):
         return instance._properties
     else:
         instance.properties()
 
 
-def _get_queryset_db(model_class, ordering=None):
+def _get_queryset_db(model_class, ordering=(None, None)):
     """Queryset für Subklasse von db.Model"""
     query = model_class.all()
-    if ordering:
-        attr, direction = ordering
+    attr, direction = ordering
+    if attr:
         if attr in model_class.properties():
             if direction == '-':
                 attr = '-' + attr
@@ -106,7 +112,6 @@ def xdb_queryset(model_class, ordering=None):
 
     Es wird die gewünschte Sortierung durchgeführt.
     """
-    # TODO: Tupel: (attr, direction)
     if xdb_is_ndb(model_class):
         query = _get_queryset_ndb(model_class, ordering)
     else:
@@ -115,6 +120,7 @@ def xdb_queryset(model_class, ordering=None):
 
 
 def xdb_fetch_page(query, limit, offset=None, start_cursor=None):
+    """Pagination-ready fetching a some entities."""
     if isinstance(query, ndb.Query):
         if start_cursor:
             objects, cursor, more_objects = query.fetch_page(limit, start_cursor=Cursor(urlsafe=start_cursor))

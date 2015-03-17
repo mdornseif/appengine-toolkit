@@ -28,17 +28,10 @@ handlers:
 Created by Christian Klein on 2011-11-24.
 Copyright (c) 2011, 2012 HUDORA. All rights reserved.
 """
-
-import config
-config.imported = True
-
-try:
-    import json
-except ImportError:
-    import simplejson as json
+import json
 import time
+import webapp2
 
-import gaetk
 import gaetk.handler
 from google.appengine.ext import db
 
@@ -55,7 +48,7 @@ def get_config(key, default=None):
     """Get (cached) configuration value for key"""
 
     if key in CONFIG_CACHE:
-        timestamp, value = CONFIG_CACHE[key]
+        timestamp, _value = CONFIG_CACHE[key]
         if timestamp > time.time() - 100:
             return CONFIG_CACHE.get(key)[1]
 
@@ -87,13 +80,4 @@ class FlushConfigCacheHandler(gaetk.handler.BasicHandler):
         self.response.out.write('ok\n')
 
 
-application = gaetk.webapp2.WSGIApplication([('.*/flush', FlushConfigCacheHandler)])
-
-
-def main():
-    """Main Entry Point for Python 2.5 Runtime"""
-    application.run()
-
-
-if __name__ == "__main__":
-    main()
+application = webapp2.WSGIApplication([('.*/flush', FlushConfigCacheHandler)])

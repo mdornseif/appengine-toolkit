@@ -4,15 +4,14 @@
 gaetk/__init__.py
 
 Created by Maximillian Dornseif on 2010-10-31.
-Copyright (c) 2010, 2012 HUDORA. All rights reserved.
+Copyright (c) 2010, 2012, 2015 HUDORA. All rights reserved.
 """
 
-try:
-    import webapp2  # on AppEngine python27
-except ImportError:
-    import mywebapp2 as webapp2  # on AppEngine python25
+import webapp2  # on AppEngine python27
 
-import configuration
-import handler
-import infrastructure
-import tools
+from gaetk import handler
+from gaetk.lib import _gaesessions as gaesessions
+
+__all__ = [
+    'webapp2', 'configuration', 'compat', 'handler', 'infrastructure', 'tools',
+    'gaesessions']
