@@ -16,7 +16,6 @@ from google.appengine.ext import db
 
 import gaetk.compat
 from gaetk.admin import autodiscover
-from gaetk.admin.sites import site
 from gaetk.admin.util import get_app_name
 
 
@@ -88,10 +87,14 @@ def add_to_index(key):
     skey = gaetk.compat.xdb_str_key(key)
     kind = gaetk.compat.xdb_kind(obj)
 
-    admin = site._registry.get(type(obj))
-    if hasattr(admin, 'searchdoc'):
-        data = admin.searchdoc(obj)
-    elif hasattr(obj, 'as_dict'):
+    # We have some very nasty problems with cyclic imports
+    # site registry depends on options and options depends
+    # on a lot of stuff which depends on the site registry
+    #admin = gaetk.admin.sites.site._registry.get(type(obj))
+    #if hasattr(admin, 'searchdoc'):
+    #    data = admin.searchdoc(obj)
+
+    if hasattr(obj, 'as_dict'):
         data = obj.as_dict()
     else:
         key_name = gaetk.compat.xdb_id_or_name(key)

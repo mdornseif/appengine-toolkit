@@ -21,10 +21,63 @@ from google.appengine.ext import ndb
 from wtforms.ext.appengine.db import model_form
 
 from gaetk.admin import util
-from gaetk.admin.sites import site
 from gaetk.admin.models import DeletedObject
 from gaetk import compat
 
+from gaetk.compat import xdb_kind
+
+# sites registry
+
+class AdminSite(object):
+    """Konzept zur Verwaltung (per Weboberfläche) adminsitrierbarer GAE Models."""
+
+    def __init__(self):
+        """Konstruktor."""
+        self._registry = {}
+
+    def get_admin_class(self, key):
+        return self._registry.get(key)
+
+    def register(self, model_class, admin_class=None):
+        """Registers the given model with the given admin class."""
+
+        # We have some very nasty problems with cyclic imports
+        # site registry depends on options and options depends
+        # on a lot of stuff which depends on the site registry
+        # if we would be able to break the dependency between the registry
+        # AdminSite and ModelAdmin things would be much easier.
+        if admin_class is None:
+            admin_class = ModelAdmin
+
+        # # Don't import the humongous validation code unless required
+        # if admin_class and settings.DEBUG:
+        #     from django.contrib.admin.validation import validate
+        # else:
+        #     validate = lambda model, adminclass: None
+
+        if model_class in self._registry:
+            logging.warn(u'The model %s is already registered', xdb_kind(model_class))
+
+        # Instantiate the admin class to save in the registry
+        self._registry[model_class] = admin_class(model_class, self)
+
+    @property
+    def registry(self):
+        """Gib eine Kopie der Registry zurück"""
+        return dict(self._registry)
+
+    def get_model_class(self, application, model):
+        """Klasse zu 'model' zurückgeben."""
+
+        for model_class in self._registry:
+            if model == xdb_kind(model_class) and application == util.get_app_name(model_class):
+                return model_class
+
+
+# The global AdminSite instance
+site = AdminSite()
+
+# options
 
 class ModelAdmin(object):
     """Admin Modell."""

@@ -8,8 +8,6 @@ Copyright (c) 2010, 2012, 2014 HUDORA. All rights reserved.
 import json
 import logging
 import re
-from itertools import groupby
-from operator import itemgetter
 
 import jinja2
 from jinja2.utils import Markup
@@ -73,7 +71,7 @@ def to_json(value):
 
 def make_attrgetter(environment, attribute):
     """Returns a callable that looks up the given attribute from a
-    passed object with the rules of the environment.  Dots are allowed
+    passed object with the rules of the environment. Dots are allowed
     to access attributes of attributes.
     """
     if not isinstance(attribute, basestring) or '.' not in attribute:
@@ -81,26 +79,11 @@ def make_attrgetter(environment, attribute):
     attribute = attribute.split('.')
 
     def attrgetter(item):
+        """Closure."""
         for part in attribute:
             item = environment.getitem(item, part)
         return item
     return attrgetter
-
-
-def do_groupbyr(environment, value, attribute):
-    """reversed groupby"""
-    expr = make_attrgetter(environment, attribute)
-    return sorted(map(_GroupTuple, groupby(sorted(value, key=expr, reverse=True), expr)), reverse=True)
-do_groupbyr.environmentfilter = True
-
-
-class _GroupTuple(tuple):
-    __slots__ = ()
-    grouper = property(itemgetter(0))
-    list = property(itemgetter(1))
-
-    def __new__(cls, (key, value)):
-        return tuple.__new__(cls, (key, list(value)))
 
 
 def plural(value, singular_str, plural_str):
@@ -117,7 +100,7 @@ def filter_dateformat(value, formatstring='%Y-%m-%d'):
     """Formates a date"""
 
     from huTools.calendar.formats import convert_to_date
-    return convert_to_date(value).isoformat()
+    return convert_to_date(value).strftime(formatstring)
 
 
 def filter_markdown(value):
@@ -147,7 +130,7 @@ def filter_urlquote(value):
     """Makes a string valid in an URL."""
     import huTools.http.tools
 
-    if type(value) == 'Markup':
+    if hasattr(value, 'unescape'):  # jinja2 Markup
         value = value.unescape()
     return huTools.http.tools.quote(value)
 
@@ -272,7 +255,6 @@ def register_custom_filters(jinjaenv):
     jinjaenv.filters['nicenum'] = nicenum
     jinjaenv.filters['eurocent'] = eurocent
     jinjaenv.filters['to_json'] = to_json
-    jinjaenv.filters['groupbyr'] = do_groupbyr
     jinjaenv.filters['plural'] = plural
     jinjaenv.filters['dateformat'] = filter_dateformat
     jinjaenv.filters['markdown'] = filter_markdown
