@@ -50,11 +50,11 @@ from webob.exc import HTTPTemporaryRedirect as HTTP307_TemporaryRedirect
 from webob.exc import HTTPUnauthorized as HTTP401_Unauthorized
 from webob.exc import HTTPUnsupportedMediaType as HTTP415_UnsupportedMediaType
 
-from gaetk.gaesessions import get_current_session
+from gaetk.lib._gaesessions import get_current_session
+from gaetk.lib import _itsdangerous
 import gaetk.compat
 import gaetk.tools
-from gaetk import webapp2
-from gaetk import itsdangerous
+import webapp2
 
 
 LOGIN_ALLOWED_DOMAINS = getattr(config, 'LOGIN_ALLOWED_DOMAINS', [])
@@ -74,7 +74,8 @@ _dummy = [HTTP301_Moved, HTTP302_Found, HTTP303_SeeOther, HTTP307_TemporaryRedir
           HTTP503_ServiceUnavailable]
 
 
-CREDENTIAL_CACHE_TIMEOUT = 300
+CREDENTIAL_CACHE_TIMEOUT = 600
+_local_credential_cache = {}
 _jinja_env_cache = {}
 
 
@@ -98,7 +99,7 @@ def login_user(credential, session, via, response=None):
         else:
             os.environ['USER_EMAIL'] = '%s@auth.hudora.de' % credential.uid
     if response:
-        s = itsdangerous.URLSafeTimedSerializer(session.base_key)
+        s = _itsdangerous.URLSafeTimedSerializer(session.base_key)
         domain = gaetk.tools.get_cookie_domain()
         uidcookie = s.dumps(dict(uid=credential.uid, provider=os.environ.get('HTTP_HOST', '')))
         response.set_cookie('gaetkuid', uidcookie, domain='.%s' % domain, max_age=60 * 60 * 2)
@@ -108,14 +109,12 @@ def login_user(credential, session, via, response=None):
             "%s logged in via %s since %s sid:%s",
             credential.uid, session['login_via'], session['login_time'], session.sid)
 
-_local_credential_cache = {}
-
 
 def _get_credential(username):
     """Helper to read Credentials - can be monkey_patched"""
     if username in _local_credential_cache:
         credential, ts = _local_credential_cache[username]
-        if ts + 600 < time.time():  # 10 Minutes caching
+        if ts + CREDENTIAL_CACHE_TIMEOUT < time.time():  # 10 Minutes caching
             return credential
         else:
             del _local_credential_cache[username]
@@ -327,7 +326,7 @@ class BasicHandler(webapp2.RequestHandler):
                 extensions=extensions,
                 auto_reload=False,  # do not check if the source changed
                 trim_blocks=True,  # first newline after a block is removed
-                bytecode_cache=jinja2.MemcachedBytecodeCache(memcache, timeout=600)
+                bytecode_cache=jinja2.MemcachedBytecodeCache(memcache, timeout=3600)
             )
             myfilters.register_custom_filters(env)
             self.add_jinja2env_globals(env)
