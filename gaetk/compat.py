@@ -87,7 +87,7 @@ def _get_queryset_db(model_class, ordering=None):
     return query
 
 
-def _get_queryset_ndb(model_class, ordering):
+def _get_queryset_ndb(model_class, ordering=None):
     """Queryset für Subklasse von ndb.Model"""
     query = model_class.query()
     if ordering:
@@ -111,6 +111,15 @@ def xdb_queryset(model_class, ordering=None):
         query = _get_queryset_ndb(model_class, ordering)
     else:
         query = _get_queryset_db(model_class, ordering)
+    return query
+
+
+def xdb_query_run(query):
+    """Erzeugt einen Iterator basierend auf einer query."""
+    if isinstance(query, ndb.Query):
+        return query()
+    else:
+        return query.run()
     return query
 
 

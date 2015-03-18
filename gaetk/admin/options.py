@@ -386,29 +386,11 @@ class ModelExporter(object):
 
     def to_xls(self, fileobj):
         # we create a fake writer object to do buffering
-        # because xlwt cant do streaming writes.
-
-        xlswriter = XlsWriter()
+        # because xlwt can't do streaming writes.
+        import huTools.structured_xls
+        xlswriter = huTools.structured_xls.XLSwriter()
         self.create_header(xlswriter)
         for row in self.model.query():
             self.create_row(xlswriter, row)
         xlswriter.save(fileobj)
 
-
-class XlsWriter(object):
-    def __init__(self):
-        from xlwt import Workbook
-        self.buff = []
-        self.book = Workbook()
-        self.sheet = self.book.add_sheet('Export')
-        self.rownum = 0
-
-    def writerow(self, row):
-        col = 0
-        for coldata in row:
-            self.sheet.write(self.rownum, col, coldata)
-            col += 1
-        self.rownum += 1
-
-    def save(self, fd):
-        self.book.save(fd)
