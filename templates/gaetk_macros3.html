@@ -1,0 +1,18 @@
+{# macros for bootstrap3 #}
+
+{% macro paginate() -%}
+  <nav>
+    <ul class="pager">
+      <li class="previous{% if not prev_objects %} disabled{% endif %}">
+        <{% if prev_objects %}a href="?{{ prev_qs|e }}"
+         {% else %}span{% endif %}><span aria-hidden="true">&larr;</span> Zurück
+        </{% if prev_objects %}a{% else %}span{% endif %}>
+      </li>
+      <li class="next{% if not more_objects %} disabled{% endif %}">
+        <{% if more_objects %}a href="?{{ next_qs|e }}"
+         {% else %}span{% endif %}> Vor <span aria-hidden="true">&rarr;</span>
+        </{% if more_objects %}a{% else %}span{% endif %}>
+     </li>
+    </ul>
+  </nav>
+{% endmacro %}
