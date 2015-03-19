@@ -329,8 +329,8 @@ class BasicHandler(webapp2.RequestHandler):
                 bytecode_cache=jinja2.MemcachedBytecodeCache(memcache, timeout=3600)
             )
             myfilters.register_custom_filters(env)
-            self.add_jinja2env_globals(env)
             _jinja_env_cache[key] = env
+        self.add_jinja2env_globals(_jinja_env_cache[key])
         return _jinja_env_cache[key]
 
     def add_jinja2env_globals(self, env):

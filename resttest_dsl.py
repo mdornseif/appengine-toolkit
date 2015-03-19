@@ -254,15 +254,16 @@ class TestClient(object):
         """
         self.authdict[auth] = creds
 
-    def GET(self, path, auth=None, accept=None):
+    def GET(self, path, auth=None, accept=None, headers={}):
         """Führt einen HTTP-GET auf den gegebenen [path] aus.
         Nutzt dabei ggf. die credentials zu [auth] und [accept]."""
         if auth and auth not in self.authdict:
             raise ValueError("Unknown auth '%s'" % auth)
 
-        headers = {}
+        myheaders = {}
         if accept:
-            headers['Accept'] = accept
+            myheaders['Accept'] = accept
+        myheaders.update(headers)
 
         url = urlparse.urlunparse((self.protocol, self.host, path, '', '', ''))
 
@@ -283,10 +284,28 @@ class TestClient(object):
             status, responseheaders, content = fetch(
                 url, content='', method='GET',
                 credentials=self.authdict.get(auth),
-                headers=headers, multipart=False, ua='resttest', timeout=30)
+                headers=myheaders, multipart=False, ua='resttest', timeout=30)
             duration = int((time.time() - start) * 1000)
             slowstats[url] = duration
             counter += 1
+        response = Response('GET', url, status, responseheaders, content, duration)
+        self.responses.append(response)
+        return response
+
+    def POST(self, path, content, auth=None, headers={}):
+        """Führt einen HTTP-GET auf den gegebenen [path] aus.
+        Nutzt dabei ggf. die credentials zu [auth] und [accept]."""
+        if auth and auth not in self.authdict:
+            raise ValueError("Unknown auth '%s'" % auth)
+        url = urlparse.urlunparse((self.protocol, self.host, path, '', '', ''))
+
+        start = time.time()
+        status, responseheaders, content = fetch(
+            url, content=content, method='GET',
+            credentials=self.authdict.get(auth),
+            headers=headers, multipart=False, ua='resttest', timeout=30)
+        duration = int((time.time() - start) * 1000)
+
         response = Response('GET', url, status, responseheaders, content, duration)
         self.responses.append(response)
         return response

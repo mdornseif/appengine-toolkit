@@ -6,6 +6,7 @@ defaulthandlers.py - handlers implementing common functionality for gaetk
 Created by Maximillian Dornseif on 2011-01-09.
 Copyright (c) 2011, 2015 HUDORA. All rights reserved.
 """
+import config
 import datetime
 import json
 import os
@@ -113,12 +114,6 @@ class RobotTxtHandler(gaetk.handler.BasicHandler):
 
     def get(self):
         """Deliver robots.txt based on application version."""
-
-        config = object()
-        try:
-            import config
-        except ImportError:
-            pass
 
         canonical_hostname = getattr(config, 'CANONICAL_HOSTNAME', None)
         if canonical_hostname is None or self.request.host == canonical_hostname:

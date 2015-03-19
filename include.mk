@@ -11,7 +11,7 @@ OPENAPPID?= $(APPID)
 # [R0903(too-few-public-methods), gaetk_Snippet] Too few public methods (0/2)
 # [R0904(too-many-public-methods), ShowKategorie] Too many public methods (22/20)
 # [R0913(too-many-arguments),
-# [R0921(abstract-class-not-used), AuditLog] Abstract class not referenced#
+# [R0921(abstract-class-not-used), AuditLog] Abstract class not referenced
 # [R0922(abstract-class-little-used)]
 # [W0142(star-args), CheckoutHandler.get] Used * or ** magic
 # [W0201(attribute-defined-outside-init), wwwHandler.default_template_vars] Attribute 'title' defined outside __init__
@@ -22,7 +22,7 @@ OPENAPPID?= $(APPID)
 # [I0011(locally-disabled), ] Locally disabling unused-argument (W0613)
 
 PYLINT_ARGS= "--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
-			 -rn --ignore=config.py,_itsdangerous.py,_gaesessions.py,_internal.py \
+			 -rn --ignore=config.py,_gaesessions.py,_internal.py,_itsdangerous.py,huwawi_a_models.py \
              --dummy-variables-rgx="_|dummy" \
              --generated-members=request,response,data,_fields,errors \
              --ignored-classes=Struct,Model,google.appengine.api.memcache,google.appengine.api.files,google.appengine.ext.ndb \
@@ -37,7 +37,7 @@ PYLINT_ARGS= "--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
              --disable=I0011
 
 # PYLINT_ARGS_ADDON?= --import-graph=import.dot -ry
-LINT_FILES?= modules/ tests/*.py *.py lib/CentralServices/cs/huwawi/ lib/appengine-toolkit/gaetk
+LINT_FILES?= modules/ tests/*.py *.py lib/CentralServices/cs lib/appengine-toolkit/gaetk
 
 LINT_LINE_LENGTH= 110
 LINT_FLAKE8_ARGS= --max-complexity=12 --builtins=_ --exclude=appengine_config.py,lib/*.py --max-line-length=$(LINT_LINE_LENGTH) --ignore=E711,E712
