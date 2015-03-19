@@ -1,6 +1,7 @@
 GAE_VERSION=1.9.18
 PRODUCTIONURL?= https://$(OPENAPPID).appspot.com/
 DEVPAGE?= /
+OPENAPPID?= $(APPID)
 
 # we don't want to know about:
 # [C0103(invalid-name), ] Invalid constant name "application"
@@ -11,6 +12,7 @@ DEVPAGE?= /
 # [R0904(too-many-public-methods), ShowKategorie] Too many public methods (22/20)
 # [R0913(too-many-arguments),
 # [R0921(abstract-class-not-used), AuditLog] Abstract class not referenced#
+# [R0922(abstract-class-little-used)]
 # [W0142(star-args), CheckoutHandler.get] Used * or ** magic
 # [W0201(attribute-defined-outside-init), wwwHandler.default_template_vars] Attribute 'title' defined outside __init__
 # [W0212(protected-access)] we know what we are doing
@@ -26,10 +28,11 @@ PYLINT_ARGS= "--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
              --ignored-classes=Struct,Model,google.appengine.api.memcache,google.appengine.api.files,google.appengine.ext.ndb \
              --no-docstring-rgx="(__.*__|get|post|head)" \
              --max-line-length=$(LINT_LINE_LENGTH) \
+             --max-locals=20 --max-attributes=20 --max-returns=8 \
              --good-names=application \
              --disable=C0103,C0330 \
              --disable=E1103 \
-             --disable=R0201,R0903,R0904,R0913,R0921 \
+             --disable=R0201,R0903,R0904,R0913,R0921,R0922 \
              --disable=W0142,W0201,W0212,W0221,W0232,W0232,W0703 \
              --disable=I0011
 

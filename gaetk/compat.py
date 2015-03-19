@@ -97,7 +97,7 @@ def _get_queryset_ndb(model_class, ordering=None):
     """Queryset für Subklasse von ndb.Model"""
     query = model_class.query()
     if ordering:
-        attr, direction = ordering
+        attr, direction = ordering  # pylint: disable=unpacking-non-sequence
         prop = model_class._properties.get(attr)
         if prop:
             if direction == '-':
