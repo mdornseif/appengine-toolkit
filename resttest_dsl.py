@@ -321,8 +321,11 @@ def extract_links(content, url):
     links = []
     dom =  lxml.html.document_fromstring(content, base_url=url)
     dom.make_links_absolute(url)
-    for _element, _attribute, link, _pos in dom.iterlinks():
+    for element, _attribute, link, _pos in dom.iterlinks():
         if link.startswith('http'):
+            if element.tag == 'form' and element.get('method'):
+                if element.get('method').upper() == 'POST':
+                    continue
             links.append(link)
         alllinks[link] += 1
     return links
