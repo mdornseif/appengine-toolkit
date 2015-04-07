@@ -844,14 +844,19 @@ class MarkdownFileHandler(BasicHandler):
         path = path + '.markdown'
         textfile = 'text/%s' % path
         title = ''
+        if not os.path.exists(textfile):
+            raise gaetk.handler.HTTP404_NotFound("%s not available" % textfile)
         try:
             with codecs.open(textfile, 'r', 'utf-8') as fileobj:
-                text = fileobj.read()
+                text = []
                 # wir gehen davon aus, dass die erste Zeile, die mit `# ` beginnt, der Titel ist
-                for line in text.split('\n'):
-                    if line.startswith('# '):
+                for line in fileobj.readlines():
+                    if line.startswith('# ') and not title:
                         title = line.lstrip('# ')
-                        break
-            self.render({'text': text, 'title': title}, self.template_name)
+                    else:
+                        text.append(line)
+
+            self.render({'text': "".join(text), 'title': title}, self.template_name)
         except IOError:
+            raise
             raise gaetk.handler.HTTP404_NotFound("%s not available" % textfile)

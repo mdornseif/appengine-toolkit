@@ -170,8 +170,8 @@ class WarmupHandler(gaetk.handler.BasicHandler):
 
 
 application = gaetk.webapp2.WSGIApplication([
-    ('/gaetk/stats.json', Stats),
-    ('/robots.txt', RobotTxtHandler),
-    ('/version.txt', VersionHandler),
+    (r'/gaetk/stats.json', Stats),
+    (r'^/robots.txt', RobotTxtHandler),
+    (r'^/version.txt', VersionHandler),
     (r'^/_ah/warmup$', WarmupHandler),
 ])
