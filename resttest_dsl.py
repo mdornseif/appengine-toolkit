@@ -55,7 +55,8 @@ class Response(object):
     r.responds_html()
     """
 
-    def __init__(self, method, url, status, headers, content, duration):  # pylint: disable=R0913
+    def __init__(self, client, method, url, status, headers, content, duration):  # pylint: disable=R0913
+        self.client = client
         self.method = method
         self.url = url
         self.status = status
@@ -238,6 +239,27 @@ class Response(object):
         self.responds_fast(maxduration)
         return self
 
+    def responds_unauthorized(self):
+        """sichert zu, dass der Zugriff verweigert wurde."""
+        self.responds_http_status(403)
+
+    def responds_with_html_to_valid_auth(self):
+        """
+        Stellt sicher, dass der Request nur mit gueltiger Authentifizierung
+        funktioniert und ansonsten der Zugriff verweigert wird.
+        """
+        self.responds_http_status(401)
+        path = urlparse.urlparse(self.url).path
+        self.client.GET(path, auth='user').responds_html()
+
+    def responds_with_json_to_valid_auth(self):
+        """stellt sicher, das der Request nur mit gueltiger Authentifizierung
+        funktioniert und ansonsten der Zugriff verweigert wird."""
+        self.responds_http_status(401)
+        path = urlparse.urlparse(self.url).path
+        self.client.GET(path, auth='user').responds_json()
+
+
 class TestClient(object):
     """Hilfsklasse zum Ausfuehren von HTTP-Requests im Rahmen von Tests."""
     def __init__(self, host):
@@ -288,7 +310,7 @@ class TestClient(object):
             duration = int((time.time() - start) * 1000)
             slowstats[url] = duration
             counter += 1
-        response = Response('GET', url, status, responseheaders, content, duration)
+        response = Response(self, 'GET', url, status, responseheaders, content, duration)
         self.responses.append(response)
         return response
 
@@ -306,7 +328,7 @@ class TestClient(object):
             headers=headers, multipart=False, ua='resttest', timeout=30)
         duration = int((time.time() - start) * 1000)
 
-        response = Response('GET', url, status, responseheaders, content, duration)
+        response = Response(self, 'GET', url, status, responseheaders, content, duration)
         self.responses.append(response)
         return response
 
