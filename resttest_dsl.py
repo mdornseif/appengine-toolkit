@@ -108,9 +108,9 @@ class Response(object):
 
     def redirects_to(self, expected_url):
         """sichert zu, dass mit einen Redirect geantwortet wurde."""
-        location = self.headers.get('location')
-        self.expect_condition(location == expected_url,
-                        'expected redirect to %s, got %s' % (expected_url, location))
+        location = self.headers.get('location', self.headers.get('content-location', ''))
+        self.expect_condition(
+            location.endswith(expected_url), 'expected redirect to %s, got %s' % (expected_url, location))
 
     def converter_succeeds(self, converter, message):
         """sichert zu, dass content mittels converter(self.content) ohne exception konvertiert werden kann"""
