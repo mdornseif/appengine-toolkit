@@ -1,16 +1,12 @@
 cron:
 # Syncronisation
 - description: Artikelpass taeglich
-  url: /huwawi_local/auto/SyncDaily
+  url: /huwawi_local/auto/eap
   schedule: every 24 hours
   timezone: Europe/Paris
 - description: Artikelpass woechentlich
-  url: /huwawi_local/auto/SyncWeekly
+  url: /huwawi_local/auto/eap/weekly
   schedule: every 168 hours
-  timezone: Europe/Paris
-- description: Artikelpass monatlich
-  url: /huwawi_local/auto/SyncMonthly
-  schedule: every 720 hours
   timezone: Europe/Paris
 
 - description: Replikation zu CloudSQL

@@ -22,6 +22,7 @@ from gaetk.infrastructure import query_iterator
 
 
 class ModelExporter(object):
+    """Export all entities of a Model as XLS, CSV, etc."""
     def __init__(self, model, query=None):
         self.model = model
         self.query = query
@@ -74,6 +75,7 @@ class ModelExporter(object):
         return csv.writer(fileobj, dialect='excel', delimiter='\t')
 
     def to_csv(self, fileobj):
+        """generate CSV in fileobj"""
         csvwriter = csv.writer(fileobj, dialect='excel', delimiter='\t')
         fixer = lambda row: [unicode(x).encode('utf-8') for x in row]
         self.create_header(csvwriter, fixer)
@@ -81,6 +83,7 @@ class ModelExporter(object):
             self.create_row(csvwriter, row, fixer)
 
     def to_xls(self, fileobj):
+        """generate XLS in fileobj"""
         import huTools.structured_xls
         xlswriter = huTools.structured_xls.XLSwriter()
         self.create_header(xlswriter)
