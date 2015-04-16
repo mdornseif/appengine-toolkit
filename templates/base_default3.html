@@ -1,6 +1,6 @@
 {% extends "base_minimal3.html" %}
 <!DOCTYPE html>
-    {% block gaetkstyle %}
+    {% block gaetkstyle %}<!--base_default3:gaetkstyle-->
     <style type="text/css">
 body {
   padding-top: 20px;
@@ -11,9 +11,9 @@ body {
   margin-bottom: 20px;
 }
     </style>
-    {% endblock gaetkstyle %}
+    <!--/base_default3:gaetkstyle-->{% endblock gaetkstyle %}
 
-      {% block navbar -%}
+      {% block navbar -%}<!--base_default3:navbar-->
       <!-- Static navbar -->
       <div class="navbar navbar-default" role="navigation">
         <div class="container-fluid">
@@ -24,13 +24,13 @@ body {
               <span class="icon-bar"></span>
               <span class="icon-bar"></span>
             </button>
-            <a class="navbar-brand" href="/">{% block projectname -%}
+            <a class="navbar-brand" href="/">{% block projectname -%}<!--base_default3:projectname-->
               {% if projectname is defined -%}
                 {{ projectname|e }}
               {%- else -%}
                 gaetk used without setting `projectname`
               {%- endif -%}
-            {%- endblock projectname %}</a>
+            <!--/base_default3:projectname-->{%- endblock projectname %}</a>
           </div>
           <div class="navbar-collapse collapse">
             <ul class="nav navbar-nav">
@@ -58,10 +58,11 @@ body {
           </div><!--/.nav-collapse -->
         </div><!--/.container-fluid -->
       </div>
-     {%- endblock navbar %}
+    {% block navbaraddon %}<!--base_default3:navbaraddon-->
+    {% endblock navbaraddon %}
+    <!--/base_default3:navbar-->{%- endblock navbar %}
 
-    {% block content -%}
-
+    {% block content -%}<!--base_default3:content-->
         {# display session specific messages #}
         {% if _gaetk_messages is defined -%}
           {% for message in _gaetk_messages -%}
@@ -72,30 +73,30 @@ body {
           {%- endfor %}
         {%- endif %}
 
-      {% block firstheading -%}<h1>{% if title is defined %}{{ title|e }}{% endif %}</h1>{%- endblock firstheading %}
+      {% block firstheading -%}<!--base_default3:firstheading--><h1>{% if title is defined %}{{ title|e }}{% endif %}</h1><!--/base_default3:firstheading-->{%- endblock firstheading %}
 
       <div class="row mainrow">
-      {% block mainrow -%}
+      {% block mainrow -%}<!--base_default3:mainrow-->
         <div class="col-sm-8 maincontent">
-        {% block maincontent -%}
+        {% block maincontent -%}<!--base_default3:maincontent-->
           {% if content is defined -%}
             {{ content }}
           {%- else -%}
             {#<h3>Main content</h3>#}
           {%- endif %}
-        {%- endblock maincontent %}
+        <!--/base_default3:maincontent-->{%- endblock maincontent %}
         </div>
 
-        <div class="col-sm-3 col-sm-offset-1">
-        {% block secondarycontent -%}
+        <div class="col-md-3 col-md-offset-1">
+        {% block secondarycontent -%}<!--base_default3:secondarycontent-->
           {% if secondarycontent is defined -%}
             {{ secondarycontent }}
           {%- else -%}
             {# <h3>Secondary content</h3> #}
           {%- endif %}
-        {%- endblock secondarycontent %}
+        <!--/base_default3:secondarycontent-->{%- endblock secondarycontent %}
         </div>
-      {%- endblock mainrow %}
+      <!--/base_default3:mainrow-->{%- endblock mainrow %}
       </div>
     </div>
-    {%- endblock content %}
+    <!--/base_default3:content-->{%- endblock content %}

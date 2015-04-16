@@ -9,9 +9,8 @@
     <script src="//code.jquery.com/jquery-1.11.2.min.js"></script>
     <script src="//code.jquery.com/ui/1.11.2/jquery-ui.min.js"></script>
     <!-- Bootstrap -->
-    <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet">
     <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
-
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -19,21 +18,22 @@
       <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
     <![endif]-->
 
-    {% block gaetkstyle %}
-    {% endblock gaetkstyle %}
-    {% block extrastyle %}
-    {% endblock extrastyle %}
+    {% block gaetkstyle -%}
+      <!--base_minimal3:gaetkstyle--><!--/base_minimal3:gaetkstyle-->
+    {%- endblock gaetkstyle %}
+    {% block extrastyle -%}
+      <!--base_minimal3:extrastyle--><!--/base_minimal3:extrastyle-->
+    {%- endblock extrastyle %}
   </head>
 
   <body>
     <div class="container">
-    {% block container -%}
-      {% block navbar -%}
-      {%- endblock navbar %}
+    {% block container -%}<!--base_minimal3:container-->
+      {% block navbar -%}<!--base_minimal3:navbar-->{%- endblock navbar %}
 
-      {% block content -%}
+      {% block content -%}<!--base_minimal3:content-->
         {# display session specific messages #}
-        {% block gaetk_messages -%}
+        {% block gaetk_messages -%}<!--base_minimal3:gaetk_messages-->
         {% if _gaetk_messages is defined -%}
           {% for message in _gaetk_messages -%}
             <div class="alert alert-{{ message.type }}">
@@ -42,36 +42,36 @@
             </div>
           {%- endfor %}
         {%- endif %}
-        {%- endblock gaetk_messages %}
+        <!--/base_minimal3:gaetk_messages-->{%- endblock gaetk_messages %}
 
         <div class="row mainrow">
-          {% block maincontent -%}
+          {% block maincontent -%}<!--base_minimal3:maincontent-->
 
-          {% block firstheading -%}<h1>{% if title is defined %}{{ title|e }}{% endif %}</h1>{%- endblock firstheading %}
+          {% block firstheading -%}<!--base_minimal3:firstheading--><h1>{% if title is defined %}{{ title|e }}{% endif %}</h1><!--/base_minimal3:firstheading-->{%- endblock firstheading %}
 
-          {% block mainrow -%}
+          {% block mainrow -%}<!--base_minimal3:mainrow-->
             {% if content is defined -%}
               {{ content }}
             {%- else -%}
               {#<h3>Main content</h3>#}
             {%- endif %}
-          {%- endblock mainrow %}
-          {%- endblock maincontent %}
+          <!--/base_minimal3:mainrow-->{%- endblock mainrow %}
+          <!--/base_minimal3:maincontent-->{%- endblock maincontent %}
         </div>
       </div>
     </div>
-    {%- endblock content %}
-    {%- endblock container %}
+    <!--/base_minimal3:content-->{%- endblock content %}
+    <!--/base_minimal3:container-->{%- endblock container %}
     </div>
 
-    {% block footer -%}{%- endblock footer %}
+    {% block footer -%}<!--base_minimal3:footer-->{%- endblock footer %}
 
     <!-- Le javascript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
-    <script src="/gaetk/static/bootstrap/3.3.x/js/bootstrap.min.js"></script>
-    {% block basejavascript -%}{%- endblock basejavascript %}
-    {% block javascript -%}{%- endblock javascript %}
-    {% block analytics_tracking -%}{%- endblock analytics_tracking %}
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    {% block basejavascript -%}<!--base_minimal3:basejavascript-->{%- endblock basejavascript %}
+    {% block javascript -%}<!--base_minimal3:javascript-->{%- endblock javascript %}
+    {% block analytics_tracking -%}<!--base_minimal3:analytics_tracking-->{%- endblock analytics_tracking %}
   </body>
 </html>
