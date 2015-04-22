@@ -841,8 +841,7 @@ class MarkdownFileHandler(BasicHandler):
         path = re.sub(r'[^a-z/]', '', path)
         if not path:
             path = 'index'
-        path = path + '.markdown'
-        textfile = 'text/%s' % path
+        textfile = 'text/%s.markdown' % path
         title = ''
         if not os.path.exists(textfile):
             raise gaetk.handler.HTTP404_NotFound("%s not available" % textfile)
@@ -856,7 +855,7 @@ class MarkdownFileHandler(BasicHandler):
                     else:
                         text.append(line)
 
-            self.render({'text': "".join(text), 'title': title}, self.template_name)
+            self.render({'text': "".join(text), 'title': title, 'path': path}, self.template_name)
         except IOError:
             raise
             raise gaetk.handler.HTTP404_NotFound("%s not available" % textfile)
