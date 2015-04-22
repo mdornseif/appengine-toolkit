@@ -165,7 +165,7 @@ class VersionHandler(gaetk.handler.BasicHandler):
         self.response.write(version + '\n')
 
 
-class Warmup(gaetk.handler.BasicHandler):
+class WarmupHandler(gaetk.handler.BasicHandler):
     """Instanz initialisieren"""
 
     def authchecker(self, method, *args, **kwargs):
@@ -183,5 +183,5 @@ application = gaetk.webapp2.WSGIApplication([
     ('/gaetk/stats.json', Stats),
     ('/robots.txt', RobotTxtHandler),
     ('/version.txt', VersionHandler),
-    (r'^/_ah/warmup$', gaetk.defaulthandlers.WarmupHandler),
+    (r'^/_ah/warmup$', WarmupHandler),
 ])
