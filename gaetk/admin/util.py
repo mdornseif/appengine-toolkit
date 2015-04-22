@@ -30,8 +30,10 @@ def get_app_name(model):
     components = model.__module__.split('.')
     if len(components) > 3:
         return components[-3]
-    else:
+    elif len(components) > 2:
         return components[-2]
+    else:
+        return components[-1]
 
 
 def create_instance(klass, data):
