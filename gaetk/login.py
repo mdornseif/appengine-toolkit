@@ -106,8 +106,8 @@ class LoginHandler(gaetk.handler.BasicHandler):
                 via = 'HTTP'
         # Next, try to get data from the request parameters (form data)
         else:
-            username = self.request.get('username', '').strip()
-            password = self.request.get('password', '').strip()
+            username = self.request.get('username', '').strip().encode('utf-8', 'ignore')
+            password = self.request.get('password', '').strip().encode('utf-8', 'ignore')
             via = 'FORM'
 
         # Verify submitted username and password
@@ -139,8 +139,8 @@ class LoginHandler(gaetk.handler.BasicHandler):
         """
 
         if 'username' in self.request.params:
-            username = self.request.get('username', '').strip()
-            password = self.request.get('password', '').strip()
+            username = self.request.get('username', '').strip().encode('utf-8', 'ignore')
+            password = self.request.get('password', '').strip().encode('utf-8', 'ignore')
             credential = self.get_verified_credential(username, password, self.session)
             if credential:
                 logging.info(u'Login by %s/%s', username, self.request.remote_addr)
