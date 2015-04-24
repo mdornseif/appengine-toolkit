@@ -152,11 +152,11 @@ class NdbCredential(ndb.Expando):
     @classmethod
     def create(cls, uid=None, tenant='_unknown', user=None, admin=False, **kwargs):
         """Creates a credential Object generating a random secret and a random uid if needed."""
-        # secret hopfully contains about 64 bits of entropy - more than most passwords
+        # secret hopfully contains about 40 bits of entropy - more than most passwords
         data = u'%s%s%s%f%s' % (user, uuid.uuid1(), uid, time.time(),
                                 os.environ.get('CURRENT_VERSION_ID', '?'))
         digest = hashlib.md5(data.encode('utf-8')).digest()
-        secret = str(base64.b32encode(digest).rstrip('='))[1:15]
+        secret = str(base64.b32encode(digest).rstrip('='))[1:9]
         if not uid:
             uid = "u%s" % (cls.allocate_ids(1)[0])
         kwargs['permissions'] = ['generic_permission']
