@@ -126,15 +126,6 @@ def filter_nl2br(eval_ctx, value):
     return result
 
 
-def filter_urlquote(value):
-    """Makes a string valid in an URL."""
-    import huTools.http.tools
-
-    if hasattr(value, 'unescape'):  # jinja2 Markup
-        value = value.unescape()
-    return huTools.http.tools.quote(value)
-
-
 @jinja2.contextfilter
 def filter_authorize(context, value, permission_types):
     """Display content only if the current logged in user has a specific permission"""
@@ -237,8 +228,15 @@ def _formatint(value):
     return value
 
 
-@jinja2.contextfilter
-def urlencode_filter(_context, value):
+def filter_attrencode(value):
+    """Makes a string valid as an XML attribute."""
+    import xml.sax.saxutils
+    if hasattr(value, 'unescape'):  # jinja2 Markup
+        value = value.unescape()
+    return xml.sax.saxutils.quoteattr(value)[1:-1]
+
+
+def filter_urlencode(value):
     """Encode string for usage in URLs"""
     import urllib
     if isinstance(value, Markup):
@@ -265,4 +263,5 @@ def register_custom_filters(jinjaenv):
     jinjaenv.filters['percent'] = percent
     jinjaenv.filters['euroword'] = euroword
     jinjaenv.filters['intword'] = intword
-    jinjaenv.filters['urlencode'] = urlencode_filter
+    jinjaenv.filters['attrencode'] = filter_attrencode
+    jinjaenv.filters['urlencode'] = filter_urlencode
