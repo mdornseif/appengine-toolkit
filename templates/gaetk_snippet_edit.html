@@ -1,0 +1,24 @@
+{% extends "base_minimal3.html" %}
+
+{% block firstheading -%}<h1>Bearbeiten von <code><a href="snippet.path_info">{{ snippet.name }}</a></code></h1>{%- endblock firstheading %}
+
+{% block mainrow %}
+<h1 name="edit">Ändern:</h1>
+
+<form method="POST">
+        <input type="hidden" name="name" value="{{ snippet.name }}">
+        <textarea name="sniptext" id="sniptext" class="form-control" rows="10">{{ snippet.markdown }}</textarea>
+  <input type="submit" value="Speichern">
+</form>
+
+{% endblock mainrow %}
+
+{% block javascript -%}
+  <script type="text/javascript" src="/static/pagedown-bootstrap/js/jquery.pagedown-bootstrap.combined.min.js"></script>
+  <link href="/static/pagedown-bootstrap/css/jquery.pagedown-bootstrap.css" rel="stylesheet">
+  <script>
+      $(document).ready(function(){
+                                        $("textarea#sniptext").pagedownBootstrap();
+        });
+  </script>
+{%- endblock javascript %}

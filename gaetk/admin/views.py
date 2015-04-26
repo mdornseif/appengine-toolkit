@@ -177,9 +177,11 @@ class AdminUndeleteHandler(AdminHandler):
 
 
 autodiscover()
-app = make_app([(r'/admin/_undelete/(.+)', AdminUndeleteHandler),
-                (r'/admin/(\w+)/(\w+)/search/$', AdminSearchHandler),
-                (r'/admin/(\w+)/(\w+)/(.+?)/', AdminDetailHandler),
-                (r'/admin/(\w+)/(\w+)/$', AdminListHandler),
+import gaetk.snippets
+app = make_app([(r'^/admin/_undelete/(.+)', AdminUndeleteHandler),
+                (r'^/admin/snippet/edit/', gaetk.snippets.SnippetEditHandler),
+                (r'^/admin/(\w+)/(\w+)/search/$', AdminSearchHandler),
+                (r'^/admin/(\w+)/(\w+)/(.+?)/', AdminDetailHandler),
+                (r'^/admin/(\w+)/(\w+)/$', AdminListHandler),
                 (r'^/admin/?$', AdminIndexHandler),
                 ])
