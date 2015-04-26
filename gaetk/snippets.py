@@ -96,5 +96,5 @@ class SnippetEditHandler(gaetk.handler.BasicHandler):
         snippet = gaetk_Snippet.get_by_id(id=name)
         snippet.markdown = markdown
         snippet.put()
-        memcache.delete('gaetk_snippet:%s:rendered' % name)
+        memcache.delete('gaetk_snippet2:%s:rendered' % name)
         raise gaetk.handler.HTTP303_SeeOther(location=snippet.path_info)
