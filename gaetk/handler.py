@@ -715,7 +715,7 @@ class BasicHandler(webapp2.RequestHandler):
     def add_message(self, typ, html, ttl=15):
         """Sets a user specified message to be displayed to the currently logged in user.
 
-        `type` can be `error`, `success`, `info` or `warning`
+        `typ` can be `error`, `success`, `info` or `warning`
         `html` is the text do be displayed
         `ttl` is the number of seconds after we should stop serving the message."""
         messages = self.session.get('_gaetk_messages', [])
