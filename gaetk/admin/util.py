@@ -4,17 +4,19 @@
 util.py
 
 Created by Christian Klein on 2011-08-10.
-Copyright (c) 2011 HUDORA GmbH. All rights reserved.
+Copyright (c) 2011-2015 HUDORA GmbH. All rights reserved.
 """
-from __future__ import with_statement
 import config
-config.imported = True
 
+import cloudstorage
 import mimetypes
 
-from google.appengine.api import files
+from gaetk.compat import xdb_kind
+from google.appengine.api import app_identity
+from google.appengine.ext import blobstore
 from google.appengine.ext import db
-from huTools.calendar.formats import convert_to_date, convert_to_datetime
+from huTools.calendar.formats import convert_to_date
+from huTools.calendar.formats import convert_to_datetime
 
 
 def get_app_name(model):
@@ -84,21 +86,19 @@ def object_as_dict(obj):
     return {'model': model, 'key': str(obj.key()), 'fields': fields}
 
 
-def upload_to_blobstore(fileobj):
+def upload_to_blobstore(obj, key_name, blob):
     """
     Lade ein Datei-ähnliches Objekt in den Blobstore
 
     Der Rückgabewert ist der Blob-Key des neuen Objekts.
     """
-    mime_type, _ = mimetypes.guess_type(fileobj.filename)
-    filename = files.blobstore.create(mime_type=mime_type, _blobinfo_uploaded_filename=fileobj.filename)
-
-    with files.open(filename, 'a') as blobstore_file:
-        # In den Blobstore kann nur in einer Blockgröße von 1 MB geschrieben werden
-        while fileobj.file:
-            data = fileobj.file.read(990000)
+    mime_type, _ = mimetypes.guess_type(blob.filename)
+    bucket = getattr(config, 'GCS_BUCKET_NAME', app_identity.get_default_gcs_bucket_name())
+    file_name = '/%s/admin/%s/%s/%s' % (bucket, xdb_kind(obj), key_name, blob.filename)
+    with cloudstorage.open(file_name, 'w', content_type=mime_type) as fileobj:
+        while blob.file:
+            data = blob.file.read(8192)
             if not data:
                 break
-            blobstore_file.write(data)
-    files.finalize(filename)
-    return files.blobstore.get_blob_key(filename)
+            fileobj.write(data)
+    return blobstore.BlobKey(blobstore.create_gs_key('/gs' + file_name))

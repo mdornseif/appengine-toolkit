@@ -175,13 +175,13 @@ class ModelAdmin(object):
         """Ermittle die Instanz über den gegeben ID"""
         return compat.xdb_get_instance(self.model, encoded_key)
 
-    def handle_blobstore_fields(self, handler, obj):
+    def handle_blobstore_fields(self, handler, obj, key_name):
         """Upload für Blobs"""
         # Falls das Feld vom Typ cgi.FieldStorage ist, wurde eine Datei zum Upload übergeben
         for blob_upload_field in self.blob_upload_fields:
             blob = handler.request.params.get(blob_upload_field)
             if blob.__class__ == cgi.FieldStorage:
-                blob_key = util.upload_to_blobstore(blob)
+                blob_key = util.upload_to_blobstore(obj, key_name, blob)
                 setattr(obj, blob_upload_field, blob_key)
 
     def change_view(self, handler, object_id, extra_context=None):
@@ -198,9 +198,7 @@ class ModelAdmin(object):
             # Der User hat gebeten, dieses Objekt zu löschen.
             key = compat.xdb_key(obj)
             data = compat.xdb_to_protobuf(obj)
-            dblayer = 'db'
-            if compat.xdb_is_ndb(obj):
-                dblayer = 'ndb'
+            dblayer = 'ndb' if compat.xdb_is_ndb(obj) else 'db'
             archived = DeletedObject(key_name=str(key), model_class=model_class.__name__,
                                      old_key=str(key), dblayer=dblayer, data=data)
             archived.put()
@@ -225,7 +223,8 @@ class ModelAdmin(object):
         if handler.request.method == 'POST':
             form = form_class(handler.request.POST)
             if form.validate():
-                self.handle_blobstore_fields(handler, obj)
+                key_name = compat.xdb_id_or_name(xdb_key(obj))
+                self.handle_blobstore_fields(handler, obj, key_name)
                 if hasattr(obj, 'update'):
                     obj.update(form.data)
                 else:
@@ -278,7 +277,12 @@ class ModelAdmin(object):
                 else:
                     obj = factory(key_name=key_name, **form_data)
 
-                self.handle_blobstore_fields(handler, obj)
+                # Beim Anlegen muss dann halt einmal gespeichert werden,
+                # ansonsten ist der ID unbekannt. 
+                if self.self.blob_upload_fields and key_name is None:
+                    key_name = compat.xdb_id_or_name(obj.put())
+
+                self.handle_blobstore_fields(handler, obj, key_name)
                 key = obj.put()
                 handler.add_message('success', u'<strong>%s</strong> wurde angelegt.' % obj)
                 # Indexierung für Admin-Volltextsuche
