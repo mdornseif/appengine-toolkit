@@ -1,37 +1,28 @@
 {% set title = " Administration" %}
-{% extends "base_admin.html" %}
+{% extends "base_admin3.html" %}
 
 {% macro display_id(obj) %}
 {% if obj.key is callable %}{{ obj.key().id_or_name()|e }}{% else %}{{ obj.key.id()|e }}{% endif %}
 {% endmacro %}
 
-{% block javascript %}
-<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-<script src="/gaetk/static/bootstrap/2.3.x/js/bootstrap.min.js"></script>
-{% endblock %}
-
 {% block breadcrumbs %}
-<ul class="breadcrumb">
-  <li><a href="/">Backend</a> <span class="divider">/backend/</span></li>
-  <li><a href="/admin/">Administration</a> <span class="divider">/</span></li>
-  <li><a href="/admin/{{ app }}/{{ model }}/">{{ model }}</a> <span class="divider">/</span></li>
-  <li class="active">{{ object|e }}</li>
-</ul>
+<ol class="breadcrumb">
+  <li><a href="/admin/">Administration</a></li>
+  <li><a href="/admin/{{ app }}/{{ model }}/">{{ model }}</a></li>
+  <li class="active">{{ display_id(object)|e }}</li>
+</ol>
 {% endblock %}
 
 {% block maincontent %}
-    <form action="." method="POST" accept-charset="utf-8" enctype="multipart/form-data">
+    <form class="form" action="." method="POST" accept-charset="utf-8" enctype="multipart/form-data">
       <fieldset>
         <legend>Bearbeiten</legend>
         {% block fields %}
         {% for field in form %}
-          <div class="control-group {% if field.errors %}error{% endif %}">
-            <div class="controls">
-              {{ field.label() }}
-              {{ field(class="input-xxlarge", rows="5", **field_args.get(field.name, {})) }}
-              <!-- {{ field.widget }} -->
+          <div class="form-group {% if field.errors %}has-error{% endif %}">
+              {{ field.label(class="control-label") }}
+              {{ field(class="form-control", rows="5", **field_args.get(field.name, {})) }}
               <span class="help-block">{{ ', '.join(field.errors) }}</span>
-            </div>
           </div>
         {% endfor %}
         {% endblock %}
@@ -39,34 +30,40 @@
         {% if admin_class.blob_upload_fields %}
         <h2>Blobstore-Keys</h2>
         {% for field in admin_class.blob_upload_fields %}
-          <label for="id_{{ field }}" >{{ field.capitalize() }}</label><input id="id_{{ field }}" type="file" name="{{ field }}">
+          <label class="control-label" for="id_{{ field }}" >{{ field.capitalize() }}</label>
+          <input id="id_{{ field }}" type="file" name="{{ field }}">
         {% endfor %}
         {% endif %}
 
-        <div class="form-actions">
+        <div class="form-group">&nbsp;</div>
+        <div class="form-group">
           <button class="btn btn-primary" type="submit">Speichern</button>
           {% if object is defined %}
-          <button class="btn btn-danger" data-toggle="modal" data-target="#confirm-edit" data-keyboard="true" data-backdrop="true">Löschen</button>
+          &nbsp;
+          <!-- <button class="btn btn-danger" data-toggle="modal" data-target="#confirm-edit" data-keyboard="true" > -->
+          <button type="button" class="btn btn-danger" data-toggle="modal" data-backdrop="true" data-keyboard="true" data-target="#confirm-edit">Löschen</button>
           {% endif %}
         </div>
       </fieldset>
     </form>
 
-    {% if object is defined %}
-    {# popup fuer den delete-button #}
-    <div id="confirm-edit" class="modal hide">
-        <div class="modal-header">
-            <a href="#" class="close">×</a>
-            <h3>Wirklich löschen?</h3>
-        </div>
-        <div class="modal-body">
-            <p>Wollen Sie <strong>{{ display_id(object)|e }}</strong> wirklich löschen?</p>
-        </div>
-        <div class="modal-footer">
-          <a href="?delete=yesiwant" class="btn danger" id="confirmeddelete" type="submit">Löschen</button>
-          <a href="#" id="abort" class="btn secondary">Abbrechen</a>
-        </div>
+{% if object is defined %}
+<div class="modal fade" id="confirm-edit" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">Wirklich löschen?</h4>
+      </div>
+      <div class="modal-body">
+        <p>Wollen Sie <strong>{{ display_id(object)|e }}</strong> wirklich löschen?</p>
+      </div>
+      <div class="modal-footer">
+          <a href="?delete=yesiwant" class="btn btn-danger" id="confirmeddelete" type="submit">Löschen</button>
+          <a href="#" id="abort" data-dismiss="modal" class="btn btn-default">Abbrechen</a>
+      </div>
     </div>
-    {% endif %}
-
+  </div>
+</div>
+{% endif %}
 {% endblock %}
