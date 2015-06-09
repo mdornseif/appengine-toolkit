@@ -14,12 +14,13 @@ import datetime
 import hashlib
 import logging
 import os
-import time
 import re
+import time
 import urllib
 import urlparse
 import uuid
 import warnings
+
 from functools import partial
 
 # Wenn es ein `config` Modul gibt, verwenden wir es, wenn nicht haben wir ein default.
@@ -29,9 +30,10 @@ except (ImportError), msg:
     logging.debug('no config file used because of %s', msg)
     config = object()
 
-from google.appengine.api import users
 from google.appengine.api import memcache
-from google.appengine.ext import db, ndb
+from google.appengine.api import users
+from google.appengine.ext import db
+from google.appengine.ext import ndb
 from webob.exc import HTTPBadRequest as HTTP400_BadRequest
 from webob.exc import HTTPConflict as HTTP409_Conflict
 from webob.exc import HTTPForbidden as HTTP403_Forbidden
@@ -50,11 +52,12 @@ from webob.exc import HTTPTemporaryRedirect as HTTP307_TemporaryRedirect
 from webob.exc import HTTPUnauthorized as HTTP401_Unauthorized
 from webob.exc import HTTPUnsupportedMediaType as HTTP415_UnsupportedMediaType
 
-from gaetk.lib._gaesessions import get_current_session
-from gaetk.lib import _itsdangerous
 import gaetk.compat
 import gaetk.tools
 import webapp2
+
+from gaetk.lib import _itsdangerous
+from gaetk.lib._gaesessions import get_current_session
 
 
 LOGIN_ALLOWED_DOMAINS = getattr(config, 'LOGIN_ALLOWED_DOMAINS', [])
@@ -163,6 +166,9 @@ class NdbCredential(ndb.Expando):
         ret = cls.get_or_insert(uid, uid=uid, secret=secret, tenant=tenant,
                                 user=user, admin=admin, **kwargs)
         return ret
+
+    def __str__(self):
+        return str(self.uid)
 
     def __repr__(self):
         return "<gaetk.NdbCredential %s>" % self.uid
