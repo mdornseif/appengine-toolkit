@@ -9,17 +9,19 @@ Copyright (c) 2011, 2013, 2014 HUDORA GmbH. All rights reserved.
 import config
 
 import datetime
+import logging
+
 import gaetk.handler
 import webapp2
-from google.appengine.datastore import entity_pb
-from google.appengine.ext import db, ndb
-
 from gaetk.admin import autodiscover
 from gaetk.admin import search
 from gaetk.admin.models import DeletedObject
 from gaetk.admin.sites import site
 from gaetk.admin.util import get_app_name
 from gaetk.compat import xdb_kind
+from google.appengine.datastore import entity_pb
+from google.appengine.ext import db
+from google.appengine.ext import ndb
 
 
 def make_app(url_mapping):
@@ -85,14 +87,15 @@ class AdminListHandler(AdminHandler):
         # unsupported: Link-Fields (oder wie das heißt)
         # unsupported: callables in List_fields
         query = admin_class.get_queryset(self.request)
+        template_values = self.paginate(
+            query, defaultcount=admin_class.list_per_page, datanodename='object_list', calctotal=False)
+        template_values.update(
+            list_fields=admin_class.list_fields,
+            app=application,
+            model=model,
+            model_class=model_class,
+            read_only=admin_class.read_only)
 
-        template_values = self.paginate(query,
-                                        defaultcount=admin_class.list_per_page,
-                                        datanodename='object_list', calctotal=False)
-        template_values['list_fields'] = admin_class.list_fields
-        template_values['app'] = application
-        template_values['model'] = model
-        template_values['model_class'] = model_class
         self.render(template_values, 'admin/list.html')
 
 
@@ -133,25 +136,29 @@ class AdminDetailHandler(AdminHandler):
         args = self.request.route_args
         application, model, action_or_objectid = args
 
-        # Authchecker, hat der User Zugriff auf das Model mit der Action wäre noch was.
-
         model_class = site.get_model_class(application, model)
         if not model_class:
             raise gaetk.handler.HTTP404_NotFound('No model %s' % ('%s.%s' % (application, model)))
         admin_class = site.get_admin_class(model_class)
 
-        import logging
         logging.info("%s %s", action_or_objectid, self.request.route_args)
         # Bestimme Route! Da könnte man dann auch einen Handler mit angeben.
+        # Das muss irgendwie besser gehen als Keys und Actions zu mischen.
         if action_or_objectid == 'add':
+            if admin_class.read_only:
+                raise gaetk.handler.HTTP403_Forbidden
             admin_class.add_view(self)
         elif action_or_objectid == 'export_xls':
             admin_class.export_view_xls(self)
         elif action_or_objectid == 'export_csv':
             admin_class.export_view_csv(self)
         elif action_or_objectid == 'delete':
+            if admin_class.read_only:
+                raise gaetk.handler.HTTP403_Forbidden
             admin_class.delete_view(self)
         else:
+            if admin_class.read_only:
+                raise gaetk.handler.HTTP403_Forbidden
             admin_class.change_view(self, action_or_objectid,
                                     extra_context=dict(app=application, model=model))
 

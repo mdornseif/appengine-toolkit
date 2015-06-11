@@ -109,6 +109,8 @@ class ModelAdmin(object):
     # (ist das erste eigene Attribut)
     field_args = {}
 
+    read_only = False
+
     # Actions, bisher nicht implementiert.
     actions = []
 
