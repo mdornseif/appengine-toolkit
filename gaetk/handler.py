@@ -842,9 +842,10 @@ class MarkdownFileHandler(BasicHandler):
     """Zeigt beliebige Markdown Files an."""
     template_name = 'gaetk_markdown.html'
 
-    def get(self, path, *_args, **_kwargs):
-        path = path.strip('/')
-        path = re.sub(r'[^a-z/]', '', path)
+    def get(self, path=None, *_args, **_kwargs):
+        if path is None:
+            path = self.request.path
+        path = re.sub(r'[^a-zA-Z/]', '', path.strip('/'))
         if not path:
             path = 'index'
         textfile = 'text/%s.markdown' % path
