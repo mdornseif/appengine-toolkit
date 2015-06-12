@@ -281,7 +281,7 @@ class ModelAdmin(object):
 
                 # Beim Anlegen muss dann halt einmal gespeichert werden,
                 # ansonsten ist der ID unbekannt. 
-                if self.self.blob_upload_fields and key_name is None:
+                if self.blob_upload_fields and key_name is None:
                     key_name = compat.xdb_id_or_name(obj.put())
 
                 self.handle_blobstore_fields(handler, obj, key_name)
