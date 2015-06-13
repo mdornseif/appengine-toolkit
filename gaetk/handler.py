@@ -864,5 +864,4 @@ class MarkdownFileHandler(BasicHandler):
 
             self.render({'text': "".join(text), 'title': title, 'path': path}, self.template_name)
         except IOError:
-            raise
             raise gaetk.handler.HTTP404_NotFound("%s not available" % textfile)

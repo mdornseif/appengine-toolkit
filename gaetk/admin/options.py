@@ -225,7 +225,7 @@ class ModelAdmin(object):
         if handler.request.method == 'POST':
             form = form_class(handler.request.POST)
             if form.validate():
-                key_name = compat.xdb_id_or_name(xdb_key(obj))
+                key_name = compat.xdb_id_or_name(compat.xdb_key(obj))
                 self.handle_blobstore_fields(handler, obj, key_name)
                 if hasattr(obj, 'update'):
                     obj.update(form.data)
@@ -280,7 +280,7 @@ class ModelAdmin(object):
                     obj = factory(key_name=key_name, **form_data)
 
                 # Beim Anlegen muss dann halt einmal gespeichert werden,
-                # ansonsten ist der ID unbekannt. 
+                # ansonsten ist der ID unbekannt.
                 if self.blob_upload_fields and key_name is None:
                     key_name = compat.xdb_id_or_name(obj.put())
 
