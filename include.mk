@@ -21,6 +21,7 @@ OPENAPPID?= $(APPID)
 # [W0221(arguments-differ), ShowLieferschein.get] Arguments number differs from overridden method
 # [W0232(no-init), gaetk_Snippet] Class has no __init__ method
 # [W0703(broad-except), show_snippet] Catching too general exception Exception]
+# [W1306(missing-format-attribute)] - kommt nicht mit Objekten zurecht
 # [I0011(locally-disabled), ] Locally disabling unused-argument (W0613)
 
 PYLINT_ARGS= "--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
@@ -35,7 +36,7 @@ PYLINT_ARGS= "--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
              --disable=C0103,C0330 \
              --disable=E1103 \
              --disable=R0201,R0903,R0904,R0913,R0921,R0922 \
-             --disable=W0142,W0201,W0212,W0221,W0232,W0232,W0703 \
+             --disable=W0142,W0201,W0212,W0221,W0232,W0232,W0703,W1306 \
              --disable=I0011
 
 # PYLINT_ARGS_ADDON?= --import-graph=import.dot -ry

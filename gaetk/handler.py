@@ -91,7 +91,7 @@ def login_user(credential, session, via, response=None):
     session['uid'] = credential.uid
     if 'login_via' not in session:
         session['login_via'] = via
-    if 'logintime' not in session:
+    if 'login_time' not in session:
         session['login_time'] = datetime.datetime.now()
     if not os.environ.get('USER_ID', None):
         os.environ['USER_ID'] = credential.uid
@@ -213,6 +213,15 @@ class BasicHandler(webapp2.RequestHandler):
         if str(code) == '404':
             self.response.headers['Content-Type'] = 'text/plain'
             self.response.out.write('Daten nicht gefunden.')
+
+    @property
+    def browser_redirectable(self):
+        """Is this a user initiated request which can be redirected to a login-page etc?"""
+        return (
+            'text/' in self.request.headers.get('Accept', '') or
+            'image/' in self.request.headers.get('Accept', '') or
+            self.request.is_xhr or
+            'Mozilla' in self.request.headers.get('User-Agent', ''))
 
     def paginate(self, query, defaultcount=10, datanodename='objects', calctotal=False, formatter=None):
         """Pagination a la http://mdornseif.github.com/2010/10/02/appengine-paginierung.html
@@ -628,12 +637,7 @@ class BasicHandler(webapp2.RequestHandler):
         # authentication
         if not self.credential:
             # Login not successful
-            is_browser = (
-                'text/' in self.request.headers.get('Accept', '') or
-                'image/' in self.request.headers.get('Accept', '') or
-                self.request.is_xhr or
-                'Mozilla' in self.request.headers.get('User-Agent', ''))
-            if is_browser:
+            if self.browser_redirectable:
                 # we assume the request came via a browser - redirect to the "nice" login page
                 # let login.py handle it from there
                 absolute_url = self.abs_url(
