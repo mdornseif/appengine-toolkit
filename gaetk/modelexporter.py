@@ -90,4 +90,3 @@ class ModelExporter(object):
         for row in query_iterator(self.query):
             self.create_row(xlswriter, row)
         xlswriter.save(fileobj)
-

@@ -35,9 +35,11 @@ def get_cookie_domain():
         domain = '.'.join(host.split('.')[-2:])
     return domain
 
-## {{{ http://code.activestate.com/recipes/577257/ (r1)
+# {{{ http://code.activestate.com/recipes/577257/ (r1)
 _slugify_strip_re = re.compile(r'[^\w\s-]')
 _slugify_hyphenate_re = re.compile(r'[-\s]+')
+
+
 def slugify(value):
     """
     Normalizes string, converts to lowercase, removes non-alpha characters,
@@ -49,7 +51,7 @@ def slugify(value):
     value = unicodedata.normalize('NFKD', unicode(value)).encode('ascii', 'ignore')
     value = unicode(_slugify_strip_re.sub('', value).strip().lower())
     return _slugify_hyphenate_re.sub('-', value)
-## end of http://code.activestate.com/recipes/577257/ }}}
+# end of http://code.activestate.com/recipes/577257/ }}}
 
 
 if __name__ == "__main__":

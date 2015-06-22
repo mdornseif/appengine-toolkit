@@ -23,7 +23,6 @@ from gaetk import compat
 
 from gaetk.compat import xdb_kind
 
-# sites registry
 
 class AdminSite(object):
     """Konzept zur Verwaltung (per Weboberfläche) adminsitrierbarer GAE Models."""
@@ -74,7 +73,6 @@ class AdminSite(object):
 # The global AdminSite instance
 site = AdminSite()
 
-# options
 
 class ModelAdmin(object):
     """Admin Modell."""

@@ -1,4 +1,4 @@
-GAE_VERSION=1.9.15
+GAE_VERSION=1.9.22
 
 LINT_LINE_LENGTH= 110
 LINT_FLAKE8_ARGS= --max-complexity=27 --builtins=_ --max-line-length=$(LINT_LINE_LENGTH) --exclude=mywebapp2.py,gaesessions.py,gaetk/__init__.py
