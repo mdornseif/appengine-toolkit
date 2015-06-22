@@ -411,7 +411,7 @@ class CredentialsHandler(gaetk.handler.BasicHandler):
 
         self.response.headers["Content-Type"] = "application/json"
         self.response.set_status(201)
-        self.response.out.write(huTools.hujson.dumps(dict(
+        self.response.out.write(huTools.hujson2.dumps(dict(
             uid=credential.uid, secret=credential.secret,
             admin=credential.admin, text=credential.text,
             tenant=credential.tenant, email=credential.email,
