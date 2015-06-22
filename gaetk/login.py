@@ -119,7 +119,7 @@ class LoginHandler(gaetk.handler.BasicHandler):
                 gaetk.handler.login_user(credential, self.session, via, self.response)
                 raise gaetk.handler.HTTP302_Found(location=continue_url)
             else:
-                logging.warning(u'login: Invalid password for %s', username)
+                logging.warning(u'login: Invalid password for %s', username.decode('utf-8', 'ignore'))
                 msg = u'Anmeldung fehlgeschlagen, versuchen Sie es erneut.'
 
         # Render template with login form
