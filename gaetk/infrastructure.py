@@ -71,3 +71,26 @@ def copy_entity(entity, **kwargs):
     properties = dict((key, value.__get__(entity, klass)) for (key, value) in klass.properties().iteritems())
     properties.update(**kwargs)
     return klass(**properties)
+
+
+def index_usages(query):
+    """
+    Format used indexes nicely.
+
+    Darstellung wie in index.yaml:
+    yaml.dump(desc, default_flow_style=False)
+    """
+    indexes = []
+    for index in query.index_list():
+        description = dict(kind=str(index.kind()))
+        if index.has_ancestor():
+            description['ancestor'] = True
+        properties = description['properties'] = []
+        for name, direction in index.properties():
+            prop = dict(name=str(name))
+            if direction == db.Index.DESCENDING:
+                prop['direction'] = 'desc'
+            properties.append(prop)
+        indexes.append(description)
+
+    return indexes
