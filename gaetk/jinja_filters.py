@@ -12,6 +12,8 @@ import re
 import jinja2
 from jinja2.utils import Markup
 
+import gaetk.tools
+
 
 def left_justify(value, width):
     """Prefix the given string with spaces until it is width characters long."""
@@ -265,3 +267,4 @@ def register_custom_filters(jinjaenv):
     jinjaenv.filters['intword'] = intword
     jinjaenv.filters['attrencode'] = filter_attrencode
     jinjaenv.filters['urlencode'] = filter_urlencode
+    jinjaenv.filters['slugify'] = gaetk.tools.slugify
