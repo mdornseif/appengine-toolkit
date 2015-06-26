@@ -233,6 +233,8 @@ def _formatint(value):
 def filter_attrencode(value):
     """Makes a string valid as an XML attribute."""
     import xml.sax.saxutils
+    if value is None:
+        return u''
     if hasattr(value, 'unescape'):  # jinja2 Markup
         value = value.unescape()
     return xml.sax.saxutils.quoteattr(value)[1:-1]
