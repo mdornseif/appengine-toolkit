@@ -21,9 +21,9 @@ import huTools.http.tools
 import huTools.markdown2
 import jinja2
 
-from google.appengine.ext import ndb
-from google.appengine.api import users
 from google.appengine.api import memcache
+from google.appengine.api import users
+from google.appengine.ext import ndb
 
 
 class gaetk_Snippet(ndb.Model):
@@ -39,38 +39,40 @@ class gaetk_Snippet(ndb.Model):
 def show_snippet(env, name, default=''):
     """Render a snippet inside a jinja2 template."""
     name = gaetk.tools.slugify(name.replace(' ', ''))
-    snippet = gaetk_Snippet.get_by_id(name)
-    if not snippet:
-        snippet = gaetk_Snippet(id=name, name=name, markdown=default)
-        snippet.put()
-    path_info = os.environ.get('PATH_INFO', '?')
-    if snippet.path_info is None or not path_info.startswith(snippet.path_info.encode('utf-8', 'ignore')):
-        if not snippet.path_info or random.random() < 0.01:
-            snippet.path_info = path_info
-            snippet.put()
 
     edit = ''
     if users.is_current_user_admin():
         edit = u'''<div style="float:right"><a
-href="/admin/snippet/edit/?id={0}#edit" class="snippet_edit_button"
-id="snippet_{1}_button"><i class="fa fa-pencil-square-o"></i></a></div>
-<script>
-$( "#snippet_{1}_button" ).mouseover(function() {{
-$( this ).parents(".snippetenvelope").effect( "highlight")
-}}); </script>
-'''.format(name, huTools.http.tools.quote(name))
+    href="/admin/snippet/edit/?id={0}#edit" class="snippet_edit_button"
+    id="snippet_{1}_button"><i class="fa fa-pencil-square-o"></i></a></div>
+    <script>
+    $( "#snippet_{1}_button" ).mouseover(function() {{
+    $( this ).parents(".snippetenvelope").effect( "highlight")
+    }}); </script>
+    '''.format(name, huTools.http.tools.quote(name))
 
     content = memcache.get('gaetk_snippet2:%s:rendered' % name)
-    if content is None:
-        template = env.from_string(huTools.markdown2.markdown(snippet.markdown))
-        try:
-            content = template.render({})
-            if not memcache.set('gaetk_snippet2:%s:rendered' % name, content, 600):
-                logging.error('Memcache set failed.')
-        except Exception, msg:
-            logging.error("%s", msg)
-            traceback.print_exc()
-            return '''<!-- Rendering error: %s -->%s''' % (cgi.escape(str(msg)), edit)
+    if random.random() < 0.01 or not content:
+        snippet = gaetk_Snippet.get_by_id(name)
+        if not snippet:
+            snippet = gaetk_Snippet(id=name, name=name, markdown=default)
+            snippet.put()
+        path_info = os.environ.get('PATH_INFO', '?')
+        if snippet.path_info is None or not path_info.startswith(snippet.path_info.encode('utf-8', 'ignore')):
+            if not snippet.path_info or random.random() < 0.1:
+                snippet.path_info = path_info
+                snippet.put()
+
+        if content is None:
+            template = env.from_string(huTools.markdown2.markdown(snippet.markdown))
+            try:
+                content = template.render({})
+                if not memcache.set('gaetk_snippet2:%s:rendered' % name, content, 600):
+                    logging.error('Memcache set failed.')
+            except Exception, msg:
+                logging.error("%s", msg)
+                traceback.print_exc()
+                return '''<!-- Rendering error: %s -->%s''' % (cgi.escape(str(msg)), edit)
 
     return jinja2.Markup(u'''<div class="snippetenvelope"
 id="snippet_{0}_envelop">{1}<div class="snippet"
