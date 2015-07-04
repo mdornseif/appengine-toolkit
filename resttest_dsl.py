@@ -6,18 +6,20 @@ Copyright (c) 2011, 2013 HUDORA. All rights reserved.
 File created by Philipp Benjamin Koeppchen on 2011-02-23
 """
 
-from collections import Counter
 import optparse
 import os
 import sys
 import time
 import urlparse
 import xml.dom.minidom
+
+from collections import Counter
 from pprint import pprint
 
-from huTools.http import fetch
-from huTools import hujson2
 import huTools.http._httplib2  # for ServerNotFoundError
+
+from huTools import hujson2
+from huTools.http import fetch
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
 FOREGROUND = 30
@@ -231,12 +233,13 @@ class Response(object):
             pass
         return self
 
-    def responds_normal(self, maxduration=DEFAULTFAST):
+    def responds_normal(self, maxduration=DEFAULTFAST, links=True):
         """Normale Seite: Status 200, HTML, schnelle Antwort, keine kaputten Links"""
         self.responds_html()
         # self.responds_with_valid_html()
-        self.responds_with_valid_links()
         self.responds_fast(maxduration)
+        if links:
+            self.responds_with_valid_links()
         return self
 
     def responds_unauthorized(self):
