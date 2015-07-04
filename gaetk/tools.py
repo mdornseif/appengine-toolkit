@@ -6,9 +6,13 @@ gaetk.tools - various small helpers
 Created by Maximillian Dornseif on 2010-11-07.
 Copyright (c) 2010, 2015 HUDORA. All rights reserved.
 """
+import functools
 import os
 import re
 import unicodedata
+
+import gaetk.lib._lru_cache
+import gaetk.lib.memorised.decorators
 
 
 def split(stos):
@@ -54,6 +58,42 @@ def slugify(value):
     value = unicode(_slugify_strip_re.sub('', value).strip().lower())
     return _slugify_hyphenate_re.sub('-', value)
 # end of http://code.activestate.com/recipes/577257/ }}}
+
+
+class mem_cache(object):
+    def __init__(self, maxsize='ignored', typed='ignored', ttl=60*30):
+        """
+        If there are decorator arguments, the function
+        to be decorated is not passed to the constructor!
+        """
+        self.ttl = ttl
+
+    def __call__(self, user_function):
+        """
+        If there are decorator arguments, __call__() is only called
+        once, as part of the decoration process! You can only give
+        it a single argument, which is the function object.
+        """
+        return gaetk.lib.memorised.decorators.memorise(ttl=self.ttl)(user_function,)
+
+
+class hd_cache(object):
+    def __init__(self, maxsize=8, typed='ignored', ttl=60*30):
+        """
+        If there are decorator arguments, the function
+        to be decorated is not passed to the constructor!
+        """
+        self.ttl = ttl
+        self.maxsize = maxsize
+
+    def __call__(self, user_function):
+        """
+        If there are decorator arguments, __call__() is only called
+        once, as part of the decoration process! You can only give
+        it a single argument, which is the function object.
+        """
+        wraped = gaetk.lib.memorised.decorators.memorise(ttl=self.ttl)(user_function)
+        return gaetk.lib._lru_cache.lru_cache(maxsize=self.maxsize, typed=True, ttl=self.ttl)(wraped)
 
 
 if __name__ == "__main__":

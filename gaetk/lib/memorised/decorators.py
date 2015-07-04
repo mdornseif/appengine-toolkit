@@ -1,14 +1,16 @@
 """memorised module - container for the memorise python-memcache decorator"""
 
-from functools import wraps
-from hashlib import md5
 import inspect
 import itertools
+import os
 import random
 
-import memcache
+from functools import wraps
+from hashlib import md5
 
-from memorised import compat
+from google.appengine.api import memcache
+
+from gaetk.lib.memorised import compat
 
 __author__ = 'Wes Mason <wes [at] 1stvamp [dot] org>'
 __docformat__ = 'restructuredtext en'
@@ -84,15 +86,7 @@ class memorise(object):
                 self.value = value
 
                 if mc is None:
-                        if not mc_servers:
-                                mc_servers = ['localhost:11211']
-                        self.mc = memcache.Client(mc_servers, debug=0)
-                elif hasattr(mc, 'get') and hasattr(mc, 'set'):
-                        self.mc = mc
-                elif hasattr(mc, '__getitem__') and hasattr(mc, '__setitem__'):
-                        self.mc = memorise.dict_wrapper(mc)
-                else:
-                        raise ValueError('`mc` doesn\'t look like a valid cache')
+                    self.mc = memcache.Client(mc_servers, debug=0)
 
                 # TTL is None: turn off caching
                 if ttl is None:
@@ -206,16 +200,16 @@ class memorise(object):
                 # Create a unique hash of the function/method call
                 key = "%s%s(%s)" % (parent_name, fn.__name__, ",".join(arg_values_hash))
                 key = key.encode('utf8') if isinstance(key, compat.text_type) else key
-                key = md5(key).hexdigest()
+                key = "%s.%s" % (fn.__name__, md5(key).hexdigest())
                 return key
 
         def get_cache(self, key):
-            return self.mc.get(key)
+            return self.mc.get("%s.%s" % (os.environ.get('CURRENT_VERSION_ID', '?'), key))
 
         def set_cache(self, key, value):
             ttl = self.ttl()
             if ttl is not None:
-                    self.mc.set(key, value, time=ttl)
+                    self.mc.set("%s.%s" % (os.environ.get('CURRENT_VERSION_ID', '?'), key), value, time=ttl)
             else:
                     pass  # TTL=None means data should not go to the cache
 
