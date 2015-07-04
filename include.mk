@@ -1,4 +1,4 @@
-GAE_VERSION=1.9.21
+GAE_VERSION=1.9.23
 PRODUCTIONURL?= https://$(OPENAPPID).appspot.com/
 PRODUCTIONNAME?= production
 DEVPAGE?= /
@@ -64,7 +64,7 @@ check: lib/google_appengine/google/__init__.py checknodeps
 
 deploy:
 	# appcfg.py update .
-	appcfg.py --oauth2 update -A $(APPID) -V dev-`whoami` .
+	appcfg.py update -A $(APPID) -V dev-`whoami` .
 	TESTHOST=dev-`whoami`-dot-$(OPENAPPID).appspot.com make resttest
 	make opendev
 
@@ -77,11 +77,11 @@ deploy_production:
 	(cd tmp/$(REPOSNAME) ; git show-ref --hash=7 refs/remotes/origin/production > version.txt)
 	(cd tmp/$(REPOSNAME) ; curl https://$(OPENAPPID).appspot.com/version.txt > lastversion.txt)
 	# Erst getaggte Version hochladen
-	-appcfg.py --oauth2 update -A $(APPID) -V "v`cat tmp/$(REPOSNAME)/version.txt`" tmp/$(REPOSNAME)
+	-appcfg.py update -A $(APPID) -V "v`cat tmp/$(REPOSNAME)/version.txt`" tmp/$(REPOSNAME)
 	# Dann testen
 	(cd tmp/$(REPOSNAME) ; TESTHOST="v`cat version.txt`"-dot-$(OPENAPPID).appspot.com make resttest)
 	# Wenn das geklappt hat: produktionsversion aktivieren.
-	appcfg.py --oauth2 update -A $(APPID) -V $(PRODUCTIONNAME) tmp/$(REPOSNAME)
+	appcfg.py update -A $(APPID) -V $(PRODUCTIONNAME) tmp/$(REPOSNAME)
 	curl -X POST --data-urlencode 'payload={"channel": "#general", "username": "webhookbot", "text": "<$(PRODUCTIONURL)> neu deployed"}' https://hooks.slack.com/services/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
 	(cd tmp/$(REPOSNAME) ; git log --pretty='%ae %s' `cat lastversion.txt`..`cat version.txt`)
 
