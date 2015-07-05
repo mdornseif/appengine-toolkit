@@ -713,8 +713,9 @@ class BasicHandler(webapp2.RequestHandler):
         except AttributeError:
             # session handling not activated
             self.session = {}
-        # init messages array based on session
-        self.session['_gaetk_messages'] = self.session.get('_gaetk_messages', [])
+        # init messages array based on session but avoid modifying session if not needed
+        if self.session.get('_gaetk_messages', None):
+            self.session['_gaetk_messages'] = self.session.get('_gaetk_messages', [])
         # Give authentication Hooks opportunity to do their thing
         self.authchecker(method, *args, **kwargs)
 
@@ -779,8 +780,9 @@ class JsonResponseHandler(BasicHandler):
 
         # bind session on dispatch (not in __init__)
         self.session = get_current_session()
-        # init messages array based on session
-        self.session['_gaetk_messages'] = self.session.get('_gaetk_messages', [])
+        # init messages array based on session but avoid modifying session if not needed
+        if self.session.get('_gaetk_messages', None):
+            self.session['_gaetk_messages'] = self.session.get('_gaetk_messages', [])
         # Give authentication Hooks opportunity to do their thing
         self.authchecker(method, *args, **kwargs)
 
