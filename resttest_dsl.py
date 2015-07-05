@@ -197,7 +197,9 @@ class Response(object):
                 try:
                     status, _responseheaders, _content = fetch(
                         link,
-                        headers=dict(referer=self.url, Cookie=self.headers['set-cookie']),
+                        headers=dict(
+                            referer=self.url, Cookie=self.headers.get('set-cookie', '')
+                            ),
                         content='', method='GET', multipart=False, ua='', timeout=30)
                 except (IOError, huTools.http._httplib2.ServerNotFoundError):
                     status = 600
