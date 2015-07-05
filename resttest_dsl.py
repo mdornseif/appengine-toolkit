@@ -39,6 +39,7 @@ alllinks = Counter()
 oklinks = set()
 brokenlinks = {}
 
+
 def colored(text, color):
     """Färbt den Text mit Terminalsequenzen ein.
 
@@ -95,8 +96,9 @@ class Response(object):
     # low-level-beschreibungen der erwartungen
     def responds_http_status(self, expected_status):
         """sichert zu, dass mit dem gegebenen HTTP-status geantwortet wurde."""
-        self.expect_condition(self.status == expected_status,
-                        'expected status %s, got %s' % (expected_status, self.status))
+        self.expect_condition(
+            self.status == expected_status,
+            'expected status %s, got %s' % (expected_status, self.status))
         return self
 
     def responds_content_type(self, expected_type):
@@ -104,8 +106,9 @@ class Response(object):
         actual_type = self.headers.get('content-type')
         # evtl wird dem contenttype ein encoding nachgestellt, dies soll abgetrennt werden
         actual_type = actual_type.split(';')[0]
-        self.expect_condition(actual_type == expected_type,
-                        'expected content type %r, got %r' % (expected_type, actual_type))
+        self.expect_condition(
+            actual_type == expected_type,
+            'expected content type %r, got %r' % (expected_type, actual_type))
         return self
 
     def redirects_to(self, expected_url):
@@ -175,14 +178,16 @@ class Response(object):
     def responds_with_content_location(self, expected_location):
         """sichert zu, dass die Antwort einen location-header hat."""
         content_location = self.headers.get('content-location', '')
-        self.expect_condition(content_location.endswith(expected_location),
-              'expected content-location to end with %r, got %r.' % (expected_location, content_location))
+        self.expect_condition(
+            content_location.endswith(expected_location),
+            'expected content-location to end with %r, got %r.' % (expected_location, content_location))
         return self
 
     def responds_fast(self, maxduration=DEFAULTFAST):
         """sichert zu, dass der Zugriff schnell geht (unter maxduration ms)."""
-        self.expect_condition(self.duration <= maxduration,
-                        'expected answer within %d ms, took %d ms' % (maxduration, self.duration))
+        self.expect_condition(
+            self.duration <= maxduration,
+            'expected answer within %d ms, took %d ms' % (maxduration, self.duration))
         return self
 
     def responds_with_valid_links(self):
@@ -212,14 +217,16 @@ class Response(object):
                     brokenlinks.setdefault(link, set()).add(self.url)
                 if status == 700:
                     print 'too many redirects on %s' % link
-                self.expect_condition(status in (200, 401, 405, 700), 'invalid (%r) link to %r' % (status, link))
+                self.expect_condition(
+                    status in (200, 401, 405, 700), 'invalid (%r) link to %r' % (status, link))
 
     def responds_with_valid_html(self):
         if NO_HTML_VALIDATION:
             return self
         try:
             from tidylib import tidy_document
-            document, errors = tidy_document(self.content, options={'numeric-entities':1, 'input-encoding': 'utf8'})
+            document, errors = tidy_document(
+                self.content, options={'numeric-entities':1, 'input-encoding': 'utf8'})
             if errors:
                 print "### {0} see http://validator.w3.org/nu/?doc={0}".format(self.url)
                 contentlines = self.content.split('\n')
@@ -346,7 +353,7 @@ class TestClient(object):
 def extract_links(content, url):
     import lxml.html
     links = []
-    dom =  lxml.html.document_fromstring(content, base_url=url)
+    dom = lxml.html.document_fromstring(content, base_url=url)
     dom.make_links_absolute(url)
     for element, _attribute, link, _pos in dom.iterlinks():
         if link.startswith('http'):
@@ -382,16 +389,20 @@ def create_testclient_from_cli(default_hostname, default_credentials_user, defau
     """
     global DEBUG
     parser = optparse.OptionParser()
-    parser.add_option('-H', '--hostname', dest='hostname',
-                                          help='Hostname, on which the tests should be run',
-                                          default=default_hostname)
-    parser.add_option('-u', '--credentials-user', dest='credentials_user',
-                                                  help='HTTP-credentials for the non-admin-user',
-                                                  default=default_credentials_user)
-    parser.add_option('-a', '--credentials-admin', dest='credentials_admin',
-                                                   help='HTTP-credentials for the admin-user',
-                                                   default=default_credentials_admin)
-    parser.add_option('-d', '--debug', dest='debug', default=False)
+    parser.add_option(
+        '-H', '--hostname', dest='hostname',
+        help='Hostname, on which the tests should be run',
+        default=default_hostname)
+    parser.add_option(
+        '-u', '--credentials-user', dest='credentials_user',
+        help='HTTP-credentials for the non-admin-user',
+        default=default_credentials_user)
+    parser.add_option(
+        '-a', '--credentials-admin', dest='credentials_admin',
+        help='HTTP-credentials for the admin-user',
+        default=default_credentials_admin)
+    parser.add_option(
+        '-d', '--debug', dest='debug', default=False)
 
     opts, args = parser.parse_args()
     if args:
