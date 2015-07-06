@@ -78,7 +78,7 @@ def xdb_properties(instance):
     if xdb_is_ndb(instance):
         return instance._properties
     else:
-        instance.properties()
+        return instance.properties()
 
 
 def _get_queryset_db(model_class, ordering=None):

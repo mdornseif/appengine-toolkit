@@ -7,6 +7,7 @@ Created by Christian Klein on 2011-08-22.
 Copyright (c) 2011, 2014 HUDORA GmbH. All rights reserved.
 """
 import cgi
+import datetime
 import logging
 
 import gaetk.handler
