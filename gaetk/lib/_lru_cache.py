@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
-import functools
 import threading
 import time
-
 from collections import namedtuple
 from functools import update_wrapper
 
@@ -150,7 +148,6 @@ def lru_cache(maxsize=64, typed=False, ttl=None):
                         # empty the oldest link and make it the new root
                         root = nonlocal_root[0] = oldroot[NEXT]
                         oldkey = root[KEY]
-                        oldvalue = root[RESULT]
                         root[KEY] = root[RESULT] = None
                         # now update the cache dictionary for the new links
                         del cache[oldkey]

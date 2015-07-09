@@ -6,7 +6,6 @@ gaetk.tools - various small helpers
 Created by Maximillian Dornseif on 2010-11-07.
 Copyright (c) 2010, 2015 HUDORA. All rights reserved.
 """
-import functools
 import os
 import re
 import unicodedata
@@ -53,7 +52,7 @@ def slugify(value):
     From Django's "django/template/defaultfilters.py".
     """
     if value is None:
-        return ''    
+        return ''
     value = unicodedata.normalize('NFKD', unicode(value)).encode('ascii', 'ignore')
     value = unicode(_slugify_strip_re.sub('', value).strip().lower())
     return _slugify_hyphenate_re.sub('-', value)

@@ -359,7 +359,7 @@ class ModelAdmin(object):
 
         `extra_context` ist für die Signatur erforderlich, wird aber nicht genutzt.
         """
-        exporter = ModelExporter(self.model)
+        exporter = modelexporter.ModelExporter(self.model)
         filename = '%s-%s.xls' % (compat.xdb_kind(self.model), datetime.datetime.now())
         handler.response.headers['Content-Type'] = 'application/msexcel'
         handler.response.headers['content-disposition'] = \
