@@ -851,7 +851,7 @@ class MarkdownFileHandler(BasicHandler):
     def get(self, path=None, *_args, **_kwargs):
         if path is None:
             path = self.request.path
-        path = re.sub(r'[^a-zA-Z/]', '', path.strip('/'))
+        path = re.sub(r'[^a-zA-Z0-9/]', '', path.strip('/'))
         if not path:
             path = 'index'
         textfile = 'text/%s.markdown' % path
