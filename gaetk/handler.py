@@ -320,16 +320,8 @@ class BasicHandler(webapp2.RequestHandler):
         """Initialise and return a jinja2 Environment instance.
 
         Overwrite this method to setup specific behaviour.
+        Usually overwriting `add_jinja2env_globals()` is enough.
         For example, to allow i18n:
-
-            class myHandler(BasicHandler):
-                def create_jinja2env(self):
-                    import gettext
-                    import jinja2
-                    env = jinja2.Environment(extensions=['jinja2.ext.i18n'],
-                                             loader=jinja2.FileSystemLoader(config.template_dirs))
-                    env.install_gettext_translations(gettext.NullTranslations())
-                    return env
         """
         import jinja2
         import gaetk.jinja_filters as myfilters
@@ -339,8 +331,9 @@ class BasicHandler(webapp2.RequestHandler):
             env = jinja2.Environment(
                 loader=jinja2.FileSystemLoader(config.template_dirs),
                 extensions=extensions,
-                auto_reload=False,  # do not check if the source changed
+                auto_reload=False,  # unneeded on App Engine production
                 trim_blocks=True,  # first newline after a block is removed
+                # lstrip_blocks=True,
                 bytecode_cache=jinja2.MemcachedBytecodeCache(memcache, timeout=3600)
             )
             myfilters.register_custom_filters(env)
