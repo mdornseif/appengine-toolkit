@@ -13,6 +13,20 @@ from google.appengine.ext import db
 from google.appengine.ext import ndb
 
 
+def xdb_create_key(model_class, id_or_name, parent=None):
+    if issubclass(model_class, ndb.Model):
+        return ndb.Key.from_path(model_class._get_kind(), id_or_name, parent=parent)
+    else:
+        return db.Key.from_path(model_class.kind(), id_or_name, parent=parent)
+
+
+def get_by_id_or_name(model_class, id_or_name):
+    if issubclass(model_class, ndb.Model):
+        return model_class.get_by_id(id_or_name)
+    else:
+        return model_class.get_by_key_name(id_or_name)
+
+
 def xdb_kind(model_class):
     """Get kind from db or ndb model class"""
     kind = getattr(model_class, '_get_kind', None)
@@ -28,7 +42,7 @@ def xdb_get_instance(model_class, encoded_key):
     if issubclass(model_class, ndb.Model):
         key = ndb.Key(urlsafe=encoded_key)
         instance = key.get()
-    elif issubclass(model_class, db.Model):
+    else:
         instance = model_class.get(unquote(encoded_key))
     return instance
 
@@ -134,7 +148,9 @@ def xdb_fetch_page(query, limit, offset=None, start_cursor=None):
     """Pagination-ready fetching a some entities."""
     if isinstance(query, ndb.Query):
         if start_cursor:
-            objects, cursor, more_objects = query.fetch_page(limit, start_cursor=Cursor(urlsafe=start_cursor))
+            if isinstance(start_cursor, basestring):
+                start_cursor = Cursor(urlsafe=start_cursor)
+            objects, cursor, more_objects = query.fetch_page(limit, start_cursor=start_cursor)
         else:
             objects, cursor, more_objects = query.fetch_page(limit, offset=offset)
     elif isinstance(query, db.Query):
