@@ -146,6 +146,7 @@ def xdb_query_run(query):
 
 def xdb_fetch_page(query, limit, offset=None, start_cursor=None):
     """Pagination-ready fetching a some entities."""
+
     if isinstance(query, ndb.Query):
         if start_cursor:
             if isinstance(start_cursor, basestring):
@@ -155,6 +156,8 @@ def xdb_fetch_page(query, limit, offset=None, start_cursor=None):
             objects, cursor, more_objects = query.fetch_page(limit, offset=offset)
     elif isinstance(query, db.Query):
         if start_cursor:
+            if isinstance(start_cursor, Cursor):
+                start_cursor = start_cursor.urlsafe()
             query.with_cursor(start_cursor)
             objects = query.fetch(limit)
             cursor = Cursor(urlsafe=query.cursor())
