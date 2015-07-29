@@ -126,13 +126,22 @@ class ModelAdmin(object):
     def get_ordering(self, request):
         """Return the sort order attribute"""
         order_field = request.get('o')
+        direction = request.get('ot', 'asc')
 
-        if not order_field:  # in self.model
-            order_field = self.ordering
+        if not order_field and self.ordering:
+            if self.ordering.startswith('-'):
+                direction = 'desc'
+                order_field = self.ordering[1:]
+            elif self.ordering.startswith('+'):
+                direction = 'asc'
+                order_field = self.ordering[1:]
+            else:
+                order_field = self.ordering
+                direction = 'asc'
+
         if not order_field:
             return
 
-        direction = request.get('ot', 'asc')
         return order_field, '-' if direction == 'desc' else '+'
 
     def get_queryset(self, request):
