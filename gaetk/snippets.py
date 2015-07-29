@@ -42,7 +42,7 @@ def show_snippet(env, name, default=''):
 
     edit = ''
     if users.is_current_user_admin():
-        edit = u'''<div style="float:right"><a
+        edit = u'''<div id="{1}" style="float:right"><a
     href="/admin/snippet/edit/?id={0}#edit" class="snippet_edit_button"
     id="snippet_{1}_button"><i class="fa fa-pencil-square-o"></i></a></div>
     <script>
