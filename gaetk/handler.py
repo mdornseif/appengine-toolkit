@@ -857,7 +857,7 @@ class MarkdownFileHandler(BasicHandler):
                 # wir gehen davon aus, dass die erste Zeile, die mit `# ` beginnt, der Titel ist
                 for line in fileobj.readlines():
                     if line.startswith('# ') and not title:
-                        title = line.lstrip('# ')
+                        title = line.lstrip('# ').strip()
                     else:
                         text.append(line)
 
