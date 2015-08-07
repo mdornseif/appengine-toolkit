@@ -95,10 +95,14 @@ def xdb_properties(instance):
         return instance.properties()
 
 
-def _get_queryset_db(model_class, ordering=(None, None)):
+def _get_queryset_db(model_class, ordering=None):
     """Queryset für Subklasse von db.Model"""
     query = model_class.all()
-    attr, direction = ordering
+    if ordering:
+        attr, direction = ordering
+    else:
+        attr, direction = None, None
+
     if attr and attr in model_class.properties():
         if direction == '-':
             attr = '-' + attr
