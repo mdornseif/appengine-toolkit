@@ -83,7 +83,7 @@ deploy_production:
 	# Wenn das geklappt hat: produktionsversion aktivieren.
 	appcfg.py update -A $(APPID) -V $(PRODUCTIONNAME) tmp/$(REPOSNAME)
 	curl -X POST --data-urlencode 'payload={"channel": "#general", "username": "webhookbot", "text": "<$(PRODUCTIONURL)> neu deployed"}' https://hooks.slack.com/services/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
-	(cd tmp/$(REPOSNAME) ; git log --pretty='%ae %s' `cat lastversion.txt`..`cat version.txt`)
+	(cd tmp/$(REPOSNAME) ; git log --pretty='* %s (%ae)' `cat lastversion.txt`..`cat version.txt`)
 
 fixup:
 	# Tailing Whitespace
