@@ -11,7 +11,6 @@ import cgi
 import logging
 import os
 import random
-import traceback
 
 import gaetk
 import gaetk.defaulthandlers
@@ -26,11 +25,19 @@ from google.appengine.api import users
 from google.appengine.ext import ndb
 
 
+def render(name, env, markdown):
+    """Snippet mit Jinja2 rendern"""
+    template = env.from_string(huTools.markdown2.markdown(markdown))
+    content = template.render({})
+    if not memcache.set('gaetk_snippet2:%s:rendered' % name, content, 600):
+        logging.error('Memcache set failed.')
+
+
 class gaetk_Snippet(ndb.Model):
     """Encodes a small pice of text for a jinja2 template."""
     name = ndb.StringProperty()
     markdown = ndb.TextProperty()
-    path_info = ndb.StringProperty()
+    path_info = ndb.StringProperty(default='')
     updated_at = ndb.DateTimeProperty(auto_now=True)
     created_at = ndb.DateTimeProperty(auto_now_add=True)
 
@@ -56,7 +63,7 @@ def show_snippet(env, name, default=''):
         snippet = gaetk_Snippet.get_by_id(name)
         if not snippet:
             snippet = gaetk_Snippet(id=name, name=name, markdown=default)
-            snippet.put()
+
         path_info = os.environ.get('PATH_INFO', '?')
         if snippet.path_info is None or not path_info.startswith(snippet.path_info.encode('utf-8', 'ignore')):
             if not snippet.path_info or random.random() < 0.1:
@@ -64,15 +71,11 @@ def show_snippet(env, name, default=''):
                 snippet.put()
 
         if content is None:
-            template = env.from_string(huTools.markdown2.markdown(snippet.markdown))
             try:
-                content = template.render({})
-                if not memcache.set('gaetk_snippet2:%s:rendered' % name, content, 600):
-                    logging.error('Memcache set failed.')
-            except Exception, msg:
-                logging.error("%s", msg)
-                traceback.print_exc()
-                return '''<!-- Rendering error: %s -->%s''' % (cgi.escape(str(msg)), edit)
+                render(name, env, snippet.markdown)
+            except Exception as exception:
+                logging.exception(u'Fehler beim Rendern des Snippet %s: %s', snippet.key.id(), exception)
+                return '<!-- Rendering error: %s -->%s' % (cgi.escape(str(exception)), edit)
 
     return jinja2.Markup(u'''<div class="snippetenvelope"
 id="snippet_{0}_envelop">{1}<div class="snippet"
@@ -82,21 +85,34 @@ id="snippet_{0}">{2}</div></div>'''.format(name, edit, content))
 class SnippetEditHandler(gaetk.handler.BasicHandler):
     """Allow a admin-user to change a snippet."""
 
-    def get(self):
+    def authchecker(self, *args, **kwargs):
+        """Only admin-users may edit a snippet"""
         self.login_required()
         if not self.is_admin():
             raise gaetk.handler.HTTP403_Forbidden("Access denied!")
+
+    def get(self):
         name = self.request.get('id')
+        if not name:
+            raise gaetk.handler.HTTP404_NotFound
         snippet = gaetk_Snippet.get_by_id(id=name)
-        self.render(
-            dict(title=u"Edit %s" % name, snippet=snippet),
-            'gaetk_snippet_edit.html')
+        self.render(dict(title=u"Edit %s" % name, name=name, snippet=snippet), 'gaetk_snippet_edit.html')
 
     def post(self):
-        name = self.request.get("name")
-        markdown = self.request.get("sniptext")
-        snippet = gaetk_Snippet.get_by_id(id=name)
+        name = self.request.get('name')
+        markdown = self.request.get('sniptext', u'')
+        try:
+            render(name, self.create_jinja2env(), markdown)
+        except Exception as exception:
+            logging.exception(u'Fehler beim Rendern des Snippet: %s', exception)
+            self.add_message('error', u'Fehler: %s' % exception)
+            raise gaetk.handler.HTTP303_SeeOther(location=self.request.referer)
+
+        snippet = gaetk_Snippet.get_or_insert(name, name=name, path_info='')
         snippet.markdown = markdown
         snippet.put()
-        memcache.delete('gaetk_snippet2:%s:rendered' % name)
-        raise gaetk.handler.HTTP303_SeeOther(location=snippet.path_info)
+        if snippet.path_info:
+            location = snippet.path_info
+        else:
+            location = '/admin/'
+        raise gaetk.handler.HTTP303_SeeOther(location=location)
