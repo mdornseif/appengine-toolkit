@@ -1,5 +1,5 @@
 GAE_VERSION=1.9.23
-PRODUCTIONURL?= https://$(OPENAPPID).appspot.com/
+PRODUCTIONURL?= https://$(APPID).appspot.com/
 PRODUCTIONNAME?= production
 DEVPAGE?= /
 OPENAPPID?= $(APPID)
@@ -65,7 +65,7 @@ check: lib/google_appengine/google/__init__.py checknodeps
 deploy:
 	# appcfg.py update .
 	appcfg.py update -A $(APPID) -V dev-`whoami` .
-	TESTHOST=dev-`whoami`-dot-$(OPENAPPID).appspot.com make resttest
+	TESTHOST=dev-`whoami`-dot-$(APPID).appspot.com make resttest
 	make opendev
 
 deploy_production:
@@ -79,7 +79,7 @@ deploy_production:
 	# Erst getaggte Version hochladen
 	-appcfg.py update -A $(APPID) -V "v`cat tmp/$(REPOSNAME)/version.txt`" tmp/$(REPOSNAME)
 	# Dann testen
-	(cd tmp/$(REPOSNAME) ; TESTHOST="v`cat version.txt`"-dot-$(OPENAPPID).appspot.com make resttest)
+	(cd tmp/$(REPOSNAME) ; TESTHOST="v`cat version.txt`"-dot-$(APPID).appspot.com make resttest)
 	# Wenn das geklappt hat: produktionsversion aktivieren.
 	appcfg.py update -A $(APPID) -V $(PRODUCTIONNAME) tmp/$(REPOSNAME)
 	curl -X POST --data-urlencode 'payload={"channel": "#general", "username": "webhookbot", "text": "<$(PRODUCTIONURL)> neu deployed"}' https://hooks.slack.com/services/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
@@ -104,13 +104,13 @@ clean:
 	find . -name '*.pyc' -or -name '*.pyo' -delete
 
 openlogs:
-	open "https://appengine.google.com/logs?app_id=e%7E$(OPENAPPID)&version_id=dev-`whoami`"
+	open "https://appengine.google.com/logs?app_id=$(APPID)&version_id=dev-`whoami`"
 
 opendev:
-	open https://dev-`whoami`-dot-$(OPENAPPID).appspot.com$(DEVPAGE)
+	open https://dev-`whoami`-dot-$(APPID).appspot.com$(DEVPAGE)
 
 test:
-	TESTHOST=dev-`whoami`-dot-$(OPENAPPID).appspot.com make resttest
+	TESTHOST=dev-`whoami`-dot-$(APPID).appspot.com make resttest
 
 RESTTESTSUITE?=tests/resttest.py
 resttest:
