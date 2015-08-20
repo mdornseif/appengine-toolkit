@@ -860,8 +860,13 @@ class MarkdownFileHandler(BasicHandler):
                         title = line.lstrip('# ').strip()
                     else:
                         text.append(line)
+                text = ''.join(text)
 
-            self.render({'text': "".join(text), 'title': title, 'path': path}, self.template_name)
+            self.response.headers['ETag'] = hashlib.md5(text.encode('utf-8')).hexdigest()
+            stbuf = os.stat(textfile)
+            self.response.headers['Last-Modified'] = time.strftime(
+                '%a, %d %b %y %H:%M:%S GMT', time.gmtime(stbuf.st_mtime))
+            self.render({'text': text, 'title': title, 'path': path}, self.template_name)
         except IOError as exception:
             logging.exception(u'Path %s: %s', textfile, exception)
             raise gaetk.handler.HTTP404_NotFound("%s not available" % textfile)
