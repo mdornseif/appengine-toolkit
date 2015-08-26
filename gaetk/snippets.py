@@ -72,7 +72,7 @@ def show_snippet(env, name, default=''):
 
         if content is None:
             try:
-                render(name, env, snippet.markdown)
+                content = render(name, env, snippet.markdown)
             except Exception as exception:
                 logging.exception(u'Fehler beim Rendern des Snippet %s: %s', snippet.key.id(), exception)
                 return '<!-- Rendering error: %s -->%s' % (cgi.escape(str(exception)), edit)
