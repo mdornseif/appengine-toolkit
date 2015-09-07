@@ -107,10 +107,10 @@ openlogs:
 	open "https://appengine.google.com/logs?app_id=$(APPID)&version_id=dev-`whoami`"
 
 opendev:
-	open https://dev-`whoami`-dot-$(APPID).appspot.com$(DEVPAGE)
+	open https://dev-`whoami`-dot-$(OPENAPPID).appspot.com$(DEVPAGE)
 
 test:
-	TESTHOST=dev-`whoami`-dot-$(APPID).appspot.com make resttest
+	TESTHOST=dev-`whoami`-dot-$(OPENAPPID).appspot.com make resttest
 
 RESTTESTSUITE?=tests/resttest.py
 resttest:
