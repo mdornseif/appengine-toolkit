@@ -65,7 +65,7 @@ check: lib/google_appengine/google/__init__.py checknodeps
 deploy:
 	# appcfg.py update .
 	appcfg.py update -A $(APPID) -V dev-`whoami` .
-	TESTHOST=dev-`whoami`-dot-$(APPID).appspot.com make resttest
+	TESTHOST=dev-`whoami`-dot-$(OPENAPPID).appspot.com make resttest
 	make opendev
 
 deploy_production:
