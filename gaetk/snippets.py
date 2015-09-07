@@ -31,6 +31,7 @@ def render(name, env, markdown):
     content = template.render({})
     if not memcache.set('gaetk_snippet2:%s:rendered' % name, content, 600):
         logging.error('Memcache set failed.')
+    return content
 
 
 class gaetk_Snippet(ndb.Model):
@@ -59,9 +60,10 @@ def show_snippet(env, name, default=''):
     '''.format(name, huTools.http.tools.quote(name))
 
     content = memcache.get('gaetk_snippet2:%s:rendered' % name)
-    if random.random() < 0.01 or not content:
+    if random.random() < 0.01 or content is None:
         snippet = gaetk_Snippet.get_by_id(name)
         if not snippet:
+            logging.info("generating snippet %s", name)
             snippet = gaetk_Snippet(id=name, name=name, markdown=default)
 
         path_info = os.environ.get('PATH_INFO', '?')
@@ -77,6 +79,7 @@ def show_snippet(env, name, default=''):
                 logging.exception(u'Fehler beim Rendern des Snippet %s: %s', snippet.key.id(), exception)
                 return '<!-- Rendering error: %s -->%s' % (cgi.escape(str(exception)), edit)
 
+    assert content is not None
     return jinja2.Markup(u'''<div class="snippetenvelope"
 id="snippet_{0}_envelop">{1}<div class="snippet"
 id="snippet_{0}">{2}</div></div>'''.format(name, edit, content))
