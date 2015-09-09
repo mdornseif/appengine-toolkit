@@ -14,6 +14,7 @@ from google.appengine.ext import ndb
 
 
 def xdb_create_key(model_class, id_or_name, parent=None):
+    """Key creation."""
     if issubclass(model_class, ndb.Model):
         return ndb.Key(model_class._get_kind(), id_or_name, parent=parent)
     else:
@@ -21,6 +22,7 @@ def xdb_create_key(model_class, id_or_name, parent=None):
 
 
 def get_by_id_or_name(model_class, id_or_name):
+    """Getting by key value."""
     if issubclass(model_class, ndb.Model):
         return model_class.get_by_id(id_or_name)
     else:
@@ -99,7 +101,7 @@ def _get_queryset_db(model_class, ordering=None):
     """Queryset für Subklasse von db.Model"""
     query = model_class.all()
     if ordering:
-        attr, direction = ordering
+        attr, direction = ordering  # pylint: disable=unpacking-non-sequence
     else:
         attr, direction = None, None
 
