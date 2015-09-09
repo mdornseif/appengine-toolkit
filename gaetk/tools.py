@@ -60,7 +60,7 @@ def slugify(value):
 
 
 class mem_cache(object):
-    def __init__(self, maxsize='ignored', typed='ignored', ttl=60*30):
+    def __init__(self, maxsize='ignored', typed='ignored', ttl=60*30):  # pylint: disable=unused-argument
         """
         If there are decorator arguments, the function
         to be decorated is not passed to the constructor!
@@ -77,7 +77,8 @@ class mem_cache(object):
 
 
 class hd_cache(object):
-    def __init__(self, maxsize=8, typed='ignored', ttl=60*30):
+    """Decorator, der sowohl Lokal, als auch in Memcache cached."""
+    def __init__(self, maxsize=8, typed='ignored', ttl=60*30):  # pylint: disable=unused-argument
         """
         If there are decorator arguments, the function
         to be decorated is not passed to the constructor!

@@ -25,10 +25,11 @@ OPENAPPID?= $(APPID)
 # [I0011(locally-disabled), ] Locally disabling unused-argument (W0613)
 
 PYLINT_ARGS= "--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
-			 -rn --ignore=config.py,_gaesessions.py,_internal.py,_itsdangerous.py,huwawi_a_models.py \
+			 -rn --ignore=config.py,huwawi_a_models.py,lib \
              --dummy-variables-rgx="_|dummy" \
              --generated-members=request,response,data,_fields,errors \
              --ignored-classes=Struct,Model,google.appengine.api.memcache,google.appengine.api.files,google.appengine.ext.ndb \
+			 --additional-builtins=_ \
              --no-docstring-rgx="(__.*__|get|post|head)" \
              --max-line-length=$(LINT_LINE_LENGTH) \
              --max-locals=20 --max-attributes=20 --max-returns=8 \
