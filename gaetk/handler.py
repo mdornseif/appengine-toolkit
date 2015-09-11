@@ -187,6 +187,7 @@ class BasicHandler(webapp2.RequestHandler):
     # disable session based authentication on demand
     enableSessionAuth = True
     defaultCachingTime = None
+    extensions = []
 
     def __init__(self, *args, **kwargs):
         """Initialize RequestHandler"""
@@ -316,7 +317,7 @@ class BasicHandler(webapp2.RequestHandler):
                            'is_admin': self.is_admin()})
         return values
 
-    def create_jinja2env(self, extensions=()):
+    def create_jinja2env(self):
         """Initialise and return a jinja2 Environment instance.
 
         Overwrite this method to setup specific behaviour.
@@ -326,11 +327,11 @@ class BasicHandler(webapp2.RequestHandler):
         import jinja2
         import gaetk.jinja_filters as myfilters
 
-        key = tuple(extensions)
+        key = 'default'
         if key not in _jinja_env_cache:
             env = jinja2.Environment(
                 loader=jinja2.FileSystemLoader(config.template_dirs),
-                extensions=extensions,
+                extensions=self.extensions,
                 auto_reload=False,  # unneeded on App Engine production
                 trim_blocks=True,  # first newline after a block is removed
                 # lstrip_blocks=True,

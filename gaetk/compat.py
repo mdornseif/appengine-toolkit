@@ -157,7 +157,7 @@ def xdb_fetch_page(query, limit, offset=None, start_cursor=None):
             objects, cursor, more_objects = query.fetch_page(limit, start_cursor=start_cursor)
         else:
             objects, cursor, more_objects = query.fetch_page(limit, offset=offset)
-    elif isinstance(query, db.Query):
+    elif isinstance(query, db.Query) or isinstance(query, db.GqlQuery):
         if start_cursor:
             if isinstance(start_cursor, Cursor):
                 start_cursor = start_cursor.urlsafe()

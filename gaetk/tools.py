@@ -60,6 +60,7 @@ def slugify(value):
 
 
 class mem_cache(object):
+    """Decorator, in Memcache cached."""
     def __init__(self, maxsize='ignored', typed='ignored', ttl=60*30):  # pylint: disable=unused-argument
         """
         If there are decorator arguments, the function
