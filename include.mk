@@ -1,4 +1,4 @@
-GAE_VERSION=1.9.23
+GAE_VERSION=1.9.26
 PRODUCTIONURL?= https://$(APPID).appspot.com/
 PRODUCTIONNAME?= production
 DEVPAGE?= /

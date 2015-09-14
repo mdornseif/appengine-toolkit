@@ -111,12 +111,6 @@ class Response(object):
             'expected content type %r, got %r' % (expected_type, actual_type))
         return self
 
-    def redirects_to(self, expected_url):
-        """sichert zu, dass mit einen Redirect geantwortet wurde."""
-        location = self.headers.get('location', self.headers.get('content-location', ''))
-        self.expect_condition(
-            location.endswith(expected_url), 'expected redirect to %s, got %s' % (expected_url, location))
-
     def converter_succeeds(self, converter, message):
         """sichert zu, dass content mittels converter(self.content) ohne exception konvertiert werden kann"""
         try:
@@ -174,6 +168,16 @@ class Response(object):
         """sichert zu, dass der Zugriff verweigert wurde."""
         self.responds_http_status(403)
         return self
+
+    def responds_unauthorized(self):
+        """sichert zu, dass der Zugriff verweigert wurde."""
+        self.responds_http_status(403)
+
+    def redirects_to(self, expected_url):
+        """sichert zu, dass mit einen Redirect geantwortet wurde."""
+        location = self.headers.get('location', self.headers.get('content-location', ''))
+        self.expect_condition(
+            location.endswith(expected_url), 'expected redirect to %s, got %s' % (expected_url, location))
 
     def responds_with_content_location(self, expected_location):
         """sichert zu, dass die Antwort einen location-header hat."""
@@ -250,10 +254,6 @@ class Response(object):
         if links:
             self.responds_with_valid_links()
         return self
-
-    def responds_unauthorized(self):
-        """sichert zu, dass der Zugriff verweigert wurde."""
-        self.responds_http_status(403)
 
     def responds_with_html_to_valid_auth(self):
         """
