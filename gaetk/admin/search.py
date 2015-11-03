@@ -85,9 +85,9 @@ def add_to_index(key):
     # We have some very nasty problems with cyclic imports
     # site registry depends on options and options depends
     # on a lot of stuff which depends on the site registry
-    #admin = gaetk.admin.sites.site._registry.get(type(obj))
-    #if hasattr(admin, 'searchdoc'):
-    #    data = admin.searchdoc(obj)
+    # admin = gaetk.admin.sites.site._registry.get(type(obj))
+    # if hasattr(admin, 'searchdoc'):
+    #     data = admin.searchdoc(obj)
 
     if hasattr(obj, 'as_dict'):
         data = obj.as_dict()

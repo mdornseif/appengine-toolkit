@@ -16,8 +16,10 @@ Usage:
     exporter.to_xls(handler.response)
     # exporter.to_csv(handler.response)
 """
-import datetime
 import csv
+import datetime
+
+from gaetk import compat
 from gaetk.infrastructure import query_iterator
 
 
@@ -25,19 +27,17 @@ class ModelExporter(object):
     """Export all entities of a Model as XLS, CSV, etc."""
     def __init__(self, model, query=None):
         self.model = model
-        self.query = query
-        if not self.query:
-            self.query = model.query
+        if query is None:
+            self.query = compat.xdb_queryset(model)
+        else:
+            self.query = query
 
     @property
     def fields(self):
         """Liste der zu exportierenden Felder"""
         if not hasattr(self, '_fields'):
             fields = []
-            # ndb & db compatatibility
-            props = getattr(self.model, '_properties', None)
-            if not props:
-                props = self.model.properties()
+            props = compat.xdb_properties(self.model)
             for prop in props.values():
                 # ndb & db compatatibility
                 name = getattr(prop, '_name', getattr(prop, 'name', '?'))
@@ -90,4 +90,3 @@ class ModelExporter(object):
         for row in query_iterator(self.query):
             self.create_row(xlswriter, row)
         xlswriter.save(fileobj)
-

@@ -91,7 +91,7 @@ def login_user(credential, session, via, response=None):
     session['uid'] = credential.uid
     if 'login_via' not in session:
         session['login_via'] = via
-    if 'logintime' not in session:
+    if 'login_time' not in session:
         session['login_time'] = datetime.datetime.now()
     if not os.environ.get('USER_ID', None):
         os.environ['USER_ID'] = credential.uid
@@ -187,6 +187,7 @@ class BasicHandler(webapp2.RequestHandler):
     # disable session based authentication on demand
     enableSessionAuth = True
     defaultCachingTime = None
+    extensions = []
 
     def __init__(self, *args, **kwargs):
         """Initialize RequestHandler"""
@@ -213,6 +214,15 @@ class BasicHandler(webapp2.RequestHandler):
         if str(code) == '404':
             self.response.headers['Content-Type'] = 'text/plain'
             self.response.out.write('Daten nicht gefunden.')
+
+    @property
+    def browser_redirectable(self):
+        """Is this a user initiated request which can be redirected to a login-page etc?"""
+        return (
+            'text/' in self.request.headers.get('Accept', '') or
+            'image/' in self.request.headers.get('Accept', '') or
+            self.request.is_xhr or
+            'Mozilla' in self.request.headers.get('User-Agent', ''))
 
     def paginate(self, query, defaultcount=10, datanodename='objects', calctotal=False, formatter=None):
         """Pagination a la http://mdornseif.github.com/2010/10/02/appengine-paginierung.html
@@ -307,31 +317,24 @@ class BasicHandler(webapp2.RequestHandler):
                            'is_admin': self.is_admin()})
         return values
 
-    def create_jinja2env(self, extensions=()):
+    def create_jinja2env(self):
         """Initialise and return a jinja2 Environment instance.
 
         Overwrite this method to setup specific behaviour.
+        Usually overwriting `add_jinja2env_globals()` is enough.
         For example, to allow i18n:
-
-            class myHandler(BasicHandler):
-                def create_jinja2env(self):
-                    import gettext
-                    import jinja2
-                    env = jinja2.Environment(extensions=['jinja2.ext.i18n'],
-                                             loader=jinja2.FileSystemLoader(config.template_dirs))
-                    env.install_gettext_translations(gettext.NullTranslations())
-                    return env
         """
         import jinja2
         import gaetk.jinja_filters as myfilters
 
-        key = tuple(extensions)
+        key = 'default'
         if key not in _jinja_env_cache:
             env = jinja2.Environment(
                 loader=jinja2.FileSystemLoader(config.template_dirs),
-                extensions=extensions,
-                auto_reload=False,  # do not check if the source changed
+                extensions=self.extensions,
+                auto_reload=False,  # unneeded on App Engine production
                 trim_blocks=True,  # first newline after a block is removed
+                # lstrip_blocks=True,
                 bytecode_cache=jinja2.MemcachedBytecodeCache(memcache, timeout=3600)
             )
             myfilters.register_custom_filters(env)
@@ -628,12 +631,7 @@ class BasicHandler(webapp2.RequestHandler):
         # authentication
         if not self.credential:
             # Login not successful
-            is_browser = (
-                'text/' in self.request.headers.get('Accept', '') or
-                'image/' in self.request.headers.get('Accept', '') or
-                self.request.is_xhr or
-                'Mozilla' in self.request.headers.get('User-Agent', ''))
-            if is_browser:
+            if self.browser_redirectable:
                 # we assume the request came via a browser - redirect to the "nice" login page
                 # let login.py handle it from there
                 absolute_url = self.abs_url(
@@ -709,8 +707,9 @@ class BasicHandler(webapp2.RequestHandler):
         except AttributeError:
             # session handling not activated
             self.session = {}
-        # init messages array based on session
-        self.session['_gaetk_messages'] = self.session.get('_gaetk_messages', [])
+        # init messages array based on session but avoid modifying session if not needed
+        if self.session.get('_gaetk_messages', None):
+            self.session['_gaetk_messages'] = self.session.get('_gaetk_messages', [])
         # Give authentication Hooks opportunity to do their thing
         self.authchecker(method, *args, **kwargs)
 
@@ -775,8 +774,9 @@ class JsonResponseHandler(BasicHandler):
 
         # bind session on dispatch (not in __init__)
         self.session = get_current_session()
-        # init messages array based on session
-        self.session['_gaetk_messages'] = self.session.get('_gaetk_messages', [])
+        # init messages array based on session but avoid modifying session if not needed
+        if self.session.get('_gaetk_messages', None):
+            self.session['_gaetk_messages'] = self.session.get('_gaetk_messages', [])
         # Give authentication Hooks opportunity to do their thing
         self.authchecker(method, *args, **kwargs)
 
@@ -842,9 +842,10 @@ class MarkdownFileHandler(BasicHandler):
     """Zeigt beliebige Markdown Files an."""
     template_name = 'gaetk_markdown.html'
 
-    def get(self, path, *_args, **_kwargs):
-        path = path.strip('/')
-        path = re.sub(r'[^a-z/]', '', path)
+    def get(self, path=None, *_args, **_kwargs):
+        if path is None:
+            path = self.request.path
+        path = re.sub(r'[^a-zA-Z0-9/]', '', path.strip('/'))
         if not path:
             path = 'index'
         textfile = 'text/%s.markdown' % path
@@ -857,11 +858,16 @@ class MarkdownFileHandler(BasicHandler):
                 # wir gehen davon aus, dass die erste Zeile, die mit `# ` beginnt, der Titel ist
                 for line in fileobj.readlines():
                     if line.startswith('# ') and not title:
-                        title = line.lstrip('# ')
+                        title = line.lstrip('# ').strip()
                     else:
                         text.append(line)
+                text = ''.join(text)
 
-            self.render({'text': "".join(text), 'title': title, 'path': path}, self.template_name)
-        except IOError:
-            raise
+            self.response.headers['ETag'] = hashlib.md5(text.encode('utf-8')).hexdigest()
+            stbuf = os.stat(textfile)
+            self.response.headers['Last-Modified'] = time.strftime(
+                '%a, %d %b %y %H:%M:%S GMT', time.gmtime(stbuf.st_mtime))
+            self.render({'text': text, 'title': title, 'path': path}, self.template_name)
+        except IOError as exception:
+            logging.exception(u'Path %s: %s', textfile, exception)
             raise gaetk.handler.HTTP404_NotFound("%s not available" % textfile)

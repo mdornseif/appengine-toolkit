@@ -7,6 +7,7 @@ Created by Christian Klein on 2011-08-22.
 Copyright (c) 2011, 2014 HUDORA GmbH. All rights reserved.
 """
 import cgi
+import datetime
 import logging
 
 import gaetk.handler
@@ -17,13 +18,12 @@ from google.appengine.ext import deferred
 from google.appengine.ext import ndb
 from wtforms.ext.appengine.db import model_form
 
+from gaetk import compat
+from gaetk import modelexporter
 from gaetk.admin import util
 from gaetk.admin.models import DeletedObject
-from gaetk import compat
-
 from gaetk.compat import xdb_kind
 
-# sites registry
 
 class AdminSite(object):
     """Konzept zur Verwaltung (per Weboberfläche) adminsitrierbarer GAE Models."""
@@ -74,7 +74,6 @@ class AdminSite(object):
 # The global AdminSite instance
 site = AdminSite()
 
-# options
 
 class ModelAdmin(object):
     """Admin Modell."""
@@ -109,6 +108,8 @@ class ModelAdmin(object):
     # (ist das erste eigene Attribut)
     field_args = {}
 
+    read_only = False
+
     # Actions, bisher nicht implementiert.
     actions = []
 
@@ -125,13 +126,22 @@ class ModelAdmin(object):
     def get_ordering(self, request):
         """Return the sort order attribute"""
         order_field = request.get('o')
+        direction = request.get('ot', 'asc')
 
-        if not order_field:  # in self.model
-            order_field = self.ordering
+        if not order_field and self.ordering:
+            if self.ordering.startswith('-'):
+                direction = 'desc'
+                order_field = self.ordering[1:]
+            elif self.ordering.startswith('+'):
+                direction = 'asc'
+                order_field = self.ordering[1:]
+            else:
+                order_field = self.ordering
+                direction = 'asc'
+
         if not order_field:
             return
 
-        direction = request.get('ot', 'asc')
         return order_field, '-' if direction == 'desc' else '+'
 
     def get_queryset(self, request):
@@ -223,7 +233,7 @@ class ModelAdmin(object):
         if handler.request.method == 'POST':
             form = form_class(handler.request.POST)
             if form.validate():
-                key_name = compat.xdb_id_or_name(xdb_key(obj))
+                key_name = compat.xdb_id_or_name(compat.xdb_key(obj))
                 self.handle_blobstore_fields(handler, obj, key_name)
                 if hasattr(obj, 'update'):
                     obj.update(form.data)
@@ -278,8 +288,8 @@ class ModelAdmin(object):
                     obj = factory(key_name=key_name, **form_data)
 
                 # Beim Anlegen muss dann halt einmal gespeichert werden,
-                # ansonsten ist der ID unbekannt. 
-                if self.self.blob_upload_fields and key_name is None:
+                # ansonsten ist der ID unbekannt.
+                if self.blob_upload_fields and key_name is None:
                     key_name = compat.xdb_id_or_name(obj.put())
 
                 self.handle_blobstore_fields(handler, obj, key_name)
@@ -346,7 +356,7 @@ class ModelAdmin(object):
         `extra_context` ist für die Signatur erforderlich, wird aber nicht genutzt.
         """
         # irgendwann werden wir hier einen longtask nutzen muessen
-        exporter = ModelExporter(self.model)
+        exporter = modelexporter.ModelExporter(self.model)
         filename = '%s-%s.csv' % (compat.xdb_kind(self.model), datetime.datetime.now())
         handler.response.headers['Content-Type'] = 'text/csv; charset=utf-8'
         handler.response.headers['content-disposition'] = \
@@ -358,7 +368,7 @@ class ModelAdmin(object):
 
         `extra_context` ist für die Signatur erforderlich, wird aber nicht genutzt.
         """
-        exporter = ModelExporter(self.model)
+        exporter = modelexporter.ModelExporter(self.model)
         filename = '%s-%s.xls' % (compat.xdb_kind(self.model), datetime.datetime.now())
         handler.response.headers['Content-Type'] = 'application/msexcel'
         handler.response.headers['content-disposition'] = \
@@ -376,76 +386,3 @@ class ModelAdmin(object):
 
         attr = action + '_form_template'
         return getattr(self, attr, 'admin/detail.html')
-
-
-import datetime
-import csv
-
-
-class ModelExporter(object):
-    """Exports models as CSV, XLS, etc."""
-    def __init__(self, model, query=None):
-        self.model = model
-        self.query = query
-
-    @property
-    def fields(self):
-        """Liste der zu exportierenden Felder"""
-        if not hasattr(self, '_fields'):
-            fields = []
-            # ndb & db compatatibility
-            props = getattr(self.model, '_properties', None)
-            if not props:
-                props = self.model.properties()
-            for prop in props.values():
-                # ndb & db compatatibility
-                fields.append(getattr(prop, '_name', getattr(prop, 'name', '?')))
-            if hasattr(self, 'additional_fields'):
-                fields.extend(self.additional_fields)
-            fields.sort()
-            self._fields = fields
-        return self._fields
-
-    def create_header(self, output, fixer=lambda x: x):
-        """Erzeugt eine oder mehrere Headerzeilen in `output`"""
-        output.writerow(fixer(['# Exported at:', str(datetime.datetime.now())]))
-        output.writerow(fixer(self.fields + [u'Datenbankschlüssel']))
-
-    def create_row(self, output, data, fixer=lambda x: x):
-        """Erzeugt eine einzelne Zeile im Output."""
-        row = []
-        for field in self.fields:
-            attr = getattr(data, field)
-            if callable(attr):
-                tmp = attr()
-            else:
-                tmp = attr
-            row.append(unicode(tmp))
-        if callable(data.key):
-            row.append(unicode(data.key()))
-        else:
-            row.append(unicode(data.key.urlsafe()))
-        output.writerow(fixer(row))
-
-    def create_writer(self, fileobj):
-        """Generiert den Ausgabedatenstrom aus fileobj."""
-        return csv.writer(fileobj, dialect='excel', delimiter='\t')
-
-    def to_csv(self, fileobj):
-        """Generate CSV Output."""
-        csvwriter = csv.writer(fileobj, dialect='excel', delimiter='\t')
-        fixer = lambda row: [unicode(x).encode('utf-8') for x in row]
-        self.create_header(csvwriter, fixer)
-        for row in self.model.query():
-            self.create_row(csvwriter, row, fixer)
-
-    def to_xls(self, fileobj):
-        """Generate XLS Output."""
-        # we create a fake writer object to do buffering
-        # because xlwt can't do streaming writes.
-        import huTools.structured_xls
-        xlswriter = huTools.structured_xls.XLSwriter()
-        self.create_header(xlswriter)
-        for row in self.model.query():
-            self.create_row(xlswriter, row)
-        xlswriter.save(fileobj)

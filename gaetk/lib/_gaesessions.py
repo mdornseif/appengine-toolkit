@@ -15,7 +15,8 @@ from google.appengine.api import memcache
 from google.appengine.ext import db
 
 # Configurable cookie options
-COOKIE_NAME_PREFIX = "DgU"  # identifies a cookie as being one used by gae-sessions (so you can set cookies too)
+# Identifies a cookie as being one used by gae-sessions (so you can set cookies too)
+COOKIE_NAME_PREFIX = "DgU"  
 COOKIE_PATH = "/"
 DEFAULT_COOKIE_ONLY_THRESH = 10240  # 10KB: GAE only allows ~16000B in HTTP header - leave ~6KB for other info
 DEFAULT_LIFETIME = datetime.timedelta(days=7)
@@ -28,7 +29,8 @@ EXPIRE_COOKIE_FMT = ' %s=; expires=Wed, 01-Jan-1970 00:00:00 GMT; Path=' + COOKI
 COOKIE_FMT = ' ' + COOKIE_NAME_PREFIX + '%02d="%s"; %sPath=' + COOKIE_PATH + '; HttpOnly'
 COOKIE_FMT_SECURE = COOKIE_FMT + '; Secure'
 COOKIE_DATE_FMT = '%a, %d-%b-%Y %H:%M:%S GMT'
-COOKIE_OVERHEAD = len(COOKIE_FMT % (0, '', '')) + len('expires=Xxx, xx XXX XXXX XX:XX:XX GMT; ') + 150  # 150=safety margin (e.g., in case browser uses 4000 instead of 4096)
+# 150=safety margin (e.g., in case browser uses MAX_COOKIE_LEN 4000 instead of 4096)
+COOKIE_OVERHEAD = len(COOKIE_FMT % (0, '', '')) + len('expires=Xxx, xx XXX XXXX XX:XX:XX GMT; ') + 150
 MAX_DATA_PER_COOKIE = MAX_COOKIE_LEN - COOKIE_OVERHEAD
 
 _tls = threading.local()

@@ -12,6 +12,8 @@ import re
 import jinja2
 from jinja2.utils import Markup
 
+import gaetk.tools
+
 
 def left_justify(value, width):
     """Prefix the given string with spaces until it is width characters long."""
@@ -231,6 +233,8 @@ def _formatint(value):
 def filter_attrencode(value):
     """Makes a string valid as an XML attribute."""
     import xml.sax.saxutils
+    if value is None:
+        return u''
     if hasattr(value, 'unescape'):  # jinja2 Markup
         value = value.unescape()
     return xml.sax.saxutils.quoteattr(value)[1:-1]
@@ -265,3 +269,4 @@ def register_custom_filters(jinjaenv):
     jinjaenv.filters['intword'] = intword
     jinjaenv.filters['attrencode'] = filter_attrencode
     jinjaenv.filters['urlencode'] = filter_urlencode
+    jinjaenv.filters['slugify'] = gaetk.tools.slugify

@@ -13,6 +13,22 @@ from google.appengine.ext import db
 from google.appengine.ext import ndb
 
 
+def xdb_create_key(model_class, id_or_name, parent=None):
+    """Key creation."""
+    if issubclass(model_class, ndb.Model):
+        return ndb.Key(model_class._get_kind(), id_or_name, parent=parent)
+    else:
+        return db.Key.from_path(model_class.kind(), id_or_name, parent=parent)
+
+
+def get_by_id_or_name(model_class, id_or_name):
+    """Getting by key value."""
+    if issubclass(model_class, ndb.Model):
+        return model_class.get_by_id(id_or_name)
+    else:
+        return model_class.get_by_key_name(id_or_name)
+
+
 def xdb_kind(model_class):
     """Get kind from db or ndb model class"""
     kind = getattr(model_class, '_get_kind', None)
@@ -28,7 +44,7 @@ def xdb_get_instance(model_class, encoded_key):
     if issubclass(model_class, ndb.Model):
         key = ndb.Key(urlsafe=encoded_key)
         instance = key.get()
-    elif issubclass(model_class, db.Model):
+    else:
         instance = model_class.get(unquote(encoded_key))
     return instance
 
@@ -78,18 +94,21 @@ def xdb_properties(instance):
     if xdb_is_ndb(instance):
         return instance._properties
     else:
-        instance.properties()
+        return instance.properties()
 
 
-def _get_queryset_db(model_class, ordering=(None, None)):
+def _get_queryset_db(model_class, ordering=None):
     """Queryset für Subklasse von db.Model"""
     query = model_class.all()
-    attr, direction = ordering
-    if attr:
-        if attr in model_class.properties():
-            if direction == '-':
-                attr = '-' + attr
-            query.order(attr)
+    if ordering:
+        attr, direction = ordering  # pylint: disable=unpacking-non-sequence
+    else:
+        attr, direction = None, None
+
+    if attr and attr in model_class.properties():
+        if direction == '-':
+            attr = '-' + attr
+        query.order(attr)
     return query
 
 
@@ -130,13 +149,18 @@ def xdb_query_run(query):
 
 def xdb_fetch_page(query, limit, offset=None, start_cursor=None):
     """Pagination-ready fetching a some entities."""
+
     if isinstance(query, ndb.Query):
         if start_cursor:
-            objects, cursor, more_objects = query.fetch_page(limit, start_cursor=Cursor(urlsafe=start_cursor))
+            if isinstance(start_cursor, basestring):
+                start_cursor = Cursor(urlsafe=start_cursor)
+            objects, cursor, more_objects = query.fetch_page(limit, start_cursor=start_cursor)
         else:
             objects, cursor, more_objects = query.fetch_page(limit, offset=offset)
-    elif isinstance(query, db.Query):
+    elif isinstance(query, db.Query) or isinstance(query, db.GqlQuery):
         if start_cursor:
+            if isinstance(start_cursor, Cursor):
+                start_cursor = start_cursor.urlsafe()
             query.with_cursor(start_cursor)
             objects = query.fetch(limit)
             cursor = Cursor(urlsafe=query.cursor())

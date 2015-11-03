@@ -8,6 +8,10 @@ Copyright (c) 2010, 2015 HUDORA. All rights reserved.
 """
 import os
 import re
+import unicodedata
+
+import gaetk.lib._lru_cache
+import gaetk.lib.memorised.decorators
 
 
 def split(stos):
@@ -35,9 +39,11 @@ def get_cookie_domain():
         domain = '.'.join(host.split('.')[-2:])
     return domain
 
-## {{{ http://code.activestate.com/recipes/577257/ (r1)
+# {{{ http://code.activestate.com/recipes/577257/ (r1)
 _slugify_strip_re = re.compile(r'[^\w\s-]')
 _slugify_hyphenate_re = re.compile(r'[-\s]+')
+
+
 def slugify(value):
     """
     Normalizes string, converts to lowercase, removes non-alpha characters,
@@ -45,11 +51,50 @@ def slugify(value):
 
     From Django's "django/template/defaultfilters.py".
     """
-    import unicodedata
+    if value is None:
+        return ''
     value = unicodedata.normalize('NFKD', unicode(value)).encode('ascii', 'ignore')
     value = unicode(_slugify_strip_re.sub('', value).strip().lower())
     return _slugify_hyphenate_re.sub('-', value)
-## end of http://code.activestate.com/recipes/577257/ }}}
+# end of http://code.activestate.com/recipes/577257/ }}}
+
+
+class mem_cache(object):
+    """Decorator, in Memcache cached."""
+    def __init__(self, maxsize='ignored', typed='ignored', ttl=60*30):  # pylint: disable=unused-argument
+        """
+        If there are decorator arguments, the function
+        to be decorated is not passed to the constructor!
+        """
+        self.ttl = ttl
+
+    def __call__(self, user_function):
+        """
+        If there are decorator arguments, __call__() is only called
+        once, as part of the decoration process! You can only give
+        it a single argument, which is the function object.
+        """
+        return gaetk.lib.memorised.decorators.memorise(ttl=self.ttl)(user_function,)
+
+
+class hd_cache(object):
+    """Decorator, der sowohl Lokal, als auch in Memcache cached."""
+    def __init__(self, maxsize=8, typed='ignored', ttl=60*30):  # pylint: disable=unused-argument
+        """
+        If there are decorator arguments, the function
+        to be decorated is not passed to the constructor!
+        """
+        self.ttl = ttl
+        self.maxsize = maxsize
+
+    def __call__(self, user_function):
+        """
+        If there are decorator arguments, __call__() is only called
+        once, as part of the decoration process! You can only give
+        it a single argument, which is the function object.
+        """
+        wraped = gaetk.lib.memorised.decorators.memorise(ttl=self.ttl)(user_function)
+        return gaetk.lib._lru_cache.lru_cache(maxsize=self.maxsize, typed=True, ttl=self.ttl)(wraped)
 
 
 if __name__ == "__main__":

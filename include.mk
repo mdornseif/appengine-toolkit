@@ -1,5 +1,5 @@
-GAE_VERSION=1.9.21
-PRODUCTIONURL?= https://$(OPENAPPID).appspot.com/
+GAE_VERSION=1.9.26
+PRODUCTIONURL?= https://$(APPID).appspot.com/
 PRODUCTIONNAME?= production
 DEVPAGE?= /
 OPENAPPID?= $(APPID)
@@ -21,13 +21,15 @@ OPENAPPID?= $(APPID)
 # [W0221(arguments-differ), ShowLieferschein.get] Arguments number differs from overridden method
 # [W0232(no-init), gaetk_Snippet] Class has no __init__ method
 # [W0703(broad-except), show_snippet] Catching too general exception Exception]
+# [W1306(missing-format-attribute)] - kommt nicht mit Objekten zurecht
 # [I0011(locally-disabled), ] Locally disabling unused-argument (W0613)
 
 PYLINT_ARGS= "--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
-			 -rn --ignore=config.py,_gaesessions.py,_internal.py,_itsdangerous.py,huwawi_a_models.py \
+			 -rn --ignore=config.py,huwawi_a_models.py,lib \
              --dummy-variables-rgx="_|dummy" \
              --generated-members=request,response,data,_fields,errors \
              --ignored-classes=Struct,Model,google.appengine.api.memcache,google.appengine.api.files,google.appengine.ext.ndb \
+			 --additional-builtins=_ \
              --no-docstring-rgx="(__.*__|get|post|head)" \
              --max-line-length=$(LINT_LINE_LENGTH) \
              --max-locals=20 --max-attributes=20 --max-returns=8 \
@@ -35,7 +37,7 @@ PYLINT_ARGS= "--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
              --disable=C0103,C0330 \
              --disable=E1103 \
              --disable=R0201,R0903,R0904,R0913,R0921,R0922 \
-             --disable=W0142,W0201,W0212,W0221,W0232,W0232,W0703 \
+             --disable=W0142,W0201,W0212,W0221,W0232,W0232,W0703,W1306 \
              --disable=I0011
 
 # PYLINT_ARGS_ADDON?= --import-graph=import.dot -ry
@@ -43,7 +45,7 @@ LINT_FILES?= modules/ tests/*.py *.py lib/CentralServices/cs lib/appengine-toolk
 
 LINT_LINE_LENGTH= 110
 LINT_FLAKE8_ARGS= --max-complexity=12 --builtins=_ --exclude=appengine_config.py,lib/*.py --max-line-length=$(LINT_LINE_LENGTH) --ignore=E711,E712
-MYPYTHONPATH= lib/google_appengine:lib/google_appengine/lib/jinja2-2.6:./lib/google_appengine/lib/webob-1.2.3:./lib/google_appengine/lib/django-1.5:./lib/google_appengine/lib/webapp2-2.5.2
+MYPYTHONPATH := $(MYPYTHONPATH):lib/google_appengine:lib/google_appengine/lib/jinja2-2.6:./lib/google_appengine/lib/webob-1.2.3:./lib/google_appengine/lib/django-1.5:./lib/google_appengine/lib/webapp2-2.5.2
 
 default: check
 
@@ -63,7 +65,7 @@ check: lib/google_appengine/google/__init__.py checknodeps
 
 deploy:
 	# appcfg.py update .
-	appcfg.py --oauth2 update -A $(APPID) -V dev-`whoami` .
+	appcfg.py update -A $(APPID) -V dev-`whoami` .
 	TESTHOST=dev-`whoami`-dot-$(OPENAPPID).appspot.com make resttest
 	make opendev
 
@@ -76,13 +78,13 @@ deploy_production:
 	(cd tmp/$(REPOSNAME) ; git show-ref --hash=7 refs/remotes/origin/production > version.txt)
 	(cd tmp/$(REPOSNAME) ; curl https://$(OPENAPPID).appspot.com/version.txt > lastversion.txt)
 	# Erst getaggte Version hochladen
-	-appcfg.py --oauth2 update -A $(APPID) -V "v`cat tmp/$(REPOSNAME)/version.txt`" tmp/$(REPOSNAME)
+	-appcfg.py update -A $(APPID) -V "v`cat tmp/$(REPOSNAME)/version.txt`" tmp/$(REPOSNAME)
 	# Dann testen
 	(cd tmp/$(REPOSNAME) ; TESTHOST="v`cat version.txt`"-dot-$(OPENAPPID).appspot.com make resttest)
 	# Wenn das geklappt hat: produktionsversion aktivieren.
-	appcfg.py --oauth2 update -A $(APPID) -V $(PRODUCTIONNAME) tmp/$(REPOSNAME)
+	appcfg.py update -A $(APPID) -V $(PRODUCTIONNAME) tmp/$(REPOSNAME)
 	curl -X POST --data-urlencode 'payload={"channel": "#general", "username": "webhookbot", "text": "<$(PRODUCTIONURL)> neu deployed"}' https://hooks.slack.com/services/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
-	(cd tmp/$(REPOSNAME) ; git log --pretty='%ae %s' `cat lastversion.txt`..`cat version.txt`)
+	(cd tmp/$(REPOSNAME) ; git log --pretty='* %s (%ae)' `cat lastversion.txt`..`cat version.txt`)
 
 fixup:
 	# Tailing Whitespace
@@ -103,7 +105,7 @@ clean:
 	find . -name '*.pyc' -or -name '*.pyo' -delete
 
 openlogs:
-	open "https://appengine.google.com/logs?app_id=e%7E$(OPENAPPID)&version_id=dev-`whoami`"
+	open "https://appengine.google.com/logs?app_id=$(APPID)&version_id=dev-`whoami`"
 
 opendev:
 	open https://dev-`whoami`-dot-$(OPENAPPID).appspot.com$(DEVPAGE)

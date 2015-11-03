@@ -16,6 +16,7 @@ import google.appengine.api.memcache
 
 import gaetk
 import gaetk.handler
+
 from google.appengine.ext import db
 from google.appengine.ext.db import stats
 
@@ -170,7 +171,7 @@ class WarmupHandler(gaetk.handler.BasicHandler):
 
 
 application = gaetk.webapp2.WSGIApplication([
-    (r'/gaetk/stats.json', Stats),
+    (r'^/gaetk/stats.json', Stats),
     (r'^/robots.txt', RobotTxtHandler),
     (r'^/version.txt', VersionHandler),
     (r'^/_ah/warmup$', WarmupHandler),

@@ -19,7 +19,9 @@
 {% block maincontent %}
 
 <form class="form-inline" method="GET" action="search/">
+  {% if not read_only %}
   <a href="add/" type="button" class="btn btn-default">Neu</a>
+  {% endif %}
   <div class="btn-group">
     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">Export <span class="caret"></span></button>
     <ul class="dropdown-menu">
@@ -38,12 +40,15 @@
 
 <p>&nbsp;</p>
 
+{% if not read_only %}
 <form action="delete/" method="POST">
+{% endif %}
+
   <div class="form-group form-group-sm">
   <table class="table table-bordered table-condensed table-striped">
     <thead>
       <tr>
-        <th>&nbsp;</th>
+        {% if not read_only %}<th>&nbsp;</th>{% endif %}
         <th>Key/ID</th>
         {% for field in list_fields %}
         {# This is a little bit hackish. Django now uses a class ChangeList to display this table #}
@@ -54,8 +59,16 @@
     <tbody>
       {% for obj in object_list %}
       <tr>
+        {% if not read_only %}
         <td><input name="object_id" type="checkbox" value="{{ display_key(obj) }}"></td>
-        <td><a href="/admin/{{ app }}/{{ model }}/{{ display_key(obj) }}/">{{ display_id(obj)|e }}</a></td>
+        {% endif %}
+        <td>
+        {% if not read_only %}
+          <a href="/admin/{{ app }}/{{ model }}/{{ display_key(obj) }}/">{{ display_id(obj)|e }}</a>
+        {% else %}
+          {{ display_id(obj)|e }}
+        {%- endif %}
+        </td>
         {% for field in list_fields %}<td>{{ obj|attr(field) }}</td>{% endfor %}
       </tr>
       {% endfor %}
@@ -63,10 +76,12 @@
   </table>
   </div>
 
+{% if not read_only %}
   <div class="form-group form-group-sm">
     <button class="btn btn-danger" type="submit">Löschen</button>
   </div>
 </form>
+{% endif %}
 
 <nav>
   <ul class="pager">
