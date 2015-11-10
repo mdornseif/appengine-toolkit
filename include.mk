@@ -74,7 +74,7 @@ deploy_production:
 	rm -Rf tmp
 	mkdir tmp
 	(cd tmp ; git clone git@github.com:hudora/$(REPOSNAME).git)
-	(cd tmp/$(REPOSNAME) ; git checkout production ; make boot; make dependencies)
+	(cd tmp/$(REPOSNAME) ; git checkout production ; make boot; make dependencies code)
 	(cd tmp/$(REPOSNAME) ; git show-ref --hash=7 refs/remotes/origin/production > version.txt)
 	(cd tmp/$(REPOSNAME) ; curl https://$(OPENAPPID).appspot.com/version.txt > lastversion.txt)
 	# Erst getaggte Version hochladen
@@ -117,4 +117,6 @@ RESTTESTSUITE?=tests/resttest.py
 resttest:
 	sh -c "PYTHONPATH=lib/huTools-checkout:lib/appengine-toolkit python $(RESTTESTSUITE) --hostname=$(TESTHOST) --credentials-user=$(CREDENTIALS_USER)"
 
-.PHONY: deploy pylint dependencies_for_check_target clean check dependencies resttest
+code: ;
+
+.PHONY: deploy pylint dependencies_for_check_target clean check dependencies resttest code
