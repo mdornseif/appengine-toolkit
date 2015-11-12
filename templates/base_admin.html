@@ -55,7 +55,7 @@
     {% endblock gaetkstyle %}
 {% if is_admin and profiler_request_id -%}<link rel="stylesheet" type="text/css" href="/gae_mini_profiler/static/css/profiler.css" />{%- endif %}
 {% block stylesheets -%}{%- endblock %}
-<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js" type="text/javascript"></script>
+<script src="/gaetk/static/jquery/jquery-1.11.3.min.js" type="text/javascript"></script>
 <script src="//maxcdn.bootstrapcdn.com/bootstrap/2.3.2/js/bootstrap.min.js"></script>{% if is_admin and profiler_request_id -%}  {# Den Profiler sollen nur Admins angezeigt bekommen. #}
 <script type="text/javascript" src="/gae_mini_profiler/static/js/profiler.js"></script>
 <script type="text/javascript">GaeMiniProfiler.init("{{ profiler_request_id }}", false)</script>
