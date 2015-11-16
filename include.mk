@@ -74,7 +74,7 @@ deploy_production:
 	rm -Rf tmp
 	mkdir tmp
 	(cd tmp ; git clone git@github.com:hudora/$(REPOSNAME).git)
-	(cd tmp/$(REPOSNAME) ; git checkout production ; make boot; make dependencies code)
+	NODE_ENV=production (cd tmp/$(REPOSNAME) ; git checkout production ; make boot; make dependencies code)
 	(cd tmp/$(REPOSNAME) ; git show-ref --hash=7 refs/remotes/origin/production > version.txt)
 	(cd tmp/$(REPOSNAME) ; curl https://$(OPENAPPID).appspot.com/version.txt > lastversion.txt)
 	# Erst getaggte Version hochladen
