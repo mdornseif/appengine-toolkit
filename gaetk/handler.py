@@ -222,10 +222,16 @@ class BasicHandler(webapp2.RequestHandler):
     @property
     def browser_redirectable(self):
         """Is this a user initiated request which can be redirected to a login-page etc?"""
+
+        if (self.request.is_xhr
+            # ES6 Fetch API
+            or 'Fetch' not in self.request.headers.get('X-Requested-With', '')
+            # JSON only client
+            or 'application/json' == self.request.headers.get('Accept', '')):
+            return False
         return (
             'text/' in self.request.headers.get('Accept', '') or
             'image/' in self.request.headers.get('Accept', '') or
-            self.request.is_xhr or
             'Mozilla' in self.request.headers.get('User-Agent', ''))
 
     def paginate(self, query, defaultcount=10, datanodename='objects', calctotal=False, formatter=None):
@@ -636,6 +642,7 @@ class BasicHandler(webapp2.RequestHandler):
         if not self.credential:
             # Login not successful
             if self.browser_redirectable:
+                logging.info("404/302. headers: %r", self.request.headers)
                 # we assume the request came via a browser - redirect to the "nice" login page
                 # let login.py handle it from there
                 absolute_url = self.abs_url(
