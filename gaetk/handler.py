@@ -124,6 +124,10 @@ def _get_credential(username):
     credential = NdbCredential.get_by_id(username)
     if not credential:
         return None
+
+    if not hasattr(credential, 'permissions'):
+        credential.permissions = []
+
     _local_credential_cache[username] = (credential, time.time())
     return credential
 
