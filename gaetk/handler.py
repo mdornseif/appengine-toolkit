@@ -116,19 +116,16 @@ def login_user(credential, session, via, response=None):
 def _get_credential(username):
     """Helper to read Credentials - can be monkey_patched"""
     if username in _local_credential_cache:
-        credential, ts = _local_credential_cache[username]
-        if ts + CREDENTIAL_CACHE_TIMEOUT < time.time():  # 10 Minutes caching
+        credential, ts = _local_credential_cache.get(username, (None, time.time()))
+        if ts + CREDENTIAL_CACHE_TIMEOUT < time.time():
             return credential
         else:
-            del _local_credential_cache[username]
+            _local_credential_cache.pop(username, None)
     credential = NdbCredential.get_by_id(username)
-    if not credential:
-        return None
-
-    if not hasattr(credential, 'permissions'):
-        credential.permissions = []
-
-    _local_credential_cache[username] = (credential, time.time())
+    if credential:
+        if not hasattr(credential, 'permissions'):
+            credential.permissions = []
+        _local_credential_cache[username] = (credential, time.time())
     return credential
 
 
