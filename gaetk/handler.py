@@ -222,7 +222,7 @@ class BasicHandler(webapp2.RequestHandler):
 
         if (self.request.is_xhr
             # ES6 Fetch API
-            or 'Fetch' not in self.request.headers.get('X-Requested-With', '')
+            or 'Fetch' in self.request.headers.get('X-Requested-With', '')
             # JSON only client
             or 'application/json' == self.request.headers.get('Accept', '')):
             return False
