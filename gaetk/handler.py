@@ -334,7 +334,7 @@ class BasicHandler(webapp2.RequestHandler):
         import jinja2
         import gaetk.jinja_filters as myfilters
 
-        key = 'default'
+        key = str(self.extensions)
         if key not in _jinja_env_cache:
             env = jinja2.Environment(
                 loader=jinja2.FileSystemLoader(config.template_dirs),
