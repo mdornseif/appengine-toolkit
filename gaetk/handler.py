@@ -309,6 +309,15 @@ class BasicHandler(webapp2.RequestHandler):
                    limit=limit)
         return objects, cursor, start, ret
 
+    def is_production(self):
+        """checks if we can assume to run on a development machine"""
+        if os.environ.get('SERVER_NAME', '').startswith('dev-'):
+            return False
+        elif os.environ.get('SERVER_SOFTWARE', '').startswith('Development'):
+            return False
+        else:
+            return True
+
     def default_template_vars(self, values):
         """Helper to provide additional values to HTML Templates. To be overwritten in subclasses. E.g.
 
@@ -342,6 +351,7 @@ class BasicHandler(webapp2.RequestHandler):
                 auto_reload=False,  # unneeded on App Engine production
                 trim_blocks=True,  # first newline after a block is removed
                 # lstrip_blocks=True,
+                gaetk_production=self.is_production(),
                 bytecode_cache=jinja2.MemcachedBytecodeCache(memcache, timeout=3600)
             )
             myfilters.register_custom_filters(env)
