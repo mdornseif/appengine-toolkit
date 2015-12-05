@@ -329,8 +329,11 @@ class BasicHandler(webapp2.RequestHandler):
         """
         values.update({'is_admin': self.is_admin()})
         if self.is_admin():
-            values.update({'credential': self.credential,
-                           'is_admin': self.is_admin()})
+            values.update(dict(
+                credential=self.credential,
+                is_admin=self.is_admin(),
+                gaetk_production=self.is_production(),
+            ))
         return values
 
     def create_jinja2env(self):
@@ -351,7 +354,6 @@ class BasicHandler(webapp2.RequestHandler):
                 auto_reload=False,  # unneeded on App Engine production
                 trim_blocks=True,  # first newline after a block is removed
                 # lstrip_blocks=True,
-                gaetk_production=self.is_production(),
                 bytecode_cache=jinja2.MemcachedBytecodeCache(memcache, timeout=3600)
             )
             myfilters.register_custom_filters(env)
