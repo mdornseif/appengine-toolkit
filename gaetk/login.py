@@ -232,8 +232,8 @@ class OAuth2Callback(gaetk.handler.BasicHandler):
             raise gaetk.handler.HTTP302_Found(location=continue_url)
 
         if LOGIN_ALLOWED_DOMAINS and self.request.get('hd') not in LOGIN_ALLOWED_DOMAINS:
-            raise RuntimeError("wrong domain: %r not in %r" % (
-                self.request.get('hd'), LOGIN_ALLOWED_DOMAINS))
+            raise gaetk.handler.HTTP403_Forbidden(
+                "Wrong domain: %r not in %r" % (self.request.get('hd'), LOGIN_ALLOWED_DOMAINS))
 
         # 4. Exchange code for access token and ID token
         url = config.OAUTH['web']['token_uri']
