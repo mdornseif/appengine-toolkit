@@ -564,7 +564,7 @@ class BasicHandler(webapp2.RequestHandler):
                 disposition, filename, fmt))
 
         if fmt not in mycontenttypes:
-            raise ValueError('No content-type for format "%r"' % contenttypes)
+            raise ValueError('No content-type for format "%s": %r' % (fmt, mycontenttypes))
         return mycontenttypes[fmt]
 
     def is_admin(self):
