@@ -16,68 +16,40 @@ None
 >>> configuration.get_config('MY-KEY-NAME')
 u'5711'
 
-Values are locally cached for 100 seconds, but the cache can be flushed
-with the provided FlushConfigCacheHandler.
-The handler needs to be included in handlers section of app.yaml:
-
-For Python 2.5 Runtime:
-handlers:
-- url: /config/.*
-  script: lib/gaetk/gaetk/configuration.py
-
 Created by Christian Klein on 2011-11-24.
 Copyright (c) 2011, 2012 HUDORA. All rights reserved.
 """
 import json
-import time
-import webapp2
 
-import gaetk.handler
-from google.appengine.ext import db
-
-CONFIG_CACHE = {}
+from google.appengine.ext import ndb
 
 
-class Configuration(db.Model):
+class Configuration(ndb.Model):
     """Generic configuration object"""
-    value = db.StringProperty(default=u'')
-    updated_at = db.DateTimeProperty(auto_now_add=True, auto_now=True)
+    value = ndb.JsonProperty(default=u'')
+    updated_at = ndb.DateTimeProperty(auto_now_add=True, auto_now=True)
 
 
 def get_config(key, default=None):
-    """Get (cached) configuration value for key"""
+    """Get configuration value for key"""
 
-    if key in CONFIG_CACHE:
-        timestamp, _value = CONFIG_CACHE[key]
-        if timestamp > time.time() - 100:
-            return CONFIG_CACHE.get(key)[1]
-
-    obj = Configuration.get_by_key_name(key)
+    obj = Configuration.get_by_id(key)
     if obj:
-        CONFIG_CACHE[key] = (time.time(), json.loads(obj.value))
-        return CONFIG_CACHE.get(key)[1]
+        return obj.value  # json.loads(obj.value)
     else:
         return set_config(key, default)
+
+
+def get_config_multi(keys):
+    """Get multiple configuration values, no defaults"""
+
+    objs = ndb.get_multi([ndb.Key(Configuration, key) for key in keys])
+    return dict((obj.key.id(), obj.value) for obj in objs if obj is not None)
 
 
 def set_config(key, value):
     """Set configuration value for key"""
 
-    obj = Configuration.get_or_insert(key_name=key)
-    obj.value = json.dumps(value)
-    CONFIG_CACHE[key] = (time.time(), value)
+    obj = Configuration(id=key, value=value)  # json.dumps(value)).put()
     obj.put()
     return value
-
-
-class FlushConfigCacheHandler(gaetk.handler.BasicHandler):
-    """Handler for flushing the cached config objects"""
-
-    def get(self):
-        """Does not expect any parameters"""
-        CONFIG_CACHE.clear()
-        self.response.headers['Content-Type'] = 'text/plain'
-        self.response.out.write('ok\n')
-
-
-application = webapp2.WSGIApplication([('.*/flush', FlushConfigCacheHandler)])
