@@ -30,7 +30,7 @@ PYLINT_ARGS= "--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
              --generated-members=request,response,data,_fields,errors \
              --ignored-classes=Struct,Model,google.appengine.api.memcache,google.appengine.api.files,google.appengine.ext.ndb \
 			 --additional-builtins=_ \
-             --no-docstring-rgx="(__.*__|get|post|head)" \
+             --no-docstring-rgx="(__.*__|get|post|head|txn)" \
              --max-line-length=$(LINT_LINE_LENGTH) \
              --max-locals=20 --max-attributes=20 --max-returns=8 \
              --good-names=application \
