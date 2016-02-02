@@ -69,7 +69,7 @@
           {{ display_id(obj)|e }}
         {%- endif %}
         </td>
-        {% for field in list_fields %}<td>{{ obj|attr(field) }}</td>{% endfor %}
+        {% for field in list_fields %}<td>{{ obj|attr(field)|e }}</td>{% endfor %}
       </tr>
       {% endfor %}
     </tbody>
