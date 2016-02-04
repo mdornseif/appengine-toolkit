@@ -4,7 +4,7 @@
 jinja_filters.py - custom jinja2 filters
 Copyright (c) 2010, 2012, 2014 HUDORA. All rights reserved.
 """
-
+import decimal
 import json
 import logging
 import re
@@ -54,8 +54,11 @@ def eurocent(value, spacer='&#8239;', decimalplaces=2, plain=False):
     """
     if not value and value != 0:
         return ''
-    tmp = u"%.*f" % (decimalplaces, (int(value) / 100.0))
+    tmp = str(int(value) / decimal.Decimal(100))
+    if '.' not in tmp:
+        tmp += '.'
     euro_value, cent_value = tmp.split('.')
+    cent_value = cent_value.ljust(decimalplaces, '0')[:decimalplaces]
     rev_value = euro_value[::-1]
     euro_value = spacer.join(reversed([rev_value[i:i + 3][::-1] for i in range(0, len(rev_value), 3)]))
     if plain:
