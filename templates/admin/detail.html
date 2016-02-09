@@ -41,7 +41,9 @@
           {% if object is defined %}
           &nbsp;
           <!-- <button class="btn btn-danger" data-toggle="modal" data-target="#confirm-edit" data-keyboard="true" > -->
+          {% if admin_class.deletable %}
           <button type="button" class="btn btn-danger" data-toggle="modal" data-backdrop="true" data-keyboard="true" data-target="#confirm-edit">Löschen</button>
+          {% endif %}
           {% endif %}
         </div>
       </fieldset>
