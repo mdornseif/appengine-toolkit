@@ -99,11 +99,11 @@ body {
           {%- endfor %}
         {%- endif %}
 
-      <div class="row">
+      <div class="row gaetkheading">
         <div class="col-sm-12">{% block firstheading -%}<h1>{% if title is defined %}{{ title|e }}{% endif %}</h1>{%- endblock firstheading %}</div>
       </div>
 
-      <div class="row">
+      <div class="row gaetkbreadcrumbs">
         <div class="col-sm-12">{% block breadcrumbs %}{% endblock breadcrumbs %}</div>
       </div>
 

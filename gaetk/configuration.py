@@ -17,9 +17,8 @@ None
 u'5711'
 
 Created by Christian Klein on 2011-11-24.
-Copyright (c) 2011, 2012 HUDORA. All rights reserved.
+Copyright (c) 2011, 2012, 2016 HUDORA. All rights reserved.
 """
-import json
 
 from google.appengine.ext import ndb
 
