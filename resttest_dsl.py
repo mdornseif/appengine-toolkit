@@ -25,8 +25,6 @@ BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
 FOREGROUND = 30
 RESET_SEQ = "\033[0m"
 COLOR_SEQ = "\033[1;%dm"
-# print success messages
-DEBUG = False
 
 DEFAULTFAST = int(os.environ.get('DEFAULTFAST_MS', 1500))
 
@@ -75,7 +73,7 @@ class Response(object):
         print '=' * 50
         print "<<<",
         pprint(self.headers)
-        if DEBUG:
+        if self.client.debug:
             print "<<<",
             print self.content
         print '=' * 50
@@ -83,7 +81,7 @@ class Response(object):
 
     def succeed(self, message):
         """Positives ergebnis einer Zusicherung."""
-        if DEBUG:
+        if self.client.debug:
             print '%s %s -> %s: %s' % (self.method, self.url, colored("SUCCESS", GREEN), message)
 
     def expect_condition(self, condition, message):
@@ -274,11 +272,16 @@ class Response(object):
 
 class TestClient(object):
     """Hilfsklasse zum Ausfuehren von HTTP-Requests im Rahmen von Tests."""
-    def __init__(self, host):
+    def __init__(self, host, users, debug=False):
+        self.debug = debug
         self.host = host
         self.authdict = {}
         self.responses = []
         self.protocol = 'http'
+
+        for user in users:
+            key, creds = user.split('=', 1)
+            self.add_credentials(key, creds)
 
     def add_credentials(self, auth, creds):
         """Stellt dem Client credentials zur Verfügung, die in GET genutzt werden können.
@@ -308,7 +311,7 @@ class TestClient(object):
             if counter > 1:
                 if duration > 10:
                     break  # solw API pages etc we test only once
-                if DEBUG:
+                if self.debug:
                     print "retry request because of %d ms duration" % duration
                 else:
                     sys.stdout.write('.')
@@ -375,45 +378,40 @@ def get_app_version():
     raise RuntimeError("Can't detect version")
 
 
-def create_testclient_from_cli(default_hostname, default_credentials_user, default_credentials_admin):
+def create_testclient_from_cli(default_hostname, users):
     """ Creates a Testclient with it's arguments from the Commandline.
 
     the CLI understands the options, --hostname, --credentials-user, --credentials-admin, their default
     values are taken from this functions args
 
     default_hostname: hostname, on wich to run tests, if none is provided via CLI
-    default_credentials_user: HTTP-credetials for the user, if none are provided via CLI
-    default_credentials_admin: HTTP-credetials for the admin, if none are provided via CLI
 
     returns a `TestClient`
     """
-    global DEBUG
     parser = optparse.OptionParser()
     parser.add_option(
         '-H', '--hostname', dest='hostname',
         help='Hostname, on which the tests should be run',
         default=default_hostname)
     parser.add_option(
-        '-u', '--credentials-user', dest='credentials_user',
-        help='HTTP-credentials for the non-admin-user',
-        default=default_credentials_user)
+        '-u', '--credentials-user', dest='users', action='append', default=[],
+        help='user credentials for HTTP Basic Auth')
     parser.add_option(
-        '-a', '--credentials-admin', dest='credentials_admin',
-        help='HTTP-credentials for the admin-user',
-        default=default_credentials_admin)
-    parser.add_option(
-        '-d', '--debug', dest='debug', default=False)
+        '-d', '--debug', dest='debug', default=False, action='store_true')
 
     opts, args = parser.parse_args()
     if args:
         parser.error('positional arguments are not accepted')
-    DEBUG = opts.debug
 
     if os.environ.get('RESTTESTHOST'):
         default_hostname = os.environ.get('RESTTESTHOST')
-    # Die or sorgen dafür, dass --option='' als 'nicht angegeben' gewertet wird, siehe aufruf im Makefile
-    client = TestClient(opts.hostname or default_hostname)
-    client.add_credentials('user', opts.credentials_user or default_credentials_user)
-    client.add_credentials('admin', opts.credentials_admin or default_credentials_admin)
+    # Das `or` sorgen dafür, dass --option='' als 'nicht angegeben' gewertet wird, siehe aufruf im Makefile.
+
+    if users is None:
+        users = []
+    if opts.users:
+        users.extend(opts.users)
+
+    client = TestClient(opts.hostname or default_hostname, users=users, debug=opts.debug)
 
     return client

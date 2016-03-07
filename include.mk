@@ -118,7 +118,7 @@ test:
 
 RESTTESTSUITE?=tests/resttest.py
 resttest:
-	sh -c "PYTHONPATH=lib/huTools-checkout:lib/appengine-toolkit python $(RESTTESTSUITE) --hostname=$(TESTHOST) --credentials-user=$(CREDENTIALS_USER)"
+	sh -c "PYTHONPATH=lib/huTools-checkout:lib/appengine-toolkit python $(RESTTESTSUITE) --hostname=$(TESTHOST)"
 
 code: ;
 
