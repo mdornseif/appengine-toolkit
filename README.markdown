@@ -44,7 +44,7 @@ Create a appengine Project, then:
     mkdir lib
     echo "import site, os.path" > lib/__init__.py
     echo "site.addsitedir(os.path.dirname(__file__))" >> lib/__init__.py
-    git submodule add git@github.com:hudora/appengine-toolkit.git lib/appengine-toolkit
+    git submodule add git@github.com:mdornseif/appengine-toolkit.git lib/appengine-toolkit
     cp lib/appengine-toolkit/examples/Makefile .
     cp lib/appengine-toolkit/examples/config.py .
     cp lib/appengine-toolkit/examples/appengine_config.py .
