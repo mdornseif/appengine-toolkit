@@ -1,18 +1,29 @@
 """Configuration for each AppEngine Instance"""
 
 import config
-config.imported = True
 
+import logging
 import os
 
+# import cs.huwawi_local
 import gae_mini_profiler.profiler
-from gaetk.gaesessions import SessionMiddleware
-COOKIE_KEY = '13f22fe71b26d13940626c0555787e4bf78f5fb26b8ffae123-5a17'
+
+from gaetk import gaesessions
+from google.appengine.ext import vendor
+
+vendor.add('lib/site-packages')
+
+config.imported = True
+logging.captureWarnings(True)
+
+# cs.huwawi_local.activate_local()
+
+COOKIE_KEY = '%%PUT_RANDOM_VALUE_HERE%%'
 
 
-gaetk_replication_SQL_INSTANCE_NAME = 'huwawisql:qvexport-eu'
-gaetk_replication_SQL_DATABASE_NAME = 'wwwhudorade2'
-gaetk_replication_SQL_QUEUE_NAME = 'sqlq'
+# gaetk_replication_SQL_INSTANCE_NAME = 'huwawisql:qvexport-eu'
+# gaetk_replication_SQL_DATABASE_NAME = 'wwwhudorade23'
+# gaetk_replication_SQL_QUEUE_NAME = 'sqlq'
 
 import cs.huwawi_local
 cs.huwawi_local.activate_local()
