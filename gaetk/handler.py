@@ -203,7 +203,10 @@ class BasicHandler(webapp2.RequestHandler):
 
     def abs_url(self, url):
         """Converts an relative into an absolute URL."""
-        return urlparse.urljoin(self.request.uri, url)
+        if self.request:
+            return urlparse.urljoin(self.request.uri, url)
+        return urlparse.urljoin(os.environ.get('HTTP_ORIGIN', ''), url)
+
 
     def error(self, code):
         """Clears the response output stream and sets the given HTTP error code.
