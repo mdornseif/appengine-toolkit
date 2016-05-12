@@ -135,7 +135,7 @@ class Credential(db.Expando):
 
 class NdbCredential(ndb.Expando):
     """Encodes a user and his permissions."""
-    _default_indexed = False
+    _default_indexed = True
     uid = ndb.StringProperty(required=True)  # == key.id()
     user = ndb.UserProperty(required=False)  # Google (?) User
     tenant = ndb.StringProperty(required=False, default='_unknown', indexed=False)  # hudora.de
@@ -146,8 +146,8 @@ class NdbCredential(ndb.Expando):
     permissions = ndb.StringProperty(repeated=True, indexed=False)
     created_at = ndb.DateTimeProperty(auto_now_add=True)
     updated_at = ndb.DateTimeProperty(auto_now=True)
-    created_by = ndb.UserProperty(required=False, auto_current_user_add=True)
-    updated_by = ndb.UserProperty(required=False, auto_current_user=True)
+    created_by = ndb.UserProperty(required=False, indexed=False, auto_current_user_add=True)
+    updated_by = ndb.UserProperty(required=False, indexed=False, auto_current_user=True)
 
     @classmethod
     def _get_kind(cls):
