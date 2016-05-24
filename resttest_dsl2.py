@@ -88,7 +88,8 @@ class Response(object):
             url = "%s (->%s)" % (url, self.response.url)
         print '%s %s -> %s: %s' % (self.method, url, colored("FAIL", RED), message)
         if self.response.history:
-            print self.response.history
+            for hres in self.response.history:
+                print "->", hres.url
         print '=' * 50
         print "<<<",
         pprint(self.headers)
@@ -190,7 +191,8 @@ class Response(object):
 
     def redirects_to(self, expected_url):
         """sichert zu, dass mit einen Redirect geantwortet wurde."""
-        location = self.headers.get('location', self.headers.get('content-location', ''))
+        location = self.response.url
+        # location = self.headers.get('location', self.headers.get('content-location', ''))
         self.expect_condition(
             location.endswith(expected_url), 'expected redirect to %s, got %s' % (expected_url, location))
 
@@ -324,6 +326,8 @@ class TestClient(object):
         for url in args:
             if url.endswith('.json'):
                 checkers = [responds_json]
+            elif url.endswith('.pdf'):
+                checkers = [responds_pdf]
             elif url.endswith('.xml'):
                 checkers = [responds_xml]
             elif url.endswith('.csv') or url.endswith('.xls'):
@@ -406,6 +410,13 @@ def responds_xml(response):
     response.converter_succeeds(xml.dom.minidom.parseString, 'expected valid xml')
 
 
+def responds_pdf(response):
+    """sichert zu, dass die Antwort ein well-formed XML-Dokument war."""
+    response.responds_http_status(200)
+    response.responds_content_type('application/pdf')
+    # .startswith('%PDF-1')
+
+
 def responds_basic(response):
     """sichert zu, dass die Antwort einen vernünftigen Statuscode hat."""
     response.responds_http_status(200)
@@ -425,10 +436,12 @@ def responds_4xx(response):
     # 40x detection is messy, because `login: admin` in app.yaml
     # results in redirects to a 302
     if response.status == 302:
-        response.expect_condition(
-           response.headers.get('location').startswith(
-                'https://www.google.com/accounts/ServiceLogin'),
-           'expected status 302 redirect to google')
+        # we now generally handle 302 as a form of denial
+        return
+        # response.expect_condition(
+        #    response.headers.get('location').startswith(
+        #         'https://www.google.com/accounts/ServiceLogin'),
+        #    'expected status 302 redirect to google')
     else:
         response.expect_condition(
             response.status >= 400 and response.status < 500,
