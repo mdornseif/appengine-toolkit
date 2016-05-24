@@ -231,6 +231,7 @@ class OAuth2Callback(gaetk.handler.BasicHandler):
             logging.warn(
                 "wrong state: %r != %r", self.request.get('state'), self.session.get('oauth_state'))
             self.session.terminate()
+            del self.session['oauth_state']
             raise gaetk.handler.HTTP302_Found(location=continue_url)
 
         if LOGIN_ALLOWED_DOMAINS and self.request.get('hd') not in LOGIN_ALLOWED_DOMAINS:
@@ -267,6 +268,8 @@ class OAuth2Callback(gaetk.handler.BasicHandler):
         credential = self.create_credential_oauth2(jwt)
         gaetk.handler.login_user(credential, self.session, 'OAuth2', self.response)
         logging.info("logging in with final destination %s", continue_url)
+        if self.session.get('oauth_state'):
+            del self.session['oauth_state']
         raise gaetk.handler.HTTP302_Found(location=users.create_login_url(continue_url))
 
 
@@ -296,6 +299,8 @@ class LogoutHandler(gaetk.handler.BasicHandler):
         domain = gaetk.tools.get_cookie_domain()
         self.response.delete_cookie('gaetkuid', domain='.%s' % domain)  # gaetk Login
 
+        if self.session.get('oauth_state'):
+            del self.session['oauth_state']
         user = users.get_current_user()
         if user:
             logging.info("Google User %s", user)

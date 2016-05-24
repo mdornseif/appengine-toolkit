@@ -11,6 +11,7 @@ OPENAPPID?= $(APPID)
 # [E1103(maybe-no-member), shop_link] Instance of 'list' has no 'nachfolger_ist' member (but some types could not be inferred)
 # [E1120(no-value-for-parameter)] Fails with ndb decorators
 # [R0201(no-self-use), ArtikelMultiStammdatenHandler.get] Method could be a function
+# R0901(too-many-ancestors)
 # [R0903(too-few-public-methods), gaetk_Snippet] Too few public methods (0/2)
 # [R0904(too-many-public-methods), ShowKategorie] Too many public methods (22/20)
 # [R0913(too-many-arguments),
@@ -39,7 +40,7 @@ PYLINT_ARGS= "--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
              --good-names=application \
              --disable=C0103,C0330 \
              --disable=E1103,E1120 \
-             --disable=R0201,R0903,R0904,R0913,R0921,R0922 \
+             --disable=R0201,R0901,R0903,R0904,R0913,R0921,R0922 \
              --disable=W0108,W0142,W0201,W0212,W0221,W0232,W0232,W0631,W0703,W1306 \
              --disable=I0011
 
