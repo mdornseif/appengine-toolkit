@@ -12,17 +12,18 @@ Copyright (c) 2010, 2014, 2015 HUDORA. All rights reserved.
 
 import config
 
+import base64
+import json
 import logging
+import os
 import random
 import string
-import urllib
-import base64
 import unicodedata
-import json
-import os
+import urllib
 
 import huTools.http
 import huTools.hujson2
+
 from google.appengine.api import users
 
 import gaetk.handler
@@ -88,6 +89,7 @@ class LoginHandler(gaetk.handler.BasicHandler):
         continue_url = self.request.GET.get('continue', '/').encode('ascii', 'ignore')
 
         if not self.request.url.startswith("https://"):
+            logging.warn("forcing https: %s", self.request.url)
             raise gaetk.handler.HTTP302_Found(location=self.request.url.replace('http://', 'https://', 1))
 
         if self.request.cookies.get('gaetkuid', None):
@@ -264,6 +266,7 @@ class OAuth2Callback(gaetk.handler.BasicHandler):
 
         credential = self.create_credential_oauth2(jwt)
         gaetk.handler.login_user(credential, self.session, 'OAuth2', self.response)
+        logging.info("logging in with final destination %s", continue_url)
         raise gaetk.handler.HTTP302_Found(location=users.create_login_url(continue_url))
 
 
