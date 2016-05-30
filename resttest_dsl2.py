@@ -85,16 +85,16 @@ class Response(object):
         self.errors += 1
         url = self.url
         if self.response.url != url:
-            url = "%s (->%s)" % (url, self.response.url)
-        print '%s %s -> %s: %s' % (self.method, url, colored("FAIL", RED), message)
+            url = u'%r (->%r)' % (url, self.response.url)
+        print u'%s %s -> %s: %s' % (self.method, url, colored("FAIL", RED), message)
         if self.response.history:
             for hres in self.response.history:
-                print "->", hres.url
+                print u'->', hres.url
         print '=' * 50
-        print "<<<",
+        print '<<<',
         pprint(self.headers)
         if self.client.debug:
-            print "<<<",
+            print '<<<',
             print self.content
         else:
             print repr(self.content[:50])
