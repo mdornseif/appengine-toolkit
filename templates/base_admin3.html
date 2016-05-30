@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}<!--base_admin3:endblock-->{% if title is defined %}{{ title|e }}{% else %}gaetk{% endif %}<!--/base_admin3:endblock-->{% endblock %}</title>
+    <title>{% block title %}{% if title is defined %}{{ title|e }}{% else %}gaetk{% endif %}{% endblock %}</title>
 
     <script src="/gaetk/static/jquery/jquery-1.11.3.min.js"></script>
     <script async src="/gaetk/static/jquery/jquery-ui.min.js"></script>
