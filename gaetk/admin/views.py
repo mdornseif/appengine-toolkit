@@ -48,14 +48,17 @@ class AdminHandler(gaetk.handler.BasicHandler):
     def default_template_vars(self, values):
         """Default variablen für Breadcrumbs etc."""
         values = super(AdminHandler, self).default_template_vars(values)
-        values.update(dict(
+        values.update(
             request=self.request,
             now=datetime.datetime.now(),
-            kw=datetime.date.today().isocalendar()[1]),
-            permissions=[],
+            kw=datetime.date.today().isocalendar()[1],
             is_admin=self.is_admin())
+
         if self.credential:
-            values.update(dict(permissions=self.credential.permissions))
+            values['permissions'] = self.credential.permissions
+        if hasattr(config, 'PROJECTNAME'):
+            values['projectname'] = config.PROJECTNAME
+
         self.title = values.get('title')
         return values
 
