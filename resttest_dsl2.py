@@ -15,6 +15,7 @@ import urlparse
 import xml.dom.minidom
 
 from collections import Counter
+from functools import partial
 from pprint import pprint
 
 import concurrent.futures
@@ -144,32 +145,6 @@ class Response(object):
                 self.succeed(message)
 
     # high-level-beschreibungen
-    def responds_json(self):
-        """sichert zu, dass die Antwort ein well-formed JSON-Dokument war."""
-        self.responds_http_status(200)
-        self.responds_content_type('application/json')
-        self.converter_succeeds(hujson2.loads, 'expected valid json')
-        return self
-
-    def responds_rssxml(self):
-        """sichert zu, dass die Antwort ein well-formed RSS+XML-Dokument war."""
-        self.responds_http_status(200)
-        self.responds_content_type('application/rss+xml')
-        self.converter_succeeds(xml.dom.minidom.parseString, 'expected valid rss+xml')
-        return self
-
-    def responds_plaintext(self):
-        """sichert zu, dass die Antwort ein Plaintext-Dokument war."""
-        self.responds_http_status(200)
-        self.responds_content_type('text/plain')
-        return self
-
-    def responds_html(self):
-        """sichert zu, dass die Antwort ein HTML-Dokument war."""
-        self.responds_http_status(200)
-        self.responds_content_type('text/html')
-        return self
-
     def responds_not_found(self):
         """sichert zu, dass kein Dokument gefunden wurde."""
         self.responds_http_status(404)
@@ -184,17 +159,6 @@ class Response(object):
         """sichert zu, dass der Zugriff verweigert wurde."""
         self.responds_http_status(403)
         return self
-
-    def responds_unauthorized(self):
-        """sichert zu, dass der Zugriff verweigert wurde."""
-        self.responds_http_status(403)
-
-    def redirects_to(self, expected_url):
-        """sichert zu, dass mit einen Redirect geantwortet wurde."""
-        location = self.response.url
-        # location = self.headers.get('location', self.headers.get('content-location', ''))
-        self.expect_condition(
-            location.endswith(expected_url), 'expected redirect to %s, got %s' % (expected_url, location))
 
     def responds_with_content_location(self, expected_location):
         """sichert zu, dass die Antwort einen location-header hat."""
@@ -253,12 +217,6 @@ class Response(object):
                             print repr(contentlines[int(linenr)-1])
         except (ImportError, OSError):
             pass
-        return self
-
-    def responds_normal(self):
-        """Normale Seite: Status 200, HTML, schnelle Antwort, keine kaputten Links"""
-        self.responds_html()
-        # self.responds_with_valid_html()
         return self
 
 
@@ -322,6 +280,8 @@ class TestClient(object):
         self.responses.append(response)
         return response
 
+    # New API
+
     def check(self, *args, **kwargs):
         for url in args:
             if url.endswith('.json'):
@@ -332,6 +292,8 @@ class TestClient(object):
                 checkers = [responds_xml]
             elif url.endswith('.csv') or url.endswith('.xls'):
                 checkers = [responds_basic]
+            elif url.endswith('txt'):
+                checkers = [responds_plaintext]
             else:
                 checkers = [responds_html]
             self.queue.append((url, kwargs, checkers))
@@ -354,6 +316,17 @@ class TestClient(object):
             for url in args:
                 self.queue.append((url, myargs, [responds_4xx]))
 
+    def check_redirect(self, *args, **kwargs):
+        for urldict in args:
+            fromurl = urldict.get('url')
+            del urldict['url']
+            tourl = urldict.get('to')
+            del urldict['to']
+            myargs = dict(allow_redirects=False)
+            myargs.update(kwargs)
+            myargs.update(urldict)
+            self.queue.append((fromurl, myargs, [partial(responds_redirect, to=tourl)]))
+
     def check_statuscode(self, *args, **kwargs):
         statuscode = kwargs.get('statuscode')
         if 'statuscode' in kwargs:
@@ -373,7 +346,7 @@ class TestClient(object):
             futures = {}
             while self.queue:
                 url, kwargs, checkers = self.queue.pop()
-                futures[executor.submit(self.check_helper, checkers, url, **kwargs)] = url
+                futures[executor.submit(self._check_helper, checkers, url, **kwargs)] = url
         for future in concurrent.futures.as_completed(futures):
             # exceptions occure here
             try:
@@ -384,7 +357,7 @@ class TestClient(object):
                 raise
 
 
-    def check_helper(self, checkers, url, **kwargs):
+    def _check_helper(self, checkers, url, **kwargs):
         response = self.GET(url, **kwargs)
         for checker in checkers:
             checker(response)
@@ -410,12 +383,17 @@ def responds_xml(response):
     response.converter_succeeds(xml.dom.minidom.parseString, 'expected valid xml')
 
 
+def responds_plaintext(response):
+    """sichert zu, dass die Antwort plaintext war."""
+    response.responds_http_status(200)
+    response.responds_content_type('text/plain')
+
+
 def responds_pdf(response):
-    """sichert zu, dass die Antwort ein well-formed XML-Dokument war."""
+    """sichert zu, dass die Antwort ein well-formed PDF-Dokument war."""
     response.responds_http_status(200)
     response.responds_content_type('application/pdf')
     # .startswith('%PDF-1')
-
 
 def responds_basic(response):
     """sichert zu, dass die Antwort einen vernünftigen Statuscode hat."""
@@ -423,7 +401,7 @@ def responds_basic(response):
 
 
 def responds_html(response):
-    """sichert zu, dass die Antwort ein well-formed JSON-Dokument war."""
+    """sichert zu, dass die Antwort ein HTML war."""
     response.responds_http_status(200)
     response.responds_content_type('text/html')
     # TODO: delayed HTML validation
@@ -432,7 +410,7 @@ def responds_html(response):
 
 
 def responds_4xx(response):
-    """sichert zu, dass die Antwort ein well-formed JSON-Dokument war."""
+    """sichert zu, dass die Antwort ein Denial war."""
     # 40x detection is messy, because `login: admin` in app.yaml
     # results in redirects to a 302
     if response.status == 302:
@@ -446,6 +424,18 @@ def responds_4xx(response):
         response.expect_condition(
             response.status >= 400 and response.status < 500,
             'expected status 4xx, got %s' % response.status)
+
+
+def responds_redirect(response, to=None):
+    """sichert zu, dass die Antwort umleitet."""
+    # oder location = self.response.url
+    location = urlparse.urlparse(response.headers.get('location', '/')).path
+    response.expect_condition(
+       (300 <= response.status < 400) and location.startswith(to),
+       'expected redirect to %r, got %s:%r' % (
+            to,
+            response.response.status_code,
+            location))
 
 
 def extract_links(content, url):
