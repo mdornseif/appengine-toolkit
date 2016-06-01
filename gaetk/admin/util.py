@@ -15,6 +15,7 @@ from gaetk.compat import xdb_kind
 from google.appengine.api import app_identity
 from google.appengine.ext import blobstore
 from google.appengine.ext import db
+from google.appengine.ext import ndb
 from huTools.calendar.formats import convert_to_date
 from huTools.calendar.formats import convert_to_datetime
 
@@ -102,3 +103,10 @@ def upload_to_blobstore(obj, key_name, blob):
                 break
             fileobj.write(data)
     return blobstore.BlobKey(blobstore.create_gs_key('/gs' + file_name))
+
+
+def call_hook(func, keystr):
+    """Rufe einen Hook mit der Instanz als Parameter auf"""
+    key = ndb.Key(urlsafe=keystr)
+    instance = key.get()
+    func(instance)

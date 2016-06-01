@@ -7,6 +7,7 @@ Created by Christian Klein on 2011-08-22.
 Copyright (c) 2011, 2014 HUDORA GmbH. All rights reserved.
 """
 import cgi
+import collections
 import datetime
 import logging
 
@@ -103,6 +104,8 @@ class ModelAdmin(object):
     list_fields = ()
     list_display_links = ()
     list_per_page = 25
+
+    post_create_hooks = []
 
     # Wird dem Field beim Rendern übergeben
     # (ist das erste eigene Attribut)
@@ -276,8 +279,8 @@ class ModelAdmin(object):
             if form.validate():
                 form_data = self._convert_property_data(form.data)
                 key_name = form_data.get(key_field) if key_field else None
-                # nettes feature, dsa fehlt: Methode `create` aufrufen.
-                # Vorher: Im Code überprüfen, welche Modelle eine Methode `create` haben.
+
+                # TODO: util.create_instance nutzen oder entfernen
                 if hasattr(self.model, 'create'):
                     factory = self.model.create
                 else:
@@ -292,13 +295,23 @@ class ModelAdmin(object):
                 # ansonsten ist der ID unbekannt.
                 if self.blob_upload_fields and key_name is None:
                     key_name = compat.xdb_id_or_name(obj.put())
+                    self.handle_blobstore_fields(handler, obj, key_name)
 
-                self.handle_blobstore_fields(handler, obj, key_name)
                 key = obj.put()
-                handler.add_message('success', u'<strong>%s</strong> wurde angelegt.' % obj)
+                handler.add_message(
+                    'success',
+                    u'<strong>{} {}</strong> wurde angelegt.'.format(
+                        compat.xdb_kind(self.model), compat.xdb_id_or_name(key)))
+
                 # Indexierung für Admin-Volltextsuche
                 from gaetk.admin.search import add_to_index
                 deferred.defer(add_to_index, key)
+
+                # Call post-create-hooks
+                if isinstance(self.post_create_hooks, collections.Iterable):
+                    for hook in self.post_create_hooks:
+                        deferred.defer(util.call_hook, hook, compat.xdb_str_key(key))
+
                 raise gaetk.handler.HTTP302_Found(location='..')
         else:
             form = form_class()
