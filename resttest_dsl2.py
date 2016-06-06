@@ -145,6 +145,10 @@ class Response(object):
                 self.succeed(message)
 
     # high-level-beschreibungen
+    def responds_normal(self):
+        """sichert zu, dass ein Dokument gefunden wurde."""
+        self.responds_http_status(200)
+
     def responds_not_found(self):
         """sichert zu, dass kein Dokument gefunden wurde."""
         self.responds_http_status(404)
