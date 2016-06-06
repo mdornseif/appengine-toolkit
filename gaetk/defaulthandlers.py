@@ -159,15 +159,18 @@ class VersionHandler(gaetk.handler.BasicHandler):
 class WarmupHandler(gaetk.handler.BasicHandler):
     """Instanz initialisieren"""
 
-    def authchecker(self, method, *args, **kwargs):
-        """Authentifizierung abschalten."""
-        pass
+    def warmup(self):
+        """
+        Common warmup functionality
+        """
 
-    def get(self):
         # _strptime importieren. hilft gegen
         # http://groups.google.com/group/google-appengine-python/browse_thread/thread/efbcffa181c32f33
         datetime.datetime.strptime('2000-01-01', '%Y-%m-%d').date()
-        self.return_text('ok')
+
+    def get(self):
+        """Handle warm up requests"""
+        self.return_text(self.warmup())
 
 
 application = gaetk.webapp2.WSGIApplication([
