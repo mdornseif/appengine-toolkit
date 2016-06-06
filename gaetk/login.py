@@ -1,17 +1,13 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-spezifische Login und Logout Funktionalität.
+gaetk/login.py spezifische Login und Logout Funktionalität.
 
 based on EDIhub:login.py
 
 Created by Maximillian Dornseif on 2010-09-24.
 Copyright (c) 2010, 2014, 2015 HUDORA. All rights reserved.
 """
-
-
-import config
-
 import base64
 import json
 import logging
@@ -21,6 +17,7 @@ import string
 import unicodedata
 import urllib
 
+import config
 import huTools.http
 import huTools.hujson2
 
@@ -45,7 +42,6 @@ class LoginHandler(gaetk.handler.BasicHandler):
 
     def __init__(self, *args, **kwargs):
         """Initialize handler instance"""
-
         super(LoginHandler, self).__init__(*args, **kwargs)
 
     def get_verified_credential(self, uid, secret, session):
@@ -59,6 +55,12 @@ class LoginHandler(gaetk.handler.BasicHandler):
         if credential and credential.secret == secret:
             gaetk.handler.login_user(credential, session, "uid:secret", self.response)
             return credential
+
+    def get_final_continue_url(self, continue_url, _credential):
+        """Allow to manipulate where users get redirected to."""
+        # needs to be *idempotent*.
+        # see also `OAuth2Callback`
+        return continue_url
 
     def handle_sso(self, continue_url):
         "Try single sign on via a different hudora.de domain."
@@ -81,6 +83,7 @@ class LoginHandler(gaetk.handler.BasicHandler):
                 if credential:
                     logging.info("logged in wia SSO %s", decoded_payload.get('provider', '?'))
                     gaetk.handler.login_user(credential, self.session, 'SSO', self.response)
+                    continue_url = self.get_final_continue_url(continue_url, credential)
                     raise gaetk.handler.HTTP302_Found(location=continue_url)
 
     def get(self):
@@ -97,7 +100,7 @@ class LoginHandler(gaetk.handler.BasicHandler):
 
         # the user is tried to be authenticated via a username-password based approach.
         # The data is either taken from the HTTP header `Authorization` or the provided (form) data.
-        msg = ''
+        msg = u''
         via = '?'
         username, password = None, None
         # First, try HTTP basic auth (see RFC 2617)
@@ -119,6 +122,7 @@ class LoginHandler(gaetk.handler.BasicHandler):
                 logging.debug(u'login: Login by %s/%s, redirect to %s',
                               username, self.request.remote_addr, continue_url)
                 gaetk.handler.login_user(credential, self.session, via, self.response)
+                continue_url = self.get_final_continue_url(continue_url, credential)
                 raise gaetk.handler.HTTP302_Found(location=continue_url)
             else:
                 logging.warning(u'login: Invalid password for %s', username.decode('utf-8', 'ignore'))
@@ -204,9 +208,14 @@ def get_oauth_callback_url(request):
 class OAuth2Callback(gaetk.handler.BasicHandler):
     """Handler for Login"""
 
+    def get_final_continue_url(self, continue_url, _credential):
+        """Allow to manipulate where users get redirected to."""
+        # needs to be *idempotent*
+        # see also `LoginHandler`
+        return continue_url
+
     def create_credential_oauth2(self, jwt):
         """Create a new credential object for a newly logged in Google user."""
-
         if jwt.get('email_verified'):
             uid = jwt['email']
         else:
@@ -270,6 +279,7 @@ class OAuth2Callback(gaetk.handler.BasicHandler):
         logging.info("logging in with final destination %s", continue_url)
         if self.session.get('oauth_state'):
             del self.session['oauth_state']
+        continue_url = self.get_final_continue_url(continue_url, credential)
         raise gaetk.handler.HTTP302_Found(location=users.create_login_url(continue_url))
 
 

@@ -197,7 +197,7 @@ class BasicHandler(webapp2.RequestHandler):
             self.session = get_current_session()
         except AttributeError:
             # session middleware might not be enabled
-            self.session = {}
+            self.session = {}  # pylint: disable=R0204
         super(BasicHandler, self).__init__(*args, **kwargs)
         self.credential = None
 
@@ -227,7 +227,7 @@ class BasicHandler(webapp2.RequestHandler):
             # ES6 Fetch API
             or 'Fetch' in self.request.headers.get('X-Requested-With', '')
             # JSON only client
-            or 'application/json' == self.request.headers.get('Accept', '')):
+            or self.request.headers.get('Accept', '') == 'application/json'):
             return False
         return (
             'text/' in self.request.headers.get('Accept', '') or
@@ -729,7 +729,7 @@ class BasicHandler(webapp2.RequestHandler):
             self.session = get_current_session()
         except AttributeError:
             # session handling not activated
-            self.session = {}
+            self.session = {}  # pylint: disable=R0204
         # init messages array based on session but avoid modifying session if not needed
         if self.session.get('_gaetk_messages', None):
             self.session['_gaetk_messages'] = self.session.get('_gaetk_messages', [])
@@ -750,6 +750,7 @@ class BasicHandler(webapp2.RequestHandler):
         messages.append(dict(type=typ, html=html, expires=time.time() + ttl))
         # We can't use `.append()` because this doesn't result in automatic session saving.
         self.session['_gaetk_messages'] = messages
+        logging.debug("add_message(%r, %r, %r)", typ, html, ttl)
 
 
 class JsonResponseHandler(BasicHandler):
@@ -877,14 +878,14 @@ class MarkdownFileHandler(BasicHandler):
             raise gaetk.handler.HTTP404_NotFound("%s not available" % textfile)
         try:
             with codecs.open(textfile, 'r', 'utf-8') as fileobj:
-                text = []
+                message = []
                 # wir gehen davon aus, dass die erste Zeile, die mit `# ` beginnt, der Titel ist
                 for line in fileobj.readlines():
                     if line.startswith('# ') and not title:
                         title = line.lstrip('# ').strip()
                     else:
-                        text.append(line)
-                text = ''.join(text)
+                        message.append(line)
+                text = ''.join(message)
 
             self.response.headers['ETag'] = hashlib.md5(text.encode('utf-8')).hexdigest()
             stbuf = os.stat(textfile)

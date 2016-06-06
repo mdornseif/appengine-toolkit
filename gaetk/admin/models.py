@@ -7,11 +7,7 @@ Created by Dr. Maximillian Dornseif on 2011-09-30.
 Copyright (c) 2011 HUDORA GmbH. All rights reserved.
 """
 
-import config
-config.imported = True
-
 from google.appengine.ext import db
-
 
 class DeletedObject(db.Model):
     """Hebt ein gelöschtes Model auf, um Undelete zu implementieren."""

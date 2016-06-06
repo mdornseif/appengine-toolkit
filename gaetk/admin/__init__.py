@@ -6,12 +6,11 @@ gaetk/admin/__init__.py
 Created by Christian Klein on 2011-08-19.
 Copyright (c) 2011 HUDORA GmbH. All rights reserved.
 """
-import config
-config.imported = True
-
 import logging
 import os
 import sys
+
+import config
 
 
 def import_module(name):

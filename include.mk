@@ -1,4 +1,4 @@
-GAE_VERSION=1.9.32
+GAE_VERSION=1.9.38
 PRODUCTIONURL?= https://$(APPID).appspot.com/
 PRODUCTIONNAME?= production
 DEVPAGE?= /
@@ -7,7 +7,9 @@ OPENAPPID?= $(APPID)
 
 # we don't want to know about:
 # [C0103(invalid-name), ] Invalid constant name "application"
+# [C0121(singleton-comparison)] clashes with NDB
 # [C0330(bad-continuation), ] Wrong continued indentation.
+# [C0412(ungrouped-imports)] we sort differently
 # [E1103(maybe-no-member), shop_link] Instance of 'list' has no 'nachfolger_ist' member (but some types could not be inferred)
 # [E1120(no-value-for-parameter)] Fails with ndb decorators
 # [R0201(no-self-use), ArtikelMultiStammdatenHandler.get] Method could be a function
@@ -34,11 +36,12 @@ PYLINT_ARGS= "--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
              --generated-members=request,response,data,_fields,errors \
              --ignored-classes=Struct,Model,google.appengine.api.memcache,google.appengine.api.files,google.appengine.ext.ndb \
 			 --additional-builtins=_ \
+			 --ignore-imports=yes \
              --no-docstring-rgx="(__.*__|get|post|head|txn)" \
              --max-line-length=$(LINT_LINE_LENGTH) \
              --max-locals=20 --max-attributes=20 --max-returns=8 \
              --good-names=application \
-             --disable=C0103,C0330 \
+             --disable=C0103,C0121,C0330,C0412 \
              --disable=E1103,E1120 \
              --disable=R0201,R0901,R0903,R0904,R0913,R0921,R0922 \
              --disable=W0108,W0142,W0201,W0212,W0221,W0232,W0232,W0631,W0703,W1306 \

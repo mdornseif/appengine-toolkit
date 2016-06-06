@@ -6,7 +6,6 @@ defaulthandlers.py - handlers implementing common functionality for gaetk
 Created by Maximillian Dornseif on 2011-01-09.
 Copyright (c) 2011, 2015 HUDORA. All rights reserved.
 """
-import config
 import datetime
 import json
 import os
@@ -14,6 +13,7 @@ import os
 import google.appengine.api.app_identity
 import google.appengine.api.memcache
 
+import config
 import gaetk
 import gaetk.handler
 

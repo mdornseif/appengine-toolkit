@@ -7,6 +7,8 @@ Created by Maximillian Dornseif on 2010-11-07.
 Copyright (c) 2010, 2015 HUDORA. All rights reserved.
 """
 import datetime
+import doctest
+
 import os
 import re
 import unicodedata
@@ -106,5 +108,4 @@ def get_expiration_timestamp(seconds):
 
 
 if __name__ == "__main__":
-    import doctest
     doctest.testmod()

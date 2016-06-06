@@ -14,13 +14,13 @@ There is no support for logging of read actions yet.
 Created by Christian Klein on 2011-01-22.
 Copyright (c) 2011 HUDORA. All rights reserved.
 """
-from gaetk.lib._gaesessions import get_current_session
-from google.appengine.ext import blobstore
-from google.appengine.api import users
-from google.appengine.ext import db
-
 import decimal
 import os
+
+from gaetk.lib._gaesessions import get_current_session
+from google.appengine.api import users
+from google.appengine.ext import blobstore
+from google.appengine.ext import db
 
 
 def get_current_user():

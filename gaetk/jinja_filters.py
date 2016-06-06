@@ -10,6 +10,7 @@ import logging
 import re
 
 import jinja2
+
 from jinja2.utils import Markup
 
 import gaetk.tools
@@ -127,7 +128,7 @@ def filter_nl2br(eval_ctx, value):
     result = u'\n\n'.join(u'<p>%s</p>' % paragraph.replace('\n', '<br>\n')
                           for paragraph in paragraph_re.split(value))
     if eval_ctx.autoescape:
-        result = Markup(result)
+        return Markup(result)
     return result
 
 
@@ -152,7 +153,7 @@ def filter_authorize(context, value, permission_types):
             logging.info('context has no credential!')
 
     if context.eval_ctx.autoescape:
-        value = Markup(value)
+        return Markup(value)
     return value
 
 
@@ -225,8 +226,7 @@ def _formatint(value):
     value = int(value)
     if abs(value) < 1000000:
         rev_value = ("%d" % int(value))[::-1]
-        value = u' '.join(reversed([rev_value[i:i + 3][::-1] for i in range(0, len(rev_value), 3)]))
-        return value
+        return u' '.join(reversed([rev_value[i:i + 3][::-1] for i in range(0, len(rev_value), 3)]))
     else:
         new_value = value / 1000000.0
         return '%(value).1f Mio' % {'value': new_value}

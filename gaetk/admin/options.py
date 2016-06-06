@@ -89,7 +89,7 @@ class ModelAdmin(object):
     # Reihenfolge ihrer Erzeugung sortiert, jedoch kann jede Admin-Klasse die Sortierung
     # mit 'order_field' beeinflussen, indem sie ein bel. anderes Feld dort angibt.
     order_field = '-created_at'
-    ordering = None
+    ordering = ''
 
     # Standardmaessig lassen wir die App Engine fuer das Model automatisch einen
     # Key generieren. Es besteht jedoch in der Admin-Klasse die Moeglichkeit, via

@@ -48,7 +48,7 @@ def show_snippet(env, name, default=''):
     """Render a snippet inside a jinja2 template."""
     name = gaetk.tools.slugify(name.replace(' ', ''))
 
-    edit = ''
+    edit = u''
     if users.is_current_user_admin():
         edit = u'''<div id="{1}" style="float:right"><a
     href="/admin/snippet/edit/?id={0}#edit" class="snippet_edit_button"

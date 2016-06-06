@@ -6,13 +6,14 @@ admin/views.py - administrationsinterface - inspieriert von Django.
 Created by Christian Klein on 2011-08-10.
 Copyright (c) 2011, 2013, 2014 HUDORA GmbH. All rights reserved.
 """
-import config
-
 import datetime
 import logging
 
+import config
 import gaetk.handler
+import gaetk.snippets
 import webapp2
+
 from gaetk.admin import autodiscover
 from gaetk.admin import search
 from gaetk.admin.models import DeletedObject
@@ -187,7 +188,6 @@ class AdminUndeleteHandler(AdminHandler):
 
 
 autodiscover()
-import gaetk.snippets
 app = make_app([(r'^/admin/_undelete/(.+)', AdminUndeleteHandler),
                 (r'^/admin/snippet/edit/', gaetk.snippets.SnippetEditHandler),
                 (r'^/admin/(\w+)/(\w+)/search/$', AdminSearchHandler),

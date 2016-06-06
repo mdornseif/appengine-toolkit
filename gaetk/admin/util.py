@@ -6,10 +6,10 @@ util.py
 Created by Christian Klein on 2011-08-10.
 Copyright (c) 2011-2015 HUDORA GmbH. All rights reserved.
 """
-import config
+import mimetypes
 
 import cloudstorage
-import mimetypes
+import config
 
 from gaetk.compat import xdb_kind
 from google.appengine.api import app_identity
