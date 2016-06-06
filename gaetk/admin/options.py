@@ -227,8 +227,8 @@ class ModelAdmin(object):
 
             handler.add_message(
                 'warning',
-                u'<strong>%s</strong> wurde gelöscht. <a href="%s">Objekt wiederherstellen!</a>' % (
-                    obj, archived.undelete_url()))
+                u'<strong>{} {}</strong> wurde gelöscht. <a href="{}">Objekt wiederherstellen!</a>'.format(
+                    compat.xdb_kind(self.model), compat.xdb_id_or_name(key), archived.undelete_url()))
             raise gaetk.handler.HTTP302_Found(location='/admin/%s/%s/' % (
                 util.get_app_name(model_class), compat.xdb_kind(model_class)))
 
@@ -244,7 +244,15 @@ class ModelAdmin(object):
                 else:
                     form.populate_obj(obj)
                 key = obj.put()
-                handler.add_message('success', u'<strong>%s</strong> wurde gespeichert.' % obj)
+                handler.add_message(
+                    'success',
+                    u'<strong><a href="/admin/{}/{}/{}/">{} {}</a></strong> wurde gespeichert.'.format(
+                        util.get_app_name(self.model),
+                        compat.xdb_kind(self.model),
+                        compat.xdb_str_key(key),
+                        compat.xdb_kind(self.model),
+                        compat.xdb_id_or_name(key)))
+
                 # Indexierung für Admin-Volltextsuche
                 from gaetk.admin.search import add_to_index
                 deferred.defer(add_to_index, key)
@@ -300,8 +308,12 @@ class ModelAdmin(object):
                 key = obj.put()
                 handler.add_message(
                     'success',
-                    u'<strong>{} {}</strong> wurde angelegt.'.format(
-                        compat.xdb_kind(self.model), compat.xdb_id_or_name(key)))
+                    u'<strong><a href="/admin/{}/{}/{}/">{} {}</a></strong> wurde angelegt.'.format(
+                        util.get_app_name(self.model),
+                        compat.xdb_kind(self.model),
+                        compat.xdb_str_key(key),
+                        compat.xdb_kind(self.model),
+                        compat.xdb_id_or_name(key)))
 
                 # Indexierung für Admin-Volltextsuche
                 from gaetk.admin.search import add_to_index
