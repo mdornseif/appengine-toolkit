@@ -6,6 +6,7 @@ gaetk.tools - various small helpers
 Created by Maximillian Dornseif on 2010-11-07.
 Copyright (c) 2010, 2015 HUDORA. All rights reserved.
 """
+import datetime
 import os
 import re
 import unicodedata
@@ -95,6 +96,13 @@ class hd_cache(object):
         """
         wraped = gaetk.lib.memorised.decorators.memorise(ttl=self.ttl)(user_function)
         return gaetk.lib._lru_cache.lru_cache(maxsize=self.maxsize, typed=True, ttl=self.ttl)(wraped)
+
+
+def get_expiration_timestamp(seconds):
+    """Generate a HTTP Timestamp."""
+    delta = datetime.timedelta(seconds=seconds)
+    expiration = datetime.datetime.now() + delta
+    return expiration.strftime("%a, %d %b %Y %H:%M:%S %Z")
 
 
 if __name__ == "__main__":
