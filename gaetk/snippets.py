@@ -12,13 +12,14 @@ import logging
 import os
 import random
 
+import jinja2
+
 import gaetk
 import gaetk.defaulthandlers
 import gaetk.handler
 import gaetk.tools
 import huTools.http.tools
 import huTools.markdown2
-import jinja2
 
 from google.appengine.api import memcache
 from google.appengine.api import users
