@@ -94,11 +94,10 @@ class AdminListHandler(AdminHandler):
         template_values = self.paginate(
             query, defaultcount=admin_class.list_per_page, datanodename='object_list', calctotal=False)
         template_values.update(
-            list_fields=admin_class.list_fields,
+            admin_class=admin_class,
             app=application,
             model=model,
-            model_class=model_class,
-            read_only=admin_class.read_only)
+            model_class=model_class)
 
         self.render(template_values, 'admin/list.html')
 
@@ -159,7 +158,11 @@ class AdminDetailHandler(AdminHandler):
         elif action_or_objectid == 'delete':
             if admin_class.read_only:
                 raise gaetk.handler.HTTP403_Forbidden
-            admin_class.delete_view(self)
+            elif not admin_class.deletable:
+                self.add_message('danger', u"I'm sorry Dave, I'm afraid I can't do that")
+                raise gaetk.handler.HTTP302_Found(location=self.request.referer)
+            else:
+                admin_class.delete_view(self)
         else:
             if admin_class.read_only:
                 raise gaetk.handler.HTTP403_Forbidden

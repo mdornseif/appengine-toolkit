@@ -40,7 +40,7 @@
 
 <p>&nbsp;</p>
 
-{% if not read_only %}
+{% if not admin_class.read_only %}
 <form action="delete/" method="POST">
 {% endif %}
 
@@ -48,9 +48,9 @@
   <table class="table table-bordered table-condensed table-striped">
     <thead>
       <tr>
-        {% if not read_only %}<th>&nbsp;</th>{% endif %}
+        {% if not admin_class.read_only %}<th>&nbsp;</th>{% endif %}
         <th>Key/ID</th>
-        {% for field in list_fields %}
+        {% for field in admin_class.list_fields %}
         {# This is a little bit hackish. Django now uses a class ChangeList to display this table #}
         <th>{% if field in model_class._properties %}<a href="?ot=asc&amp;o={{ field }}">{{ field|title }}</a>{% else %}{{ field|title }}{% endif %}</th>
         {% endfor %}
@@ -69,14 +69,14 @@
           {{ display_id(obj)|e }}
         {%- endif %}
         </td>
-        {% for field in list_fields %}<td>{{ obj|attr(field)|e }}</td>{% endfor %}
+        {% for field in admin_class.list_fields %}<td>{{ obj|attr(field)|e }}</td>{% endfor %}
       </tr>
       {% endfor %}
     </tbody>
   </table>
   </div>
 
-{% if not read_only %}
+{% if not admin_class.read_only and admin_class.deletable %}
   <div class="form-group form-group-sm">
     <button class="btn btn-danger" type="submit">Löschen</button>
   </div>
