@@ -310,6 +310,8 @@ class TestClient(object):
         if 'deny' in kwargs:
             del kwargs['deny']
 
+        assert len(allow) + len(deny) > 0  # IRGENDWAS muessen wir ja testen
+
         for auth in allow:
             self.check(*args, auth=auth, **kwargs)
         for auth in deny:

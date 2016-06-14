@@ -112,7 +112,7 @@ clean:
 	find . -name '*.pyc' -or -name '*.pyo' -delete
 
 openlogs:
-	open "https://appengine.google.com/logs?app_id=$(APPID)&version_id=dev-`whoami`"
+	open "https://appengine.google.com/logs?app_id=$(APPID)&version_id=dev-`whoami`&severity_level_override=0&severity_level=3"
 
 opendev:
 	open https://dev-`whoami`-dot-$(OPENAPPID).appspot.com$(DEVPAGE)

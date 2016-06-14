@@ -237,10 +237,13 @@ class OAuth2Callback(gaetk.handler.BasicHandler):
 
         # 3. Confirm anti-forgery state token
         if self.request.get('state') != self.session.get('oauth_state'):
-            logging.warn(
+            logging.error(
                 "wrong state: %r != %r", self.request.get('state'), self.session.get('oauth_state'))
+            logging.debug("session: %s", vars(self.session))
+            logging.debug("request: %s", self.request.GET)
             self.session.terminate()
-            del self.session['oauth_state']
+            if self.session.get('oauth_state'):
+                del self.session['oauth_state']
             raise gaetk.handler.HTTP302_Found(location=continue_url)
 
         if LOGIN_ALLOWED_DOMAINS and self.request.get('hd') not in LOGIN_ALLOWED_DOMAINS:
