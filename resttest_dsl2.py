@@ -357,17 +357,21 @@ class TestClient(object):
             # exceptions occure here
             try:
                 future.result()
+                sys.stdout.flush()
             except:
                 print futures[future]
                 sys.stdout.flush()
                 raise
+        finished, not_done = concurrent.futures.wait(futures)
+        if not_done:
+            print "unfinished:", not_done
 
 
     def _check_helper(self, checkers, url, **kwargs):
         response = self.GET(url, **kwargs)
         for checker in checkers:
             checker(response)
-        return url
+        return "%s:%s" % (kwargs.get('auth'), url)
 
     @property
     def errors(self):
