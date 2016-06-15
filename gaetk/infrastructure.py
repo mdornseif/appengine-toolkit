@@ -9,7 +9,9 @@ Copyright (c) 2011, 2012 HUDORA. All rights reserved.
 import zlib
 
 from gaetk import compat
+from google.appengine.api import memcache
 from google.appengine.api import taskqueue
+from google.appengine.ext import ndb
 
 
 def taskqueue_add_multi(qname, url, paramlist, **kwargs):
@@ -73,7 +75,17 @@ def copy_entity(entity, **kwargs):
     return klass(**properties)
 
 
-def write_on_change(model, key, data):
+def flush_ndb_cache(instance):
+    """
+    Flush memcached ndb instance
+
+    Especially usefull if you mix (old) db and ndb for a model.
+    """
+    key = ndb.Context._memcache_prefix + str(instance.key())
+    memcache.delete(key)
+
+
+def write_on_change(model, key, data, flush_cache=False):
     """Schreibe (nur) die geänderten Daten in den Datastore"""
 
     key_name = data[key]
@@ -83,7 +95,10 @@ def write_on_change(model, key, data):
         obj.put()
         return obj
 
-    _changed, obj = write_on_change_instance(obj, data)
+    changed, obj = write_on_change_instance(obj, data)
+    if flush_cache and changed:
+        flush_ndb_cache(obj)
+
     return obj
 
 
