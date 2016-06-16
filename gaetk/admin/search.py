@@ -11,6 +11,7 @@ import logging
 from google.appengine.api import search
 
 import gaetk.compat
+
 from gaetk.admin import autodiscover
 from gaetk.admin.util import get_app_name
 
