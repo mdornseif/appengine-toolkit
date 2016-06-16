@@ -42,5 +42,5 @@ def autodiscover(appsdir=None):
             module_name = '.'.join((directory, subdir, 'admin'))
             try:
                 import_module(module_name)
-            except ImportError, error:
+            except ImportError as error:
                 logging.error(u'Error while importing %s: %s', module_name, error)

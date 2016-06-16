@@ -39,6 +39,7 @@ def make_app(url_mapping):
 
 class AdminHandler(gaetk.handler.BasicHandler):
     """Basisklasse AdminHandler."""
+
     def authchecker(self, method, *args, **kwargs):
         """Autentifizierung. `login: required` in app.yaml macht die Drecksarbeit für uns."""
 
@@ -172,6 +173,7 @@ class AdminDetailHandler(AdminHandler):
 
 class AdminUndeleteHandler(AdminHandler):
     """Daten, die gelöscht wurden, wieder herstellen."""
+
     def get(self, key):
         """Objekt mit <key> wiederherstellen."""
         archived = DeletedObject.get(key)

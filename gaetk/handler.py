@@ -26,7 +26,7 @@ from functools import partial
 # Wenn es ein `config` Modul gibt, verwenden wir es, wenn nicht haben wir ein default.
 try:
     import config
-except (ImportError), msg:
+except (ImportError) as msg:
     logging.debug('no config file used because of %s', msg)
     config = object()
 
@@ -206,7 +206,6 @@ class BasicHandler(webapp2.RequestHandler):
         if self.request:
             return urlparse.urljoin(self.request.uri, url)
         return urlparse.urljoin(os.environ.get('HTTP_ORIGIN', ''), url)
-
 
     def error(self, code):
         """Clears the response output stream and sets the given HTTP error code.

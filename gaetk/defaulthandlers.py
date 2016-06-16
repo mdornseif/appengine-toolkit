@@ -52,6 +52,7 @@ class Stats(gaetk.handler.BasicHandler):
     #               "misses": 20606,
     #               "byte_hits": 176865465}
     # }
+
     def get(self):
         """Deliver all Statistics available to gaetk."""
         # memcache statistics are straightforward

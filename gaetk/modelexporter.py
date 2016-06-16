@@ -25,6 +25,7 @@ from gaetk.infrastructure import query_iterator
 
 class ModelExporter(object):
     """Export all entities of a Model as XLS, CSV, etc."""
+
     def __init__(self, model, query=None):
         self.model = model
         if query is None:

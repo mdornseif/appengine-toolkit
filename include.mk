@@ -94,6 +94,7 @@ deploy_production:
 	(cd tmp/$(REPOSNAME) ; git log --pretty='* %s (%ae)' `cat lastversion.txt`..`cat version.txt`)
 
 fixup:
+	autopep8 --global-config=/dev/null --recursive --in-place --pep8-passes 2000 --max-line-length=110 -a -a --experimental --ignore=E711,E712,E401 *.py modules/ tests/ lib/CentralServices/cs
 	# Tailing Whitespace
 	find modules -name '*.py' -print0 | xargs -0 perl -pe 's/[\t ]+$$//g' -i
 	find templates -name '*.html' -print0 | xargs -0 perl -pe 's/[\t ]+$$//g' -i

@@ -74,7 +74,7 @@ class LoginHandler(gaetk.handler.BasicHandler):
             # This payload is decoded and safe
         except _itsdangerous.SignatureExpired:
             logging.warn("SignatureExpired")
-        except _itsdangerous.BadData, msg:
+        except _itsdangerous.BadData as msg:
             logging.warn("BadData: %s", msg)
         if decoded_payload and 'uid' in decoded_payload:
             if not os.environ.get('HTTP_HOST', '').endswith(decoded_payload.get('provider', '?')):
