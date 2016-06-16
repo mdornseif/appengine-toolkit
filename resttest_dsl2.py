@@ -183,8 +183,8 @@ class Response(object):
             elif link not in oklinks:
                 try:
                     r = requests.get(link, headers=dict(
-                            referer=self.url, Cookie=self.headers.get('set-cookie', '')
-                            )
+                        referer=self.url, Cookie=self.headers.get('set-cookie', '')
+                    )
                     )
                     status = r.status_code
                 except (IOError, huTools.http._httplib2.ServerNotFoundError):
@@ -207,7 +207,7 @@ class Response(object):
         try:
             from tidylib import tidy_document
             document, errors = tidy_document(
-                self.content, options={'numeric-entities':1, 'input-encoding': 'utf8'})
+                self.content, options={'numeric-entities': 1, 'input-encoding': 'utf8'})
             if errors:
                 print "### {0} see http://validator.w3.org/nu/?doc={0}".format(self.url)
                 contentlines = self.content.split('\n')
@@ -218,7 +218,7 @@ class Response(object):
                         line, linenr, column, colnr = address.split()
                         if 'trimming empty <p' not in errortext and 'inserting implicit ' not in errortext:
                             print "line {0}:{1} {2}".format(linenr, colnr, errortext),
-                            print repr(contentlines[int(linenr)-1])
+                            print repr(contentlines[int(linenr) - 1])
         except (ImportError, OSError):
             pass
         return self
@@ -226,6 +226,7 @@ class Response(object):
 
 class TestClient(object):
     """Hilfsklasse zum Ausfuehren von HTTP-Requests im Rahmen von Tests."""
+
     def __init__(self, host, users, debug=False):
         self.debug = debug
         self.host = host
@@ -366,7 +367,6 @@ class TestClient(object):
         if not_done:
             print "unfinished:", not_done
 
-
     def _check_helper(self, checkers, url, **kwargs):
         response = self.GET(url, **kwargs)
         for checker in checkers:
@@ -405,6 +405,7 @@ def responds_pdf(response):
     response.responds_content_type('application/pdf')
     # .startswith('%PDF-1')
 
+
 def responds_basic(response):
     """sichert zu, dass die Antwort einen vernünftigen Statuscode hat."""
     response.responds_http_status(200)
@@ -441,8 +442,8 @@ def responds_redirect(response, to=None):
     # oder location = self.response.url
     location = urlparse.urlparse(response.headers.get('location', '/')).path
     response.expect_condition(
-       (300 <= response.status < 400) and location.startswith(to),
-       'expected redirect to %r, got %s:%r' % (
+        (300 <= response.status < 400) and location.startswith(to),
+        'expected redirect to %r, got %s:%r' % (
             to,
             response.response.status_code,
             location))
