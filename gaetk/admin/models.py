@@ -9,6 +9,7 @@ Copyright (c) 2011 HUDORA GmbH. All rights reserved.
 
 from google.appengine.ext import db
 
+
 class DeletedObject(db.Model):
     """Hebt ein gelöschtes Model auf, um Undelete zu implementieren."""
     model_class = db.StringProperty(indexed=False)

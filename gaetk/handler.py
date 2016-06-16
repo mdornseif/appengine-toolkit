@@ -227,7 +227,7 @@ class BasicHandler(webapp2.RequestHandler):
             # ES6 Fetch API
             or 'Fetch' in self.request.headers.get('X-Requested-With', '')
             # JSON only client
-            or self.request.headers.get('Accept', '') == 'application/json'):
+                or self.request.headers.get('Accept', '') == 'application/json'):
             return False
         return (
             'text/' in self.request.headers.get('Accept', '') or
