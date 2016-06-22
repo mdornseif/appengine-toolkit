@@ -198,6 +198,7 @@ class BasicHandler(webapp2.RequestHandler):
         except AttributeError:
             # session middleware might not be enabled
             self.session = {}  # pylint: disable=R0204
+        # Careful! `webapp2.RequestHandler` does not call super()!
         super(BasicHandler, self).__init__(*args, **kwargs)
         self.credential = None
 

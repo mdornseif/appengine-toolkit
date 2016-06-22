@@ -297,6 +297,8 @@ class TestClient(object):
                 checkers = [responds_xml]
             elif url.endswith('.csv') or url.endswith('.xls'):
                 checkers = [responds_basic]
+            elif url.endswith('jpeg'):
+                checkers = [responds_jpeg]
             elif url.endswith('txt'):
                 checkers = [responds_plaintext]
             else:
@@ -403,6 +405,13 @@ def responds_pdf(response):
     """sichert zu, dass die Antwort ein well-formed PDF-Dokument war."""
     response.responds_http_status(200)
     response.responds_content_type('application/pdf')
+    # .startswith('%PDF-1')
+
+
+def responds_jpeg(response):
+    """sichert zu, dass die Antwort ein JPEG"""
+    response.responds_http_status(200)
+    response.responds_content_type('image/jpeg')
     # .startswith('%PDF-1')
 
 
