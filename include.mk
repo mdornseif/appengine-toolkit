@@ -44,7 +44,7 @@ PYLINT_ARGS= "--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
              --disable=C0103,C0121,C0330,C0412 \
              --disable=E1103,E1120 \
              --disable=R0201,R0901,R0903,R0904,R0913,R0921,R0922 \
-             --disable=W0108,W0142,W0201,W0212,W0221,W0232,W0232,W0631,W0703,W1306 \
+             --disable=W0108,W0142,W0201,W0212,W0221,W0232,W0232,W0511,W0631,W0703,W1306 \
              --disable=I0011
 
 # PYLINT_ARGS_ADDON?= --import-graph=import.dot -ry
@@ -66,7 +66,9 @@ lib/google_appengine/google/__init__.py:
 
 checknodeps:
 	flake8 $(LINT_FLAKE8_ARGS) $(LINT_FILES)
-	sh -c 'PYTHONUNBUFFERED=1 LC_ALL=en_US.UTF-8 PYTHONPATH=`python config.py`:$(MYPYTHONPATH) pylint $(PYLINT_ARGS) $(PYLINT_ARGS_ADDON) $(LINT_FILES)'
+	# --disable=W0511 no TODOs
+	sh -c 'PYTHONUNBUFFERED=1 LC_ALL=en_US.UTF-8 PYTHONPATH=`python config.py`:$(MYPYTHONPATH) pylint --disable=W0511 $(PYLINT_ARGS) $(PYLINT_ARGS_ADDON) $(LINT_FILES)'
+	sh -c 'PYTHONUNBUFFERED=1 LC_ALL=en_US.UTF-8 PYTHONPATH=`python config.py`:$(MYPYTHONPATH) pylint $(PYLINT_ARGS) $(PYLINT_ARGS_ADDON) --disable-all  --enable=W0511 $(LINT_FILES)'
 
 check: lib/google_appengine/google/__init__.py checknodeps
 
