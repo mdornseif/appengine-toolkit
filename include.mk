@@ -68,7 +68,8 @@ checknodeps:
 	flake8 $(LINT_FLAKE8_ARGS) $(LINT_FILES)
 	# --disable=W0511 no TODOs
 	sh -c 'PYTHONUNBUFFERED=1 LC_ALL=en_US.UTF-8 PYTHONPATH=`python config.py`:$(MYPYTHONPATH) pylint --disable=W0511 $(PYLINT_ARGS) $(PYLINT_ARGS_ADDON) $(LINT_FILES)'
-	sh -c 'PYTHONUNBUFFERED=1 LC_ALL=en_US.UTF-8 PYTHONPATH=`python config.py`:$(MYPYTHONPATH) pylint $(PYLINT_ARGS) $(PYLINT_ARGS_ADDON) --disable-all  --enable=W0511 $(LINT_FILES)'
+	# TODOs anzeigen
+	sh -c 'PYTHONUNBUFFERED=1 LC_ALL=en_US.UTF-8 PYTHONPATH=`python config.py`:$(MYPYTHONPATH) pylint $(PYLINT_ARGS) $(PYLINT_ARGS_ADDON) --disable=all --enable=W0511 $(LINT_FILES)'
 
 check: lib/google_appengine/google/__init__.py checknodeps
 
