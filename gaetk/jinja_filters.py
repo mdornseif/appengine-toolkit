@@ -188,7 +188,7 @@ def eurocent(value, spacer='&#8239;', decimalplaces=2, plain=False):
     default spacer is NARROW NO-BREAK SPACE U+202F
     probably `style="white-space:nowrap; word-spacing:0.5em;"` would be an CSS based alternative.
     """
-    if value is None:
+    if value is None or value == '':
         return u'␀'
     tmp = str(int(value) / decimal.Decimal(100))
     # Cent anhängen
