@@ -709,17 +709,11 @@ class BasicHandler(webapp2.RequestHandler):
         method = getattr(self, method_name, None)
         if method is None:
             # 405 Method Not Allowed.
-            # The response MUST include an Allow header containing a
-            # list of valid methods for the requested resource.
-            # http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.6
-            methods = []
-            for method in ('GET', 'POST', 'HEAD', 'OPTIONS', 'PUT', 'DELETE', 'TRACE'):
-                if getattr(self, webapp2._normalize_handler_method(method), None):
-                    methods.append(method)
-            valid = ', '.join(methods)
+            valid = ', '.join(webapp2._get_handler_methods(self))
             self.abort(405, headers=[('Allow', valid)])
 
         # The handler only receives *args if no named variables are set.
+        # TODO: Warum?
         args, kwargs = request.route_args, request.route_kwargs
         if kwargs:
             args = ()
@@ -736,9 +730,13 @@ class BasicHandler(webapp2.RequestHandler):
         # Give authentication Hooks opportunity to do their thing
         self.authchecker(method, *args, **kwargs)
 
-        ret = method(*args, **kwargs)
-        self.finished_hook(ret, method, *args, **kwargs)
-        return ret
+        try:
+            response = method(*args, **kwargs)
+        except Exception, e:
+            return self.handle_exception(e, self.app.debug)
+
+        self.finished_hook(response, method, *args, **kwargs)
+        return response
 
     def add_message(self, typ, html, ttl=15):
         """Sets a user specified message to be displayed to the currently logged in user.
