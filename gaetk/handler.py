@@ -893,3 +893,10 @@ class MarkdownFileHandler(BasicHandler):
         except IOError as exception:
             logging.exception(u'Path %s: %s', textfile, exception)
             raise gaetk.handler.HTTP404_NotFound("%s not available" % textfile)
+
+
+def get_object_or_404(model_class, key_id, message=None):
+    """Get object by key name or raise HTTP404"""
+    obj = gaetk.compat.get_by_id_or_name(model_class, key_id)
+    if not obj:
+        raise HTTP404_NotFound(message)
