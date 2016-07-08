@@ -900,3 +900,4 @@ def get_object_or_404(model_class, key_id, message=None):
     obj = gaetk.compat.get_by_id_or_name(model_class, key_id)
     if not obj:
         raise HTTP404_NotFound(message)
+    return obj
