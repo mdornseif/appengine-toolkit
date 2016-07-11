@@ -1,4 +1,4 @@
-GAE_VERSION=1.9.22
+GAE_VERSION=1.9.38
 
 LINT_LINE_LENGTH= 110
 LINT_FLAKE8_ARGS= --max-complexity=27 --builtins=_ --max-line-length=$(LINT_LINE_LENGTH) --exclude=mywebapp2.py,gaesessions.py,gaetk/__init__.py
@@ -92,10 +92,10 @@ test: dependencies
 
 pythonenv:
 	virtualenv --python=python2.7 --no-site-packages pythonenv
-	./pythonenv/bin/python pythonenv/bin/pip -q install --upgrade nose 
-	./pythonenv/bin/python pythonenv/bin/pip -q install --upgrade NoseGAE 
-	./pythonenv/bin/python pythonenv/bin/pip -q install --upgrade WebTest 
-	./pythonenv/bin/python pythonenv/bin/pip -q install --upgrade gaetestbed 
+	./pythonenv/bin/python pythonenv/bin/pip -q install --upgrade nose
+	./pythonenv/bin/python pythonenv/bin/pip -q install --upgrade NoseGAE
+	./pythonenv/bin/python pythonenv/bin/pip -q install --upgrade WebTest
+	./pythonenv/bin/python pythonenv/bin/pip -q install --upgrade gaetestbed
 	./pythonenv/bin/python pythonenv/bin/pip -q install --upgrade coverage mock fixture flake8 pylint
 	./pythonenv/bin/python pythonenv/bin/pip -q install --upgrade jinja2 webapp2 simplejson
 	./pythonenv/bin/python pythonenv/bin/pip -q install --upgrade huTools
