@@ -76,15 +76,12 @@ class ConfigHandler(gaetk.handler.JsonResponseHandler):
     def post(self, key):
         """Schreibe Konfigurationsvariable"""
 
-        import logging
         header = self.request.headers.get('Content-Type')
         if header.split(';', 1)[0] != 'application/json':
-            logging.debug(u'%s not json?', self.request.headers.get('Content-Type'))
             raise gaetk.handler.HTTP400_BadRequest
         try:
             value = json.loads(self.request.body)
         except (ValueError, TypeError) as exception:
-            logging.error(u'body: %r, exception: %s', self.request.body, exception)
             raise gaetk.handler.HTTP400_BadRequest
 
         obj = Configuration.get_or_insert(key)

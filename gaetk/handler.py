@@ -26,7 +26,7 @@ from functools import partial
 # Wenn es ein `config` Modul gibt, verwenden wir es, wenn nicht haben wir ein default.
 try:
     import config
-except (ImportError) as msg:
+except ImportError as msg:
     logging.debug('no config file used because of %s', msg)
     config = object()
 
