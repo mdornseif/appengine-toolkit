@@ -81,7 +81,7 @@ class ConfigHandler(gaetk.handler.JsonResponseHandler):
             raise gaetk.handler.HTTP400_BadRequest
         try:
             value = json.loads(self.request.body)
-        except (ValueError, TypeError) as exception:
+        except (ValueError, TypeError):
             raise gaetk.handler.HTTP400_BadRequest
 
         obj = Configuration.get_or_insert(key)
@@ -91,5 +91,5 @@ class ConfigHandler(gaetk.handler.JsonResponseHandler):
 
 
 application = gaetk.handler.WSGIApplication([
-    (r'.*/(\w+)/', ConfigHandler),
+    (r'.*/([\w-]+)/', ConfigHandler),
 ])
