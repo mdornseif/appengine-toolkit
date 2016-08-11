@@ -353,7 +353,7 @@ class Debug(gaetk.handler.BasicHandler):
         ), 'login_debug.html')
 
 
-class CredentialsHandler(gaetk.handler.BasicHandler):
+class CredentialsHandler(gaetk.handler.JsonResponseHandler):
     """Credentials - generate or update"""
 
     def authchecker(self, *args, **kwargs):
@@ -372,13 +372,15 @@ class CredentialsHandler(gaetk.handler.BasicHandler):
         if credential is None:
             raise gaetk.handler.HTTP404_NotFound
 
-        self.response.headers["Content-Type"] = "application/json"
-        self.response.out.write(huTools.hujson2.dumps(dict(uid=credential.uid,
-                                                           admin=credential.admin, text=credential.text,
-                                                           tenant=credential.tenant, email=credential.email,
-                                                           permissions=credential.permissions,
-                                                           created_at=credential.created_at,
-                                                           updated_at=credential.updated_at)))
+        return dict(
+            uid=credential.uid,
+            admin=credential.admin,
+            text=credential.text,
+            tenant=credential.tenant,
+            email=credential.email,
+            permissions=credential.permissions,
+            created_at=credential.created_at,
+            updated_at=credential.updated_at)
 
     def post(self):
         """Use it like this
@@ -423,22 +425,24 @@ class CredentialsHandler(gaetk.handler.BasicHandler):
                 if permission not in getattr(config, 'ALLOWED_PERMISSIONS', []):
                     raise gaetk.handler.HTTP400_BadRequest("invalid permission %r" % permission)
                 credential.permissions.append(permission)
+
+            credential.permissions = sorted(set(credential.permissions))
             credential.put()
         else:
             # if not, we generate a new one
             credential = gaetk.handler.NdbCredential.create(
-                admin=admin, text=text,
-                tenant=tenant, email=email)
+                admin=admin, text=text, tenant=tenant, email=email)
 
-        self.response.headers["Content-Type"] = "application/json"
-        self.response.set_status(201)
-        self.response.out.write(huTools.hujson2.dumps(dict(
-            uid=credential.uid, secret=credential.secret,
-            admin=credential.admin, text=credential.text,
-            tenant=credential.tenant, email=credential.email,
+        return dict(
+            uid=credential.uid,
+            secret=credential.secret,
+            admin=credential.admin,
+            text=credential.text,
+            tenant=credential.tenant,
+            email=credential.email,
             permissions=credential.permissions,
             created_at=credential.created_at,
-            updated_at=credential.updated_at)))
+            updated_at=credential.updated_at), 201
 
 
 # die URL-Handler fuer's Login/ Logout
