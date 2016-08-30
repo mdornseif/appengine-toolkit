@@ -17,7 +17,7 @@ import wtforms
 from google.appengine.ext import db
 from google.appengine.ext import deferred
 from google.appengine.ext import ndb
-from wtforms.ext.appengine.db import model_form
+from wtforms_appengine.db import model_form
 
 from gaetk import compat
 from gaetk import modelexporter
