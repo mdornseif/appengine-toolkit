@@ -4,7 +4,7 @@
 gaetk/modelexporter.py Export db/ndb Tables / Models
 
 Created by Maximillian on 2014-12-10.
-Copyright (c) 2014, 2015 HUDORA GmbH. All rights reserved.
+Copyright (c) 2014-2016 HUDORA GmbH. All rights reserved.
 
 Usage:
 
@@ -26,8 +26,9 @@ from gaetk.infrastructure import query_iterator
 class ModelExporter(object):
     """Export all entities of a Model as XLS, CSV, etc."""
 
-    def __init__(self, model, query=None):
+    def __init__(self, model, query=None, uid=None):
         self.model = model
+        self.uid = uid
         if query is None:
             self.query = compat.xdb_queryset(model)
         else:
@@ -52,7 +53,14 @@ class ModelExporter(object):
 
     def create_header(self, output, fixer=lambda x: x):
         """Erzeugt eine oder mehrere Headerzeilen in `output`"""
-        output.writerow(fixer(['# Exported at:', str(datetime.datetime.now())]))
+        if self.uid:
+            output.writerow(fixer([
+                '# Exported at:',
+                str(datetime.datetime.now()),
+                'for',
+                self.uid]))
+        else:
+            output.writerow(fixer(['# Exported at:', str(datetime.datetime.now())]))
         output.writerow(fixer(self.fields + [u'Datenbankschlüssel']))
 
     def create_row(self, output, data, fixer=lambda x: x):
