@@ -4,7 +4,7 @@
 handler.py - default Request Handler
 
 Created by Maximillian Dornseif on 2010-10-03.
-Copyright (c) 2010-2015 HUDORA. All rights reserved.
+Copyright (c) 2010-2016 HUDORA. All rights reserved.
 """
 
 
@@ -261,14 +261,19 @@ class BasicHandler(webapp2.RequestHandler):
         http://code.google.com/appengine/docs/python/datastore/queryclass.html#Query_cursor for
         further Information.
         """
+
+
+        if calctotal:
+            # We count up to maximum of 10000. Counting is a somewhat expensive operation on AppEngine
+            # doing thhis asyncrounously would be smart
+            total = query.count(10000)  # has to happen before `_paginate_query()`
+
         clean_qs = dict([(k, self.request.get(k)) for k in self.request.arguments()
                          if k not in ['start', 'cursor', 'cursor_start']])
         objects, cursor, start, ret = self._paginate_query(query, defaultcount)
-
         ret['total'] = None
         if calctotal:
-            # We count up to maximum of 10000. Counting is a somewhat expensive operation on AppEngine
-            ret['total'] = query.count(10000)
+            ret['total'] = total
 
         if ret['more_objects']:
             ret['cursor'] = cursor.urlsafe()
