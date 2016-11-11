@@ -262,7 +262,7 @@ class OAuth2Callback(gaetk.handler.BasicHandler):
                 "Wrong domain: %r not in %r" % (self.request.get('hd'), LOGIN_ALLOWED_DOMAINS))
 
         # 4. Exchange code for access token and ID token
-        oauth_config = config.get_oauth_config(self.request)
+        oauth_config = get_oauth_config(self.request)
         url = oauth_config['web']['token_uri']
         # get token
         params = dict(
