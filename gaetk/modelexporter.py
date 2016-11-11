@@ -18,6 +18,7 @@ Usage:
 """
 import csv
 import datetime
+import time
 
 from gaetk import compat
 from gaetk.infrastructure import query_iterator
@@ -26,9 +27,11 @@ from gaetk.infrastructure import query_iterator
 class ModelExporter(object):
     """Export all entities of a Model as XLS, CSV, etc."""
 
-    def __init__(self, model, query=None, uid=None, only=None, ignore=None, additional_fields=None):
+    def __init__(self, model,
+                 query=None, uid=None, only=None, ignore=None, additional_fields=None, maxseconds=30):
         self.model = model
         self.uid = uid
+        self.maxseconds = maxseconds
         if query is None:
             self.query = compat.xdb_queryset(model)
         else:
@@ -96,17 +99,25 @@ class ModelExporter(object):
 
     def to_csv(self, fileobj):
         """generate CSV in fileobj"""
-        csvwriter = csv.writer(fileobj, dialect='excel', delimiter='\t')
+        csvwriter = self.create_writer(fileobj)
         fixer = lambda row: [unicode(x).encode('utf-8') for x in row]
         self.create_header(csvwriter, fixer)
+        start = time.time()
         for row in query_iterator(self.query):
             self.create_row(csvwriter, row, fixer)
+            if time.time() - self.maxseconds > start:
+                self.create_row(csvwriter, ['truncated ...'], fixer)
+                break
 
     def to_xls(self, fileobj):
         """generate XLS in fileobj"""
         import huTools.structured_xls
         xlswriter = huTools.structured_xls.XLSwriter()
         self.create_header(xlswriter)
+        start = time.time()
         for row in query_iterator(self.query):
             self.create_row(xlswriter, row)
+            if time.time() - self.maxseconds > start:
+                self.create_row(xlswriter, ['truncated ...'])
+                break
         xlswriter.save(fileobj)
