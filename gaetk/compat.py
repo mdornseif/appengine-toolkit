@@ -181,3 +181,17 @@ def xdb_str_key(key):
         return key.urlsafe()
     else:
         return str(key)
+
+
+def xdb_prop_name(prop):
+    if isinstance(prop, ndb.Property):
+        return prop._name
+    elif isinstance(prop, db.Property):
+        return prop.name
+
+
+def xdb_prop_creation_counter(prop):
+    if isinstance(prop, ndb.Property):
+        return prop._creation_counter
+    elif isinstance(prop, db.Property):
+        return prop.creation_counter

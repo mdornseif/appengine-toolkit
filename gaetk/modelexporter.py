@@ -26,13 +26,17 @@ from gaetk.infrastructure import query_iterator
 class ModelExporter(object):
     """Export all entities of a Model as XLS, CSV, etc."""
 
-    def __init__(self, model, query=None, uid=None):
+    def __init__(self, model, query=None, uid=None, only=None, ignore=None, additional_fields=None):
         self.model = model
         self.uid = uid
         if query is None:
             self.query = compat.xdb_queryset(model)
         else:
             self.query = query
+
+        self.only = only
+        self.ignore = ignore
+        self.additional_fields = additional_fields
 
     @property
     def fields(self):
@@ -41,14 +45,21 @@ class ModelExporter(object):
             fields = []
             props = compat.xdb_properties(self.model)
             for prop in props.values():
-                # ndb & db compatatibility
-                name = getattr(prop, '_name', getattr(prop, 'name', '?'))
-                if name not in getattr(self, 'unwanted_fields', []):
-                    fields.append(name)
-            if hasattr(self, 'additional_fields'):
-                fields.extend(self.additional_fields)
-            fields.sort()
-            self._fields = fields
+                name = compat.xdb_prop_name(prop)
+                if self.only:
+                    if name in self.only:
+                        fields.append((compat.xdb_prop_creation_counter(prop), name))
+                elif self.ignore:
+                    if name not in self.only:
+                        fields.append((compat.xdb_prop_creation_counter(prop), name))
+                else:
+                    fields.append((compat.xdb_prop_creation_counter(prop), name))
+
+            if self.additional_fields:
+                fields.extend((999, name) for name in self.additional_fields)
+
+            self._fields = [name for (_, name) in sorted(fields)]
+
         return self._fields
 
     def create_header(self, output, fixer=lambda x: x):
