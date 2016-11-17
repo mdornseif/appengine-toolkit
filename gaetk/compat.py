@@ -11,6 +11,7 @@ from urllib import unquote
 from google.appengine.datastore.datastore_query import Cursor
 from google.appengine.ext import db
 from google.appengine.ext import ndb
+from google.appengine.ext.ndb import model
 
 
 def xdb_create_key(model_class, id_or_name, parent=None):
@@ -30,13 +31,21 @@ def get_by_id_or_name(model_class, id_or_name, parent=None):
 
 
 def xdb_kind(model_class):
-    """Get kind from db or ndb model class"""
+    """Get kind (table-name, string) for ndb model class"""
     kind = getattr(model_class, '_get_kind', None)
     if not kind:
         kind = getattr(model_class, 'kind', None)
         if not kind:
             return model_class.__name__
     return kind()
+
+
+def xdb_kind_from_query(query):
+    """Get kind-Model-Object from db or ndb model class"""
+
+    if getattr(query, 'kind', None):
+        return model.Model._lookup_model(query.kind)
+    return query._model_class
 
 
 def xdb_get_instance(model_class, encoded_key):
@@ -91,10 +100,17 @@ def xdb_to_protobuf(instance):
 
 def xdb_properties(instance):
     """Properties einer Entity."""
-    if xdb_is_ndb(instance):
-        return instance._properties
-    else:
-        return instance.properties()
+    try:
+        if xdb_is_ndb(instance):
+            return instance._properties
+        else:
+            return instance.properties()
+    except:
+        import logging
+        logging.critical('%s', instance)
+        logging.critical('%r', instance)
+        logging.critical('%r', dir(instance))
+        raise
 
 
 def _get_queryset_db(model_class, ordering=None):

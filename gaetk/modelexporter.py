@@ -28,7 +28,7 @@ class ModelExporter(object):
     """Export all entities of a Model as XLS, CSV, etc."""
 
     def __init__(self, model,
-                 query=None, uid=None, only=None, ignore=None, additional_fields=None, maxseconds=30):
+                 query=None, uid=None, only=None, ignore=None, additional_fields=None, maxseconds=40):
         self.model = model
         self.uid = uid
         self.maxseconds = maxseconds
@@ -106,7 +106,7 @@ class ModelExporter(object):
         for row in query_iterator(self.query):
             self.create_row(csvwriter, row, fixer)
             if time.time() - self.maxseconds > start:
-                self.create_row(csvwriter, ['truncated ...'], fixer)
+                csvwriter.writerow(['truncated ...'])
                 break
 
     def to_xls(self, fileobj):
@@ -118,6 +118,6 @@ class ModelExporter(object):
         for row in query_iterator(self.query):
             self.create_row(xlswriter, row)
             if time.time() - self.maxseconds > start:
-                self.create_row(xlswriter, ['truncated ...'])
+                xlswriter.writerow(['truncated ...'])
                 break
         xlswriter.save(fileobj)
