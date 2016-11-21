@@ -288,14 +288,21 @@ class TestClient(object):
     # New API
 
     def check(self, *args, **kwargs):
+        # see http://stackoverflow.com/questions/9872824/calling-a-python-function-with-args-kwargs-and-optional-default-arguments
+        typ = kwargs.get('typ', None)
+        if typ:
+            del kwargs['typ']
+
         for url in args:
-            if url.endswith('.json'):
+            if typ == 'JSON':
+                checkers = [responds_json]
+            elif url.endswith('.json'):
                 checkers = [responds_json]
             elif url.endswith('.pdf'):
                 checkers = [responds_pdf]
-            elif url.endswith('.xml'):
+            elif url.endswith(('.xml', '/xml/')):
                 checkers = [responds_xml]
-            elif url.endswith('.csv') or url.endswith('.xls'):
+            elif url.endswith(('.csv', '/csv/', '/xls/', '.xls')):
                 checkers = [responds_basic]
             elif url.endswith('jpeg'):
                 checkers = [responds_jpeg]
