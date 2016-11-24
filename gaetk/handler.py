@@ -335,8 +335,10 @@ class BasicHandler(webapp2.RequestHandler):
                 myval.update(values)
                 return myval
         """
-        # TODO: change values to be immutable
-        ret = {'is_admin': self.is_admin()}
+        ret = dict(
+            is_admin=self.is_admin(),
+            request=self.request,
+        )
         if self.is_admin():
             ret.update(dict(
                 credential=self.credential,
