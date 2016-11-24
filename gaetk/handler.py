@@ -335,14 +335,16 @@ class BasicHandler(webapp2.RequestHandler):
                 myval.update(values)
                 return myval
         """
-        values.update({'is_admin': self.is_admin()})
+        # TODO: change values to be immutable
+        ret = {'is_admin': self.is_admin()}
         if self.is_admin():
-            values.update(dict(
+            ret.update(dict(
                 credential=self.credential,
                 is_admin=self.is_admin(),
                 gaetk_production=self.is_production(),
             ))
-        return values
+        ret.update(values)
+        return ret
 
     def create_jinja2env(self):
         """Initialise and return a jinja2 Environment instance.
