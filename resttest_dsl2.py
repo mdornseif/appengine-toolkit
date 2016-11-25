@@ -9,6 +9,7 @@ File created by Philipp Benjamin Koeppchen on 2011-02-23
 import logging
 import optparse
 import os
+import random
 import sys
 import time
 import urlparse
@@ -100,6 +101,9 @@ class Response(object):
         else:
             print repr(self.content[:50])
         print '=' * 50
+        if 'X-Cloud-Trace-Context' in self.headers:
+            print ('http://console.developer.google.com/traces/details/%s'
+                   % self.headers['X-Cloud-Trace-Context'].split(';')[0])
         print
 
     def succeed(self, message):
@@ -258,7 +262,10 @@ class TestClient(object):
         if auth and auth not in self.authdict:
             raise ValueError("Unknown auth '%s'" % auth)
 
-        myheaders = {'User-Agent': 'resttest/%s' % requests.utils.default_user_agent()}
+        self.cloudtrace = "%032x" % (random.getrandbits(128))
+        myheaders = {
+            'User-Agent': 'resttest/%s' % requests.utils.default_user_agent(),
+            'X-Cloud-Trace-Context': '%s/0;o=1' % self.cloudtrace}
         if accept:
             myheaders['Accept'] = accept
         myheaders.update(headers)
