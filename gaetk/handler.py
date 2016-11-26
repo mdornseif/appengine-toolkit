@@ -88,6 +88,11 @@ WSGIApplication = webapp2.WSGIApplication
 
 def login_user(credential, session, via, response=None):
     """Ensure the system knows that a user has been logged in."""
+
+    # ensure that users with empty password are never logged in
+    if credential and not credential.secret:
+        raise HTTP401_Unauthorized("Account disabled")
+
     session['uid'] = credential.uid
     if 'login_via' not in session:
         session['login_via'] = via
@@ -160,7 +165,7 @@ class NdbCredential(ndb.Expando):
         data = u'%s%s%s%f%s' % (user, uuid.uuid1(), uid, time.time(),
                                 os.environ.get('CURRENT_VERSION_ID', '?'))
         digest = hashlib.md5(data.encode('utf-8')).digest()
-        secret = str(base64.b32encode(digest).rstrip('='))[1:9]
+        secret = str(base64.b32encode(digest).rstrip('='))[1:11]
         if not uid:
             uid = "u%s" % (cls.allocate_ids(1)[0])
         kwargs['permissions'] = ['generic_permission']
@@ -676,6 +681,11 @@ class BasicHandler(webapp2.RequestHandler):
                 raise HTTP401_Unauthorized(headers={'WWW-Authenticate': 'Basic realm="API Login"'})
 
         self.request._login_required_called = True
+
+        # ensure that users with empty password are never logged in
+        if self.credential and not self.credential.secret:
+            raise HTTP401_Unauthorized("Account disabled")
+
         return self.credential
 
     def _parse_authorisation(self):
@@ -696,7 +706,9 @@ class BasicHandler(webapp2.RequestHandler):
 
     def authchecker(self, method, *args, **kwargs):
         """Function to allow implementing authentication for all subclasses. To be overwritten."""
-        pass
+        # ensure that users with empty password are never logged in
+        if self.credential and not self.credential.secret:
+            raise HTTP401_Unauthorized("Account disabled")
 
     def finished_hook(self, ret, method, *args, **kwargs):
         """Function to allow logging etc. To be overwritten."""
