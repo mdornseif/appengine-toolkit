@@ -4,13 +4,17 @@
 infrastructure.py
 
 Created by Maximillian Dornseif on 2011-01-07.
-Copyright (c) 2011, 2012 HUDORA. All rights reserved.
+Copyright (c) 2011, 2012, 2016 Cyberlogi/HUDORA. All rights reserved.
 """
+import re
 import zlib
+
+import google.appengine.ext.deferred.deferred
 
 from gaetk import compat
 from google.appengine.api import memcache
 from google.appengine.api import taskqueue
+from google.appengine.ext import deferred
 from google.appengine.ext import ndb
 
 
@@ -114,3 +118,31 @@ def write_on_change_instance(obj, data):
         obj.put()
 
     return dirty, obj
+
+
+def defer(obj, *args, **kwargs):
+    """Defers a callable for execution later.
+
+    like https://cloud.google.com/appengine/articles/deferred
+    but adds the function name to the url for easier debugging.
+
+    Add this to `app.yaml`:
+        handlers:
+          # needed to allow abritary postfixes
+          - url: /_ah/queue/deferred(.*)
+            script: google.appengine.ext.deferred.deferred.application
+            login: admin
+    """
+
+    url = "{0}({1!s},{2!r})".format(
+        obj.__name__,
+        ','.join([str(x) for x in args]),
+        ','.join(["%s=%s" % (x[0], x[1]) for x in kwargs.items() if not x[0].startswith('_')])
+    )
+    url = url.replace(' ', '-')
+    url = re.sub(r'[^/A-Za-z0-9_\(\)\-]+', '', url)
+    url = google.appengine.ext.deferred.deferred._DEFAULT_URL + '/' + re.sub(r'-+', '-', url)
+
+    kwargs["_url"] = kwargs.pop("_url", url)
+    kwargs["_target"] = kwargs.pop("_target", 'workers')
+    return deferred.defer(obj, *args, **kwargs)
