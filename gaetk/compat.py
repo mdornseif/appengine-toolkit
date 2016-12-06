@@ -22,12 +22,12 @@ def xdb_create_key(model_class, id_or_name, parent=None):
         return db.Key.from_path(model_class.kind(), id_or_name, parent=parent)
 
 
-def get_by_id_or_name(model_class, id_or_name, parent=None):
+def get_by_id_or_name(model_class, id_or_name, parent=None, **kwargs):
     """Getting by key value."""
     if issubclass(model_class, ndb.Model):
-        return model_class.get_by_id(id_or_name, parent=parent)
+        return model_class.get_by_id(id_or_name, parent=parent, **kwargs)
     else:
-        return model_class.get_by_key_name(id_or_name, parent=parent)
+        return model_class.get_by_key_name(id_or_name, parent=parent, **kwargs)
 
 
 def xdb_kind(model_class):

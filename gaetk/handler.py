@@ -916,9 +916,9 @@ class MarkdownFileHandler(BasicHandler):
             raise gaetk.handler.HTTP404_NotFound("%s not available" % textfile)
 
 
-def get_object_or_404(model_class, key_id, parent=None, message=None):
+def get_object_or_404(model_class, key_id, parent=None, message=None, **kwargs):
     """Get object by key name or raise HTTP404"""
-    obj = gaetk.compat.get_by_id_or_name(model_class, key_id, parent=parent)
+    obj = gaetk.compat.get_by_id_or_name(model_class, key_id, parent=parent, **kwargs)
     if not obj:
         raise HTTP404_NotFound(message)
     return obj
