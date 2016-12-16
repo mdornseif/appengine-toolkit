@@ -140,9 +140,10 @@ def defer(obj, *args, **kwargs):
         ','.join(["%s=%s" % (x[0], x[1]) for x in kwargs.items() if not x[0].startswith('_')])
     )
     url = url.replace(' ', '-')
-    url = re.sub(r'[^/A-Za-z0-9_\(\)\-]+', '', url)
+    url = re.sub(r'[^/A-Za-z0-9_,.:@&+$\(\)\-]+', '', url)
     url = google.appengine.ext.deferred.deferred._DEFAULT_URL + '/' + re.sub(r'-+', '-', url)
 
     kwargs["_url"] = kwargs.pop("_url", url)
     kwargs["_target"] = kwargs.pop("_target", 'workers')
+    kwargs["_queue"] = kwargs.pop("_queue", 'workersq')
     return deferred.defer(obj, *args, **kwargs)
