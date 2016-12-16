@@ -314,6 +314,9 @@ class BasicHandler(webapp2.RequestHandler):
             objects, cursor, more_objects = gaetk.compat.xdb_fetch_page(query, limit, offset=start)
             prev_objects = start > 0
 
+        # TODO: catch google.appengine.api.datastore_errors.BadRequestError
+        # retry without parameters
+
         prev_start = max(start - limit - 1, 0)
         next_start = max(start + len(objects), 0)
 
@@ -413,6 +416,7 @@ class BasicHandler(webapp2.RequestHandler):
             content = template.render(myval)
         except jinja2.TemplateNotFound:
             # better error reporting
+            # TODO: https://docs.sentry.io/clientdev/interfaces/template/
             logging.info('jinja2 environment: %s', env)
             logging.info('template dirs: %s', config.template_dirs)
             raise
@@ -916,9 +920,11 @@ class MarkdownFileHandler(BasicHandler):
             raise gaetk.handler.HTTP404_NotFound("%s not available" % textfile)
 
 
-def get_object_or_404(model_class, key_id, parent=None, message=None, **kwargs):
+def get_object_or_404(model_class, key_id, message=None, **kwargs):
     """Get object by key name or raise HTTP404"""
-    obj = gaetk.compat.get_by_id_or_name(model_class, key_id, parent=parent, **kwargs)
-    if not obj:
-        raise HTTP404_NotFound(message)
-    return obj
+    import gaetk.helpers
+    warnings.warn(
+            "use gaetk.helpers.get_object_or_404() not gaetk.handler.get_object_or_404()",
+            DeprecationWarning, stacklevel=2)
+    return gaetk.helpers.get_object_or_404(model_class, key_id, message=message, **kwargs)
+
