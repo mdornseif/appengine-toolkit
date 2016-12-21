@@ -20,6 +20,7 @@ Created by Christian Klein on 2011-11-24.
 Copyright (c) 2011, 2012, 2016 HUDORA. All rights reserved.
 """
 import json
+import logging
 
 import gaetk.handler
 
@@ -77,11 +78,15 @@ class ConfigHandler(gaetk.handler.JsonResponseHandler):
         """Schreibe Konfigurationsvariable"""
 
         header = self.request.headers.get('Content-Type')
-        if header.split(';', 1)[0] != 'application/json':
-            raise gaetk.handler.HTTP400_BadRequest
+        if header.split(';', 1)[0] == 'application/json':
+            data = self.request.body
+        else:
+            data = self.request.get('value', '')
+
         try:
-            value = json.loads(self.request.body)
-        except (ValueError, TypeError):
+            value = json.loads(data)
+        except (ValueError, TypeError) as exception:
+            logging.exception(u'Err: %r, %s', data, exception)
             raise gaetk.handler.HTTP400_BadRequest
 
         obj = Configuration.get_or_insert(key)
