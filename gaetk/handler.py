@@ -281,12 +281,17 @@ class BasicHandler(webapp2.RequestHandler):
             ret['total'] = total
 
         if ret['more_objects']:
-            ret['cursor'] = cursor.urlsafe()
-            ret['cursor_start'] = start + ret['limit']
-            # query string to get to the next page
-            qs = dict(cursor=ret['cursor'], cursor_start=ret['cursor_start'])
-            qs.update(clean_qs)
-            ret['next_qs'] = urllib.urlencode(qs)
+            if cursor:
+                ret['cursor'] = cursor.urlsafe()
+                ret['cursor_start'] = start + ret['limit']
+                # query string to get to the next page
+                qs = dict(cursor=ret['cursor'], cursor_start=ret['cursor_start'])
+                qs.update(clean_qs)
+                ret['next_qs'] = urllib.urlencode(qs)
+            else:
+                qs = dict(start=ret['next_start'])
+                qs.update(clean_qs)
+                ret['next_qs'] = urllib.urlencode(qs)
         if ret['prev_objects']:
             # query string to get to the next previous page
             qs = dict(start=ret['prev_start'])

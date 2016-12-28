@@ -4,8 +4,10 @@
 gaetk/compat.py compability layer for App Engine
 
 Created by Dr. Maximillian Dornseif on 2014-12-10.
-Copyright (c) 2014 HUDORA GmbH. All rights reserved.
+Copyright (c) 2014, 2016 HUDORA GmbH. All rights reserved.
 """
+import logging
+
 from urllib import unquote
 
 from google.appengine.datastore.datastore_query import Cursor
@@ -106,7 +108,6 @@ def xdb_properties(instance):
         else:
             return instance.properties()
     except:
-        import logging
         logging.critical('%s', instance)
         logging.critical('%r', instance)
         logging.critical('%r', dir(instance))
@@ -183,9 +184,14 @@ def xdb_fetch_page(query, limit, offset=None, start_cursor=None):
             more_objects = len(objects) == limit
         else:
             objects = query.fetch(limit, offset=offset)
-            _cursor = query.cursor()
-            more_objects = query.with_cursor(_cursor).count(1) > 0
-            cursor = Cursor(urlsafe=_cursor)
+            # MultiQuery kann keine Cursor
+            if len(getattr(query, '_Query__query_sets', [])) < 2:
+                _cursor = query.cursor()
+                more_objects = query.with_cursor(_cursor).count(1) > 0
+                cursor = Cursor(urlsafe=_cursor)
+            else:
+                more_objects = len(objects) == limit
+                cursor = None
     else:
         raise RuntimeError('unknown query class: %s' % type(query))
     return objects, cursor, more_objects
