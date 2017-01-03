@@ -102,26 +102,10 @@ def xdb_to_protobuf(instance):
 
 def xdb_properties(instance):
     """Properties einer Entity."""
-    try:
-        if xdb_is_ndb(instance):
-            return instance._properties
-        else:
-            return instance.properties()
-    except:
-        logging.critical('%s', instance)
-        logging.critical('%r', instance)
-        logging.critical('%r', dir(instance))
-        raise
-
-
-def xdb_propertyname(prop):
-    """Return name for a ndb or a db property"""
-    # db properties share a common parent class, db.Property,
-    # but ndb properties don't. So we choose a rather ducktype-like approach.
-    if hasattr(prop, '_name'):
-        return prop._name
-    elif hasattr(prop, 'name'):
-        return prop.name
+    if xdb_is_ndb(instance):
+        return instance._properties
+    else:
+        return instance.properties()
 
 
 def _get_queryset_db(model_class, ordering=None):
