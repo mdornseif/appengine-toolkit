@@ -114,6 +114,16 @@ def xdb_properties(instance):
         raise
 
 
+def xdb_propertyname(prop):
+    """Return name for a ndb or a db property"""
+    # db properties share a common parent class, db.Property,
+    # but ndb properties don't. So we choose a rather ducktype-like approach.
+    if hasattr(prop, '_name'):
+        return prop._name
+    elif hasattr(prop, 'name'):
+        return prop.name
+
+
 def _get_queryset_db(model_class, ordering=None):
     """Queryset für Subklasse von db.Model"""
     query = model_class.all()
