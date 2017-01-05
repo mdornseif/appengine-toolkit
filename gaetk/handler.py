@@ -78,7 +78,6 @@ _dummy = [HTTP301_Moved, HTTP302_Found, HTTP303_SeeOther, HTTP307_TemporaryRedir
 
 
 CREDENTIAL_CACHE_TIMEOUT = 600
-_local_credential_cache = {}
 _jinja_env_cache = {}
 
 
@@ -120,17 +119,11 @@ def login_user(credential, session, via, response=None):
 
 def _get_credential(username):
     """Helper to read Credentials - can be monkey_patched"""
-    if username in _local_credential_cache:
-        credential, ts = _local_credential_cache.get(username, (None, time.time()))
-        if ts + CREDENTIAL_CACHE_TIMEOUT < time.time():
-            return credential
-        else:
-            _local_credential_cache.pop(username, None)
+
     credential = NdbCredential.get_by_id(username)
     if credential:
         if not hasattr(credential, 'permissions'):
             credential.permissions = []
-        _local_credential_cache[username] = (credential, time.time())
     return credential
 
 
