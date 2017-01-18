@@ -19,6 +19,7 @@ Usage:
 import csv
 import datetime
 import time
+import logging
 
 from gaetk import compat
 from gaetk.infrastructure import query_iterator
@@ -28,7 +29,15 @@ class ModelExporter(object):
     """Export all entities of a Model as XLS, CSV, etc."""
 
     def __init__(self, model,
-                 query=None, uid=None, only=None, ignore=None, additional_fields=None, maxseconds=40):
+                 query=None,
+                 uid=None,
+                 only=None,
+                 ignore=None,
+                 additional_fields=None,
+                 field_mapping=None,
+                 sort_order=None,
+                 grouping=None,
+                 maxseconds=40):
         self.model = model
         self.uid = uid
         self.maxseconds = maxseconds
@@ -40,10 +49,22 @@ class ModelExporter(object):
         self.only = only
         self.ignore = ignore
         self.additional_fields = additional_fields
+        self.field_mapping = field_mapping
+        self.sort_order = sort_order
+        self.grouping = grouping
+
+    def get_sort_key(self, prop, name):
+        if self.sort_order:
+            if name in self.sort_order:
+                return self.sort_order.index(name)
+            else:
+                return 998
+        return compat.xdb_prop_creation_counter(prop)
 
     @property
     def fields(self):
         """Liste der zu exportierenden Felder"""
+
         if not hasattr(self, '_fields'):
             fields = []
             props = compat.xdb_properties(self.model)
@@ -51,12 +72,12 @@ class ModelExporter(object):
                 name = compat.xdb_prop_name(prop)
                 if self.only:
                     if name in self.only:
-                        fields.append((compat.xdb_prop_creation_counter(prop), name))
+                        fields.append((self.get_sort_key(prop, name), name))
                 elif self.ignore:
                     if name not in self.only:
-                        fields.append((compat.xdb_prop_creation_counter(prop), name))
+                        fields.append((self.get_sort_key(prop, name), name))
                 else:
-                    fields.append((compat.xdb_prop_creation_counter(prop), name))
+                    fields.append((self.get_sort_key(prop, name), name))
 
             if self.additional_fields:
                 fields.extend((999, name) for name in self.additional_fields)
@@ -75,49 +96,64 @@ class ModelExporter(object):
                 self.uid]))
         else:
             output.writerow(fixer(['# Exported at:', str(datetime.datetime.now())]))
-        output.writerow(fixer(self.fields + [u'Datenbankschlüssel']))
 
-    def create_row(self, output, data, fixer=lambda x: x):
+        if self.field_mapping:
+            row = [self.field_mapping.get(col, col) for col in self.fields]
+        else:
+            row = self.fields
+
+        if self.ignore and not '_key' in self.ignore:
+            row.append(u'Datenbankschlüssel')
+
+        output.writerow(fixer(row))
+
+    def create_row(self, output, obj, fixer=lambda x: x):
         """Erzeugt eine einzelne Zeile im Output."""
+
         row = []
         for field in self.fields:
-            attr = getattr(data, field)
+            attr = getattr(obj, field)
             if callable(attr):
                 tmp = attr()
             else:
                 tmp = attr
             row.append(unicode(tmp))
-        if callable(data.key):
-            row.append(unicode(data.key()))
-        else:
-            row.append(unicode(data.key.urlsafe()))
+
+        if self.ignore and not '_key' in self.ignore:
+            row.append(unicode(compat.xdb_str_key(compat.xdb_key(obj.key))))
+
         output.writerow(fixer(row))
 
-    def create_writer(self, fileobj):
-        """Generiert den Ausgabedatenstrom aus fileobj."""
-        return csv.writer(fileobj, dialect='excel', delimiter='\t')
+    def create_rows(self, output, fixer=lambda x: x):
+        """Create rows..."""
 
-    def to_csv(self, fileobj):
-        """generate CSV in fileobj"""
-        csvwriter = self.create_writer(fileobj)
-        fixer = lambda row: [unicode(x).encode('utf-8') for x in row]
-        self.create_header(csvwriter, fixer)
         start = time.time()
-        for row in query_iterator(self.query):
-            self.create_row(csvwriter, row, fixer)
+        current_group = None
+        for obj in query_iterator(self.query):
+            if self.grouping:
+                next_group = getattr(obj, self.grouping, u'')
+                if current_group and current_group != next_group:
+                    output.writerow([next_group])
+                current_group = next_group
+
+            self.create_row(output, obj, fixer)
             if time.time() - self.maxseconds > start:
                 csvwriter.writerow(['truncated ...'])
                 break
 
+    def to_csv(self, fileobj):
+        """Generate CSV in fileobj"""
+
+        csvwriter = csv.writer(fileobj, dialect='excel', delimiter='\t')
+        fixer = lambda row: [unicode(x).encode('utf-8') for x in row]
+        self.create_header(csvwriter, fixer)
+        self.create_rows(csvwriter, fixer)
+
     def to_xls(self, fileobj):
-        """generate XLS in fileobj"""
+        """Generate XLS in fileobj"""
+
         import huTools.structured_xls
         xlswriter = huTools.structured_xls.XLSwriter()
         self.create_header(xlswriter)
-        start = time.time()
-        for row in query_iterator(self.query):
-            self.create_row(xlswriter, row)
-            if time.time() - self.maxseconds > start:
-                xlswriter.writerow(['truncated ...'])
-                break
+        self.create_rows(xlswriter)
         xlswriter.save(fileobj)
