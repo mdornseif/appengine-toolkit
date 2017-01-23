@@ -34,9 +34,6 @@ class ModelExporter(object):
                  only=None,
                  ignore=None,
                  additional_fields=None,
-                 field_mapping=None,
-                 sort_order=None,
-                 grouping=None,
                  maxseconds=40):
         self.model = model
         self.uid = uid
@@ -49,17 +46,24 @@ class ModelExporter(object):
         self.only = only
         self.ignore = ignore
         self.additional_fields = additional_fields
-        self.field_mapping = field_mapping
-        self.sort_order = sort_order
-        self.grouping = grouping
 
     def get_sort_key(self, prop, name):
-        if self.sort_order:
-            if name in self.sort_order:
-                return self.sort_order.index(name)
+        """
+        Sortierreihenfolge für Ausgabe in Tabelle (CSV, XLS)
+
+        Wurden nur bestimmte Felder zum Export ausgewählt (Parameter `only`),
+        wird die Reihenfolge der Felder aus Sortierreihenfolge verwendet.
+        Ansonsten wird die Reihenfolge verwendet, in der die Model-Attribute
+        definiert wurden.
+        """
+
+        if self.only:
+            if name in self.only:
+                return self.only.index(name)
             else:
                 return 998
-        return compat.xdb_prop_creation_counter(prop)
+        else:
+            return compat.xdb_prop_creation_counter(prop)
 
     @property
     def fields(self):
@@ -86,7 +90,7 @@ class ModelExporter(object):
 
         return self._fields
 
-    def create_header(self, output, fixer=lambda x: x):
+    def create_header(self, output, config, fixer=lambda x: x):
         """Erzeugt eine oder mehrere Headerzeilen in `output`"""
         if self.uid:
             output.writerow(fixer([
@@ -97,17 +101,17 @@ class ModelExporter(object):
         else:
             output.writerow(fixer(['# Exported at:', str(datetime.datetime.now())]))
 
-        if self.field_mapping:
-            row = [self.field_mapping.get(col, col) for col in self.fields]
+        if 'field_mapping' in config:
+            row = [config['field_mapping'].get(col, col) for col in self.fields]
         else:
             row = self.fields
 
-        if self.ignore and not '_key' in self.ignore:
+        if config['export_key']:
             row.append(u'Datenbankschlüssel')
 
         output.writerow(fixer(row))
 
-    def create_row(self, output, obj, fixer=lambda x: x):
+    def create_row(self, obj):
         """Erzeugt eine einzelne Zeile im Output."""
 
         row = []
@@ -119,41 +123,50 @@ class ModelExporter(object):
                 tmp = attr
             row.append(unicode(tmp))
 
-        if self.ignore and not '_key' in self.ignore:
+        if config['export_key']:
             row.append(unicode(compat.xdb_str_key(compat.xdb_key(obj.key))))
 
-        output.writerow(fixer(row))
+        return row
 
-    def create_rows(self, output, fixer=lambda x: x):
+    def create_rows(self, output, config, fixer=lambda x: x):
         """Create rows..."""
 
         start = time.time()
         current_group = None
         for obj in query_iterator(self.query):
-            if self.grouping:
-                next_group = getattr(obj, self.grouping, u'')
+            if 'grouping' in config:
+                next_group = getattr(obj, config['grouping'], u'')
                 if current_group and current_group != next_group:
                     output.writerow([next_group])
                 current_group = next_group
 
-            self.create_row(output, obj, fixer)
+            row = self.create_row(obj)
+            output.writerow(fixer(row))
+
             if time.time() - self.maxseconds > start:
                 csvwriter.writerow(['truncated ...'])
                 break
 
-    def to_csv(self, fileobj):
+    def to_csv(self, fileobj, config=None):
         """Generate CSV in fileobj"""
+
+        if config is None:
+            config = {}
 
         csvwriter = csv.writer(fileobj, dialect='excel', delimiter='\t')
         fixer = lambda row: [unicode(x).encode('utf-8') for x in row]
-        self.create_header(csvwriter, fixer)
-        self.create_rows(csvwriter, fixer)
+        self.create_header(csvwriter, config, fixer)
+        self.create_rows(csvwriter, config, )
 
-    def to_xls(self, fileobj):
+    def to_xls(self, fileobj, config=None):
         """Generate XLS in fileobj"""
 
         import huTools.structured_xls
+
+        if config is None:
+            config = {}
+
         xlswriter = huTools.structured_xls.XLSwriter()
-        self.create_header(xlswriter)
-        self.create_rows(xlswriter)
+        self.create_header(xlswriter, config)
+        self.create_rows(xlswriter, config)
         xlswriter.save(fileobj)
