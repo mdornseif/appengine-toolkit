@@ -147,3 +147,8 @@ def defer(obj, *args, **kwargs):
     kwargs["_target"] = kwargs.pop("_target", 'workers')
     kwargs["_queue"] = kwargs.pop("_queue", 'workersq')
     return deferred.defer(obj, *args, **kwargs)
+
+
+def reload_obj(obj):
+    """Objekt ohne Cache neu laden"""
+    return obj.key.get(use_cache=False, use_memcache=False)
