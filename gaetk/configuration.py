@@ -96,5 +96,5 @@ class ConfigHandler(gaetk.handler.JsonResponseHandler):
 
 
 application = gaetk.handler.WSGIApplication([
-    (r'.*/([\w-]+)/', ConfigHandler),
+    (r'.*/([\w_-]+)/', ConfigHandler),
 ])
