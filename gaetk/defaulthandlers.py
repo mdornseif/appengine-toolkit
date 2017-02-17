@@ -10,6 +10,11 @@ import datetime
 import json
 import os
 
+from google.appengine.api import lib_config
+from google.appengine.api import taskqueue
+from google.appengine.ext import db
+from google.appengine.ext.db import stats
+from google.appengine.ext.db.metadata import Kind
 import google.appengine.api.app_identity
 import google.appengine.api.memcache
 
@@ -17,8 +22,16 @@ import config
 import gaetk
 import gaetk.handler
 
-from google.appengine.ext import db
-from google.appengine.ext.db import stats
+
+backup_config = lib_config.register(
+    'gaetk_backup',
+    dict(
+        gs_bucket_name='*unset*',
+        filesystem='gs',
+        queue='backup',
+        blacklist=[],
+    )
+)
 
 
 # you can add to plugins to extend the stat handler
@@ -174,9 +187,40 @@ class WarmupHandler(gaetk.handler.BasicHandler):
         self.return_text(self.warmup())
 
 
+def get_all_datastore_kinds():
+    for kind in Kind.all():
+        if not k.kind_name.startswith('_'):
+            yield kind.kind_name
+
+
+class BackupHandler(gaetk.handler.BasicHandler):
+    """Handler to start scheduled backups"""
+
+    def get(self):
+
+        if 'X-AppEngine-Cron' not in self.request.headers:
+            raise gaetk.handler.HTTP403_Forbidden('Scheduled backups must be started via cron')
+
+        kinds = [kind for kind in get_all_datastore_kinds() if kind not in backup_config.blacklist]
+
+        today = datetime.date.today()
+        taskqueue.add(
+            url='/_ah/datastore_admin/backup.create',
+            params=dict(
+                name='datastore_backup_' + today.isoformat(),
+                gs_bucket_name='/'.join((backup_config.gs_bucket_name, today.isoformat())),
+                filesystem=backup_config.filesystem,
+                queue=backup_config.queue,
+                kind=kinds,
+            ))
+
+        self.return_text('OK')
+
+
 application = gaetk.webapp2.WSGIApplication([
     (r'^/gaetk/stats.json', Stats),
     (r'^/robots.txt', RobotTxtHandler),
     (r'^/version.txt', VersionHandler),
     (r'^/_ah/warmup$', WarmupHandler),
+    (r'^/gaetk/backup/$', BackupHandler),
 ])
