@@ -24,4 +24,3 @@ def check404(obj, message=None):
     if not obj:
         raise HTTP404_NotFound(message)
     return obj
-

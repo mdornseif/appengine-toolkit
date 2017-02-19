@@ -6,8 +6,6 @@ gaetk/compat.py compability layer for App Engine
 Created by Dr. Maximillian Dornseif on 2014-12-10.
 Copyright (c) 2014, 2016 HUDORA GmbH. All rights reserved.
 """
-import logging
-
 from urllib import unquote
 
 from google.appengine.datastore.datastore_query import Cursor

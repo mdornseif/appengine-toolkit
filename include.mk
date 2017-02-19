@@ -18,6 +18,7 @@ OPENAPPID?= $(APPID)
 # [R0901(too-many-ancestors)]
 # [R0903(too-few-public-methods), gaetk_Snippet] Too few public methods (0/2)
 # [R0904(too-many-public-methods), ShowKategorie] Too many public methods (22/20)
+# [R0912(too-many-branches)
 # [R0913(too-many-arguments),
 # [R0921(abstract-class-not-used), AuditLog] Abstract class not referenced
 # [R0922(abstract-class-little-used)]
@@ -31,7 +32,7 @@ OPENAPPID?= $(APPID)
 # [W0703(broad-except), show_snippet] Catching too general exception Exception]
 # [W1306(missing-format-attribute)] - kommt nicht mit Objekten zurecht
 # [I0011(locally-disabled), ] Locally disabling unused-argument (W0613)ı
-# I0013(file-ignored)
+# [I0013(file-ignored)
 
 PYLINT_ARGS= "--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
 			 -rn --ignore=config.py,huwawi_a_models.py,lib \
@@ -42,11 +43,10 @@ PYLINT_ARGS= "--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
 			 --ignore-imports=yes \
              --no-docstring-rgx="(__.*__|get|post|head|txn)" \
              --max-line-length=$(LINT_LINE_LENGTH) \
-             --max-locals=20 --max-attributes=20 --max-returns=8 \
-             --good-names=application \
+             --max-locals=20 --max-attributes=20 --max-returns=10 \
              --disable=C0103,C0121,C0201,C0330,C0412 \
              --disable=E1103,E1120 \
-             --disable=R0201,R0204,R0901,R0903,R0904,R0913,R0921,R0922 \
+             --disable=R0201,R0204,R0901,R0903,R0904,R0912,R0913,R0921,R0922 \
              --disable=W0108,W0142,W0201,W0212,W0221,W0232,W0232,W0511,W0631,W0703,W1306 \
              --disable=I0011,I0013
 # PYLINT_ARGS_ADDON?= --import-graph=import.dot -ry
