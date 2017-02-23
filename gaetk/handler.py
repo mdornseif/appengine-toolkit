@@ -710,6 +710,7 @@ class BasicHandler(webapp2.RequestHandler):
         """Function to allow implementing authentication for all subclasses. To be overwritten."""
         # ensure that users with empty password are never logged in
         if self.credential and not self.credential.secret:
+            logging.debug('%r %r %r', method, args, kwargs)
             raise HTTP401_Unauthorized("Account disabled")
 
     def finished_hook(self, ret, method, *args, **kwargs):
@@ -920,9 +921,8 @@ class MarkdownFileHandler(BasicHandler):
 
 def get_object_or_404(model_class, key_id, message=None, **kwargs):
     """Get object by key name or raise HTTP404"""
-    import gaetk.helpers
+    from . import helpers
     warnings.warn(
             "use gaetk.helpers.get_object_or_404() not gaetk.handler.get_object_or_404()",
             DeprecationWarning, stacklevel=2)
-    return gaetk.helpers.get_object_or_404(model_class, key_id, message=message, **kwargs)
-
+    return helpers.get_object_or_404(model_class, key_id, message=message, **kwargs)

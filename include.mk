@@ -35,7 +35,7 @@ OPENAPPID?= $(APPID)
 # [I0013(file-ignored)
 
 PYLINT_ARGS= "--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
-			 -rn --ignore=config.py,huwawi_a_models.py,lib \
+			 -rn --ignore=config.py,huwawi_a_models.py,huwawi_a_models_ndb.py,lib \
              --dummy-variables-rgx="_|dummy" \
              --generated-members=request,response,data,_fields,errors \
              --ignored-classes=Struct,Model,google.appengine.api.memcache,google.appengine.api.files,google.appengine.ext.ndb \

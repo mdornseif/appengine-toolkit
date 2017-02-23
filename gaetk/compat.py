@@ -198,6 +198,7 @@ def xdb_str_key(key):
 
 
 def xdb_prop_name(prop):
+    """Get the name of a property."""
     if isinstance(prop, ndb.Property):
         return prop._name
     elif isinstance(prop, db.Property):
@@ -205,6 +206,7 @@ def xdb_prop_name(prop):
 
 
 def xdb_prop_creation_counter(prop):
+    """Get the order in which a property was created."""
     if isinstance(prop, ndb.Property):
         return prop._creation_counter
     elif isinstance(prop, db.Property):
