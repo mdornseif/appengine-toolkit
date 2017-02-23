@@ -190,7 +190,7 @@ class WarmupHandler(gaetk.handler.BasicHandler):
 
 def get_all_datastore_kinds():
     for kind in Kind.all():
-        if not k.kind_name.startswith('_'):
+        if not kind.kind_name.startswith('_'):
             yield kind.kind_name
 
 
