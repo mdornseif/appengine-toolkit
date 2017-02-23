@@ -4,19 +4,20 @@
 defaulthandlers.py - handlers implementing common functionality for gaetk
 
 Created by Maximillian Dornseif on 2011-01-09.
-Copyright (c) 2011, 2015 HUDORA. All rights reserved.
+Copyright (c) 2011, 2015, 2017 HUDORA. All rights reserved.
 """
 import datetime
 import json
 import os
+
+import google.appengine.api.app_identity
+import google.appengine.api.memcache
 
 from google.appengine.api import lib_config
 from google.appengine.api import taskqueue
 from google.appengine.ext import db
 from google.appengine.ext.db import stats
 from google.appengine.ext.db.metadata import Kind
-import google.appengine.api.app_identity
-import google.appengine.api.memcache
 
 import config
 import gaetk
@@ -218,9 +219,9 @@ class BackupHandler(gaetk.handler.BasicHandler):
 
 
 application = gaetk.webapp2.WSGIApplication([
-    (r'^/gaetk/stats.json', Stats),
-    (r'^/robots.txt', RobotTxtHandler),
-    (r'^/version.txt', VersionHandler),
+    (r'^/gaetk/stats\.json', Stats),
+    (r'^/robots\.txt', RobotTxtHandler),
+    (r'^/version\.txt', VersionHandler),
     (r'^/_ah/warmup$', WarmupHandler),
     (r'^/gaetk/backup/$', BackupHandler),
 ])
