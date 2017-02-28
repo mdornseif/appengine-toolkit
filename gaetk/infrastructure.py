@@ -85,7 +85,7 @@ def flush_ndb_cache(instance):
 
     Especially usefull if you mix (old) db and ndb for a model.
     """
-    key = ndb.Context._memcache_prefix + compat.xdb_str_key(compat.xdb_key(instance.key))
+    key = ndb.Context._memcache_prefix + compat.xdb_str_key(compat.xdb_key(instance))
     memcache.delete(key)
 
 
