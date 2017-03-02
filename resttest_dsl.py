@@ -27,15 +27,13 @@ RESET_SEQ = "\033[0m"
 COLOR_SEQ = "\033[1;%dm"
 
 DEFAULTFAST = int(os.environ.get('DEFAULTFAST_MS', 1500))
+TIMEOUT = int(os.environ.get('TIMEOUT', 45))
 
-NO_LINK_VALIDATION = False  # superss LINK validation
-NO_HTML_VALIDATION = False  # superss HTML validation
+NO_LINK_VALIDATION = False  # suppress link validation
+NO_HTML_VALIDATION = False  # suppress HTML validation
 
 # save slowest access to each URL
-slowstats = Counter()
 alllinks = Counter()
-oklinks = set()
-brokenlinks = {}
 
 
 def colored(text, color):
@@ -197,26 +195,27 @@ class Response(object):
             return self
         links = extract_links(self.content, self.url)
         for link in links:
-            if link in brokenlinks:
+            if link in self.client.brokenlinks:
                 # no need to check again
-                brokenlinks.setdefault(link, set()).add(self.url)
-            elif link not in oklinks:
+                self.client.brokenlinks[link].add(self.url)
+            elif link not in self.client.oklinks:
                 try:
+                    print "timeout: ", TIMEOUT
                     status, _responseheaders, _content = fetch(
                         link,
                         headers=dict(
                             referer=self.url, Cookie=self.headers.get('set-cookie', '')
                         ),
-                        content='', method='GET', multipart=False, ua='', timeout=30)
-                except (IOError, huTools.http._httplib2.ServerNotFoundError):
+                        content='', method='GET', multipart=False, ua='', timeout=TIMEOUT)
+                except (IOError, huTools.http._httplib2.ServerNotFoundError) as fuck:
                     status = 600
                 except (huTools.http._httplib2.RedirectLimit):
                     status = 700
 
                 if status == 200:
-                    oklinks.add(link)
+                    self.client.oklinks.add(link)
                 else:
-                    brokenlinks.setdefault(link, set()).add(self.url)
+                    self.client.brokenlinks.setdefault(link, set()).add(self.url)
                 if status == 700:
                     print 'too many redirects on %s' % link
                 self.expect_condition(
@@ -280,6 +279,10 @@ class TestClient(object):
         self.responses = []
         self.protocol = 'http'
 
+        self.oklinks = set()
+        self.brokenlinks = {}
+        self.slowstats = Counter()
+
         for user in users:
             key, creds = user.split('=', 1)
             self.add_credentials(key, creds)
@@ -322,9 +325,9 @@ class TestClient(object):
             status, responseheaders, content = fetch(
                 url, content='', method='GET',
                 credentials=self.authdict.get(auth),
-                headers=myheaders, multipart=False, ua='resttest', timeout=30)
+                headers=myheaders, multipart=False, ua='resttest', timeout=TIMEOUT)
             duration = int((time.time() - start) * 1000)
-            slowstats[url] = duration
+            self.slowstats[url] = duration
             counter += 1
         response = Response(self, 'GET', url, status, responseheaders, content, duration)
         self.responses.append(response)
@@ -341,7 +344,7 @@ class TestClient(object):
         status, responseheaders, content = fetch(
             url, content=content, method='GET',
             credentials=self.authdict.get(auth),
-            headers=headers, multipart=False, ua='resttest', timeout=30)
+            headers=headers, multipart=False, ua='resttest', timeout=TIMEOUT)
         duration = int((time.time() - start) * 1000)
 
         response = Response(self, 'GET', url, status, responseheaders, content, duration)
