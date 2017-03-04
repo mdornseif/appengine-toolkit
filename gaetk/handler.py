@@ -211,7 +211,8 @@ class BasicHandler(webapp2.RequestHandler):
 
           code: the HTTP status error code (e.g., 501)
         """
-        logging.info('Errorhandler')
+        logging.info('Errorhandler: %s' % code)
+        assert code.isdigit()
         super(BasicHandler, self).error(code)
         if str(code) == '404':
             self.response.headers['Content-Type'] = 'text/plain'
