@@ -2,7 +2,7 @@
 """
 DSL zur Beschreibung von REST-interfaces, angelehnt an https://gist.github.com/805540
 
-Copyright (c) 2011, 2013, 2016 HUDORA. All rights reserved.
+Copyright (c) 2011, 2013, 2016, 2017 HUDORA. All rights reserved.
 File created by Philipp Benjamin Koeppchen on 2011-02-23
 """
 
@@ -240,6 +240,7 @@ class TestClient(object):
         self.sessions = {None: requests.Session()}
         self.sessions[None].trust_env = False  # avoid reading .netrc!
         self.queue = []  # contains URLs to be checked, kwargs, and checks to be done
+        self.urlfile = open('.resttest-urls.txt', 'w')  # für JavaScript Tests
 
         for user in users:
             key, creds = user.split('=', 1)
@@ -317,6 +318,7 @@ class TestClient(object):
                 checkers = [responds_plaintext]
             else:
                 checkers = [responds_html]
+                self.urlfile.write(url + '\n')
             self.queue.append((url, kwargs, checkers))
 
     def check_allowdeny(self, *args, **kwargs):
