@@ -200,14 +200,13 @@ class Response(object):
                 self.client.brokenlinks[link].add(self.url)
             elif link not in self.client.oklinks:
                 try:
-                    print "timeout: ", TIMEOUT
                     status, _responseheaders, _content = fetch(
                         link,
                         headers=dict(
                             referer=self.url, Cookie=self.headers.get('set-cookie', '')
                         ),
                         content='', method='GET', multipart=False, ua='', timeout=TIMEOUT)
-                except (IOError, huTools.http._httplib2.ServerNotFoundError) as fuck:
+                except (IOError, huTools.http._httplib2.ServerNotFoundError):
                     status = 600
                 except (huTools.http._httplib2.RedirectLimit):
                     status = 700
