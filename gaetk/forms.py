@@ -7,7 +7,7 @@ Copyright (c) 2017 HUDORA. All rights reserved.
 """
 
 
-def get_changelist(form, obj):
+def get_changelist(form, obj, ignore=None):
     """
     Erstelle Liste mit Änderungen
 
@@ -16,9 +16,12 @@ def get_changelist(form, obj):
     dem Wert aus dem Formular und dem bestehenden Wert des Objekts.
     """
 
+    if ignore is None:
+        ignore = []
+
     changes = []
     for field in form:
-        if hasattr(obj, field.name):
+        if field.name not in ignore and hasattr(obj, field.name):
             form_value, obj_value = field.data, getattr(obj, field.name)
             if form_value != obj_value:
                 changes.append((field.name, form_value, obj_value))
