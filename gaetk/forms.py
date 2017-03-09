@@ -26,3 +26,11 @@ def get_changelist(form, obj, ignore=None):
             if form_value != obj_value:
                 changes.append((field.name, form_value, obj_value))
     return changes
+
+
+def errormsg(form):
+    """Formularfehler als Zeichenkette"""
+
+    errors = ('%s: %s' % (field.capitalize().replace('_', ' '), u', '.join(err))
+              for (field, err) in form.errors.items())
+    return u'\n'.join(errors)
