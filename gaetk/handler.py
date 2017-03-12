@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-handler.py - default Request Handler
+handler.py - default Request Handler.
 
 Created by Maximillian Dornseif on 2010-10-03.
-Copyright (c) 2010-2016 HUDORA. All rights reserved.
+Copyright (c) 2010-2017 HUDORA. All rights reserved.
 """
-
 
 import base64
 import codecs
@@ -54,6 +53,7 @@ from webob.exc import HTTPUnsupportedMediaType as HTTP415_UnsupportedMediaType
 
 import gaetk.compat
 import gaetk.tools
+import jinja2
 import webapp2
 
 from gaetk.lib import _itsdangerous
@@ -362,7 +362,6 @@ class BasicHandler(webapp2.RequestHandler):
         Usually overwriting `add_jinja2env_globals()` is enough.
         For example, to allow i18n:
         """
-        import jinja2
         import gaetk.jinja_filters as myfilters
 
         key = str(self.extensions)
@@ -763,12 +762,15 @@ class BasicHandler(webapp2.RequestHandler):
         self.finished_hook(response, method, *args, **kwargs)
         return response
 
-    def add_message(self, typ, html, ttl=15):
+    def add_message(self, typ, text, ttl=15):
         """Sets a user specified message to be displayed to the currently logged in user.
 
         `typ` can be `error`, `success`, `info` or `warning`
-        `html` is the text do be displayed
-        `ttl` is the number of seconds after we should stop serving the message."""
+        `text` is the text do be displayed
+        `ttl` is the number of seconds after we should stop serving the message.
+
+        If you want to pass in HTML, you need to use `jinja2.Markup([string]).`"""
+        html = jinja2.escape(text)
         messages = self.session.get('_gaetk_messages', [])
         messages.append(dict(type=typ, html=html, expires=time.time() + ttl))
         # We can't use `.append()` because this doesn't result in automatic session saving.
