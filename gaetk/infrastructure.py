@@ -18,6 +18,8 @@ from google.appengine.ext import deferred
 from google.appengine.ext import ndb
 
 
+# Tasks
+
 def taskqueue_add_multi(qname, url, paramlist, **kwargs):
     """Adds more than one Task to the same Taskqueue/URL.
 
@@ -58,68 +60,6 @@ def taskqueue_add_multi_payload(name, url, payloadlist, **kwargs):
         taskqueue.Queue(name=name).add(tasks)
 
 
-def query_iterator(query, limit=50):
-    """Iterates over a datastore query while avoiding timeouts via a cursor."""
-    cursor = None
-    while True:
-        bucket, cursor, more_objects = compat.xdb_fetch_page(query, limit, start_cursor=cursor)
-        if not bucket:
-            break
-        for entity in bucket:
-            yield entity
-        if not more_objects:
-            break
-
-
-def copy_entity(entity, **kwargs):
-    """Copy entity"""
-    klass = type(entity)
-    properties = dict((key, value.__get__(entity, klass)) for (key, value) in klass.properties().iteritems())
-    properties.update(**kwargs)
-    return klass(**properties)
-
-
-def flush_ndb_cache(instance):
-    """
-    Flush memcached ndb instance
-
-    Especially usefull if you mix (old) db and ndb for a model.
-    """
-    key = ndb.Context._memcache_prefix + compat.xdb_str_key(compat.xdb_key(instance))
-    memcache.delete(key)
-
-
-def write_on_change(model, key, data, flush_cache=False):
-    """Schreibe (nur) die geänderten Daten in den Datastore"""
-
-    key_name = data[key]
-    obj = compat.get_by_id_or_name(model, key_name)
-    if obj is None:
-        obj = model(key=compat.xdb_create_key(model, key_name), **data)
-        obj.put()
-        return obj
-
-    changed, obj = write_on_change_instance(obj, data)
-    if flush_cache and changed:
-        flush_ndb_cache(obj)
-
-    return obj
-
-
-def write_on_change_instance(obj, data):
-    """Schreibe Instanz mit geänderten Daten in Datastore"""
-
-    dirty = False
-    for key, value in data.iteritems():
-        if value != getattr(obj, key, None):
-            setattr(obj, key, value)
-            dirty = True
-    if dirty:
-        obj.put()
-
-    return dirty, obj
-
-
 def defer(obj, *args, **kwargs):
     """Defers a callable for execution later.
 
@@ -149,6 +89,69 @@ def defer(obj, *args, **kwargs):
     return deferred.defer(obj, *args, **kwargs)
 
 
+# Datastore
+
+def query_iterator(query, limit=50):
+    """Iterates over a datastore query while avoiding timeouts via a cursor."""
+    cursor = None
+    while True:
+        bucket, cursor, more_objects = compat.xdb_fetch_page(query, limit, start_cursor=cursor)
+        if not bucket:
+            break
+        for entity in bucket:
+            yield entity
+        if not more_objects:
+            break
+
+
+def copy_entity(entity, **kwargs):
+    """Copy entity."""
+    klass = type(entity)
+    properties = dict((key, value.__get__(entity, klass)) for (key, value) in klass.properties().iteritems())
+    properties.update(**kwargs)
+    return klass(**properties)
+
+
+def write_on_change(model, key, data, flush_cache=False):
+    """Schreibe (nur) die geänderten Daten in den Datastore."""
+
+    key_name = data[key]
+    obj = compat.get_by_id_or_name(model, key_name)
+    if obj is None:
+        obj = model(key=compat.xdb_create_key(model, key_name), **data)
+        obj.put()
+        return obj
+
+    changed, obj = write_on_change_instance(obj, data)
+    if flush_cache and changed:
+        flush_ndb_cache(obj)
+
+    return obj
+
+
+def write_on_change_instance(obj, data):
+    """Schreibe Instanz mit geänderten Daten in Datastore."""
+
+    dirty = False
+    for key, value in data.iteritems():
+        if value != getattr(obj, key, None):
+            setattr(obj, key, value)
+            dirty = True
+    if dirty:
+        obj.put()
+
+    return dirty, obj
+
+def flush_ndb_cache(instance):
+    """
+    Flush memcached ndb instance.
+
+    Especially usefull if you mix (old) db and ndb for a model.
+    """
+    key = ndb.Context._memcache_prefix + compat.xdb_str_key(compat.xdb_key(instance))
+    memcache.delete(key)
+
+
 def reload_obj(obj):
-    """Objekt ohne Cache neu laden"""
+    """Objekt ohne Cache neu laden."""
     return obj.key.get(use_cache=False, use_memcache=False)
