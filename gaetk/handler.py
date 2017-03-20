@@ -398,8 +398,6 @@ class BasicHandler(webapp2.RequestHandler):
         which is given in `values`.
         """
 
-        import jinja2
-
         env = self.create_jinja2env()
         try:
             template = env.get_template(template_name)

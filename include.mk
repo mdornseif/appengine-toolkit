@@ -11,6 +11,7 @@ OPENAPPID?= $(APPID)
 # [C0201(consider-iterating-dictionary) - explicit is better than implicid
 # [C0330(bad-continuation), ] Wrong continued indentation.
 # [C0412(ungrouped-imports)] we sort differently
+# [E1102(not-callable) too many false positives
 # [E1103(maybe-no-member), shop_link] Instance of 'list' has no 'nachfolger_ist' member (but some types could not be inferred)
 # [E1120(no-value-for-parameter)] Fails with ndb decorators
 # [R0201(no-self-use), ArtikelMultiStammdatenHandler.get] Method could be a function
@@ -27,6 +28,7 @@ OPENAPPID?= $(APPID)
 # [W0201(attribute-defined-outside-init), wwwHandler.default_template_vars] Attribute 'title' defined outside __init__
 # [W0212(protected-access)] we know what we are doing
 # [W0221(arguments-differ), ShowLieferschein.get] Arguments number differs from overridden method
+# [W0223(abstract-method), AuftragsStorno] Method 'feldupdate' is abstract in class
 # [W0232(no-init), gaetk_Snippet] Class has no __init__ method
 # [W0631(undefined-loop-variable)] so far ONLY false positives
 # [W0703(broad-except), show_snippet] Catching too general exception Exception]
@@ -45,9 +47,9 @@ PYLINT_ARGS= "--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
              --max-line-length=$(LINT_LINE_LENGTH) \
              --max-locals=20 --max-attributes=20 --max-returns=10 \
              --disable=C0103,C0121,C0201,C0330,C0412 \
-             --disable=E1103,E1120 \
+             --disable=E1102,E1103,E1120 \
              --disable=R0201,R0204,R0901,R0903,R0904,R0912,R0913,R0921,R0922 \
-             --disable=W0108,W0142,W0201,W0212,W0221,W0232,W0232,W0511,W0631,W0703,W1306 \
+             --disable=W0108,W0142,W0201,W0212,W0221,W0223,W0232,W0232,W0511,W0631,W0703,W1306 \
              --disable=I0011,I0013
 # PYLINT_ARGS_ADDON?= --import-graph=import.dot -ry
 LINT_FILES?= modules/ tests/*.py *.py lib/CentralServices/cs lib/appengine-toolkit/gaetk
