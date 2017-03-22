@@ -120,7 +120,7 @@ clean:
 	find . -name '*.pyc' -or -name '*.pyo' -delete
 
 openlogs:
-	open "https://appengine.google.com/logs?app_id=$(APPID)&version_id=dev-`whoami`&severity_level_override=0&severity_level=3"
+	open "https://console.cloud.google.com/logs/viewer?project=$(APPID)&resource=gae_app%2Fmodule_id%2Fdefault%2Fversion_id%2Fdev-`whoami`&minLogLevel=0&expandAll=false&serviceId=default&versionId=dev-`whoami`&logName=projects%2Fhuwawi2%2Flogs%2Fappengine.googleapis.com%252Frequest_log"
 
 opendev:
 	open https://dev-`whoami`-dot-$(OPENAPPID).appspot.com$(DEVPAGE)

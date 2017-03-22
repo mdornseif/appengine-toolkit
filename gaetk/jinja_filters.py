@@ -61,13 +61,6 @@ def plural(value, singular_str, plural_str):
     return plural_str
 
 
-def filter_dateformat(value, formatstring='%Y-%m-%d'):
-    """Formates a date"""
-
-    from huTools.calendar.formats import convert_to_date
-    return convert_to_date(value).strftime(formatstring)
-
-
 def filter_markdown(value):
     """
     Rendert a string as Markdown
@@ -116,22 +109,33 @@ def filter_authorize(context, value, permission_types):
     return value
 
 
-@jinja2.contextfilter
-def filter_tertial(_context, value):
+def filter_tertial(value):
     """Wandelt ein Date oder Datetime-Objekt in einen Tertial-String"""
     from huTools.calendar.formats import tertial
     return tertial(value)
 
 
-@jinja2.contextfilter
-def filter_to_date(_context, value):
-    """Wandelt ein Date oder Datetime-Objekt in einen Dat-Objekt"""
+def filter_to_date(value):
+    """Wandelt ein Date oder Datetime-Objekt in einen Date-Objekt"""
     from huTools.calendar.formats import convert_to_date
     return convert_to_date(value)
 
 
-@jinja2.contextfilter
-def filter_yesno(_context, value, answers='yes,no,maybe'):
+def filter_dateformat(value, formatstring='%Y-%m-%d'):
+    """Formates a date"""
+
+    from huTools.calendar.formats import convert_to_date
+    return convert_to_date(value).strftime(formatstring)
+
+
+def filter_datetime(value, formatstring='%Y-%m-%d %H:%M'):
+    """Formates a datetime"""
+
+    from huTools.calendar.formats import convert_to_datetime
+    return convert_to_datetime(value).strftime(formatstring)
+
+
+def filter_yesno(value, answers='yes,no,maybe'):
     """
     Beispiel: {{ value|yesno:"yeah,nope,maybe" }}
     """
@@ -264,11 +268,12 @@ def register_custom_filters(jinjaenv):
     jinjaenv.filters['rjustify'] = right_justify
     jinjaenv.filters['to_json'] = to_json
     jinjaenv.filters['plural'] = plural
-    jinjaenv.filters['dateformat'] = filter_dateformat
     jinjaenv.filters['markdown'] = filter_markdown
     jinjaenv.filters['nl2br'] = filter_nl2br
     jinjaenv.filters['authorize'] = filter_authorize
     jinjaenv.filters['to_date'] = filter_to_date
+    jinjaenv.filters['dateformat'] = filter_dateformat
+    jinjaenv.filters['datetime'] = filter_datetime
     jinjaenv.filters['yesno'] = filter_yesno
     jinjaenv.filters['percent'] = percent
     jinjaenv.filters['nicenum'] = nicenum

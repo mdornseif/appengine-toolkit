@@ -19,7 +19,7 @@ def get_object_or_404(model_class, key_id, message=None, **kwargs):
     return obj
 
 
-def check404(obj, message=None):
+def check404(obj, message='Objekt nicht gefunden.'):
     """Raises 404 if obj in None"""
     if not obj:
         raise HTTP404_NotFound(message)
