@@ -61,6 +61,13 @@ def plural(value, singular_str, plural_str):
     return plural_str
 
 
+def none(value):
+    """converts `None` to ''"""
+    if value is None:
+        return u''
+    return value
+
+
 def filter_markdown(value):
     """
     Rendert a string as Markdown
@@ -268,6 +275,7 @@ def register_custom_filters(jinjaenv):
     jinjaenv.filters['rjustify'] = right_justify
     jinjaenv.filters['to_json'] = to_json
     jinjaenv.filters['plural'] = plural
+    jinjaenv.filters['none'] = none
     jinjaenv.filters['markdown'] = filter_markdown
     jinjaenv.filters['nl2br'] = filter_nl2br
     jinjaenv.filters['authorize'] = filter_authorize
