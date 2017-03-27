@@ -4,7 +4,7 @@
 infrastructure.py
 
 Created by Maximillian Dornseif on 2011-01-07.
-Copyright (c) 2011, 2012, 2016 Cyberlogi/HUDORA. All rights reserved.
+Copyright (c) 2011, 2012, 2016, 2017 Cyberlogi/HUDORA. All rights reserved.
 """
 import re
 import zlib
@@ -14,6 +14,7 @@ import google.appengine.ext.deferred.deferred
 from gaetk import compat
 from google.appengine.api import memcache
 from google.appengine.api import taskqueue
+from google.appengine.ext import db
 from google.appengine.ext import deferred
 from google.appengine.ext import ndb
 
@@ -154,4 +155,7 @@ def flush_ndb_cache(instance):
 
 def reload_obj(obj):
     """Objekt ohne Cache neu laden."""
-    return obj.key.get(use_cache=False, use_memcache=False)
+    if compat.xdb_is_ndb(obj):
+        return obj.key.get(use_cache=False, use_memcache=False)
+    else:
+        return db.get(obj.key())
