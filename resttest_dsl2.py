@@ -297,24 +297,23 @@ class TestClient(object):
 
     def check(self, *args, **kwargs):
         # see http://stackoverflow.com/questions/9872824/calling-a-python-function-with-args-kwargs-and-optional-default-arguments
-        typ = kwargs.get('typ', None)
-        if typ:
-            del kwargs['typ']
+        typ = kwargs.pop('typ', None)
 
         for url in args:
+            path = urlparse.urlparse(url).path
             if typ == 'JSON':
                 checkers = [responds_json]
-            elif url.endswith('.json'):
+            elif path.endswith('.json'):
                 checkers = [responds_json]
-            elif url.endswith('.pdf'):
+            elif path.endswith('.pdf'):
                 checkers = [responds_pdf]
-            elif url.endswith(('.xml', '/xml/')):
+            elif path.endswith(('.xml', '/xml/')):
                 checkers = [responds_xml]
-            elif url.endswith(('.csv', '/csv/', '/xls/', '.xls')):
+            elif path.endswith(('.csv', '/csv/', '/xls/', '.xls')):
                 checkers = [responds_basic]
-            elif url.endswith('jpeg'):
+            elif path.endswith('jpeg'):
                 checkers = [responds_jpeg]
-            elif url.endswith('txt'):
+            elif path.endswith('txt'):
                 checkers = [responds_plaintext]
             else:
                 checkers = [responds_html]
