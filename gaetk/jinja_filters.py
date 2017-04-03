@@ -2,7 +2,7 @@
 # encoding: utf-8
 """
 jinja_filters.py - custom jinja2 filters
-Copyright (c) 2010, 2012, 2014 HUDORA. All rights reserved.
+Copyright (c) 2010, 2012, 2014, 2017 HUDORA. All rights reserved.
 """
 import decimal
 import json
@@ -117,35 +117,39 @@ def filter_authorize(context, value, permission_types):
 
 
 def filter_tertial(value):
-    """Wandelt ein Date oder Datetime-Objekt in einen Tertial-String"""
+    """Wandelt ein Date oder Datetime-Objekt in einen Tertial-String."""
     from huTools.calendar.formats import tertial
+    if not value:
+        return ''
     return tertial(value)
 
 
 def filter_to_date(value):
-    """Wandelt ein Date oder Datetime-Objekt in einen Date-Objekt"""
+    """Wandelt ein Date oder Datetime-Objekt in einen Date-Objekt."""
     from huTools.calendar.formats import convert_to_date
+    if not value:
+        return ''
     return convert_to_date(value)
 
 
 def filter_dateformat(value, formatstring='%Y-%m-%d'):
-    """Formates a date"""
-
+    """Formates a date."""
     from huTools.calendar.formats import convert_to_date
+    if not value:
+        return ''
     return convert_to_date(value).strftime(formatstring)
 
 
 def filter_datetime(value, formatstring='%Y-%m-%d %H:%M'):
-    """Formates a datetime"""
-
+    """Formates a datetime."""
     from huTools.calendar.formats import convert_to_datetime
+    if not value:
+        return ''
     return convert_to_datetime(value).strftime(formatstring)
 
 
 def filter_yesno(value, answers='yes,no,maybe'):
-    """
-    Beispiel: {{ value|yesno:"yeah,nope,maybe" }}
-    """
+    """Beispiel: {{ value|yesno:"yeah,nope,maybe" }}."""
 
     bits = answers.split(u',')
     if len(bits) == 3:
@@ -162,8 +166,7 @@ def filter_yesno(value, answers='yes,no,maybe'):
     return vno
 
 
-@jinja2.contextfilter
-def percent(_context, value):
+def percent(value):
     """Fomat Percent and handle None"""
     if value is None:
         return u'␀'
@@ -215,8 +218,7 @@ def eurocent(value, spacer='&#8239;', decimalplaces=2, plain=False):
         return '<span class="currency">%s.%s</span>' % (euro_value, cent_value)
 
 
-@jinja2.contextfilter
-def euroword(_context, value):
+def euroword(value, plain=False):
     """Fomat Cents as pretty Euros"""
     if value is None:
         return u'␀'
