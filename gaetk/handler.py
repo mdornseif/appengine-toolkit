@@ -58,6 +58,7 @@ import webapp2
 
 from gaetk.lib import _itsdangerous
 from gaetk.lib._gaesessions import get_current_session
+from gaetk.lib._lru_cache import lru_cache
 
 
 LOGIN_ALLOWED_DOMAINS = getattr(config, 'LOGIN_ALLOWED_DOMAINS', [])
@@ -117,6 +118,7 @@ def login_user(credential, session, via, response=None):
             credential.uid, session['login_via'], session['login_time'], session.sid)
 
 
+@lru_cache(maxsize=100, typed=True, ttl=CREDENTIAL_CACHE_TIMEOUT)
 def _get_credential(username):
     """Helper to read Credentials - can be monkey_patched"""
 
