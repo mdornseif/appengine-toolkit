@@ -1,3 +1,5 @@
+# example for gaetk appengine applications
+
 APPID?= e~wwwhudorade
 OPENAPPID?= wwwhudorade
 REPOSNAME=wwwhudorade
@@ -11,3 +13,8 @@ MYPYTHONPATH=lib/site-packages
 boot:
 	git submodule update --init
 	pip install --target lib/site-packages -r requirements.txt
+
+# include from default file
+%: force
+	@$(MAKE) -f ./lib/appengine-toolkit/make2017/Makefile $@
+force: ;
