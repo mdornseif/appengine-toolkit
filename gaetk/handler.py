@@ -775,7 +775,7 @@ class BasicHandler(webapp2.RequestHandler):
         messages.append(dict(type=typ, html=html, expires=time.time() + ttl))
         # We can't use `.append()` because this doesn't result in automatic session saving.
         self.session['_gaetk_messages'] = messages
-        logging.debug("add_message(%r, %r, %r)", typ, html, ttl)
+        logging.debug(u'add_message(%r, %r, %r)', typ, html, ttl)
 
 
 class JsonResponseHandler(BasicHandler):
