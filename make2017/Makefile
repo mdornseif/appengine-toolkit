@@ -1,6 +1,20 @@
 # Defaults for gaetk appengine applications
 
--include ./lib/appengine-toolkit/include2017.mk
+# Use something like this at the bottom your Makefile:
+
+# [your defs]
+# -include ./lib/appengine-toolkit/make2017/include.mk
+# boot:
+# 	git submodule update --init
+#	pip install --upgrade --target lib/site-packages -r requirements.txt
+# [your targets]
+# %: force
+#	@$(MAKE) -f ./lib/appengine-toolkit/make2017/Makefile $@
+# force: ;
+#
+# see also https://www.gnu.org/software/make/manual/html_node/Overriding-Makefiles.html
+
+-include ./lib/appengine-toolkit/make2017/include.mk
 
 default: check
 
@@ -12,15 +26,13 @@ lib/google_appengine/google/__init__.py:
 	mv google_appengine lib/
 	rm google_appengine_$(GAE_VERSION).zip
 
-# check without calling dependencies
-checknodeps:
-	flake8 $(LINT_FLAKE8_ARGS) $(LINT_FILES)
-	# --disable=W0511 no TODOs
-	sh -c 'PYTHONUNBUFFERED=1 LC_ALL=en_US.UTF-8 PYTHONPATH=`python config.py`:$(MYPYTHONPATH) pylint --disable=W0511 $(PYLINT_ARGS) $(PYLINT_ARGS_ADDON) $(LINT_FILES)'
-	# TODOs anzeigen
-	sh -c 'PYTHONUNBUFFERED=1 LC_ALL=en_US.UTF-8 PYTHONPATH=`python config.py`:$(MYPYTHONPATH) pylint $(PYLINT_ARGS) $(PYLINT_ARGS_ADDON) --disable=all --enable=W0511 $(LINT_FILES)'
 
-check: lib/google_appengine/google/__init__.py checknodeps
+# check code quality
+check: lib/google_appengine/google/__init__.py
+	# erster, schnellere, grober check
+	flake8 --max-complexity=20 --builtins=_ --max-line-length=110 --ignore=E711,E712,N801 $(PYCODE_FILES)
+	# pip install prospector[with_vulture] --user python
+	prospector --no-external-config --output-format pylint
 
 # put onto dev-server run tests
 deploy:
@@ -48,6 +60,28 @@ deploy_production:
 	curl -X POST --data-urlencode 'payload={"channel": "#development", "username": "webhookbot", "text": "<$(PRODUCTIONURL)> neu deployed"}' https://hooks.slack.com/services/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
 	(cd tmp/$(REPOSNAME) ; git log --pretty='* %s (%ae)' `cat lastversion.txt`..`cat version.txt`)
 
+openlogs:
+	open "https://console.cloud.google.com/logs/viewer?project=$(APPID)&resource=gae_app%2Fmodule_id%2Fdefault%2Fversion_id%2Fdev-`whoami`&minLogLevel=0&expandAll=false&serviceId=default&versionId=dev-`whoami`&logName=projects%2Fhuwawi2%2Flogs%2Fappengine.googleapis.com%252Frequest_log"
+
+opendev:
+	open https://dev-`whoami`-dot-$(OPENAPPID).appspot.com$(DEVPAGE)
+
+test:
+	TESTHOST=dev-`whoami`-dot-$(OPENAPPID).appspot.com make resttest
+
+resttest:
+	sh -c "PYTHONPATH=lib/huTools-checkout:lib/appengine-toolkit:$(MYPYTHONPATH) python $(RESTTESTSUITE) --hostname=$(TESTHOST)"
+
+# pull logs from server
+# 4 for CRITICAL, 3 for ERROR, 2 for WARNING, 1 for INFO, 0 for DEBUG
+LOG_SEVERITY?=2
+LOG_DAYS?=5
+request_logs:
+	appcfg.py --oauth2 request_logs --module workers -V standard -A $(APPID) --severity=$(LOG_SEVERITY) --include_all -n $(LOG_DAYS) . request_workers.log
+	appcfg.py --oauth2 request_logs -V production -A $(APPID) --severity=$(LOG_SEVERITY) --include_all -n $(LOG_DAYS) . request_production.log
+	appcfg.py --oauth2 request_logs -V dev-`whoami` -A $(APPID) --include_all -n $(LOG_DAYS) request_dev-`whoami`.log
+
+
 # beautify source code
 fixup:
 	autopep8 --global-config=/dev/null --recursive --in-place --pep8-passes 2000 --max-line-length=110 -a -a --experimental --ignore=E711,E712,E401 *.py modules/ tests/ lib/CentralServices/cs
@@ -56,3 +90,8 @@ fixup:
 	find templates -name '*.html' -print0 | xargs -0 perl -pe 's/[\t ]+$$//g' -i
 	find text -name '*.markdown' -print0 | xargs -0 perl -pe 's/[\t ]+$$//g' -i
 	# Tabs in Templates
+
+# some stats about this project
+stats:
+	sloccount $(PYCODE_FILES)
+	cloc --unicode templates/ $(PYCODE_FILES) $(JSCODE_FILES)

@@ -8,7 +8,7 @@ DEVPAGE?=/selftest.html
 
 MYPYTHONPATH=lib/site-packages
 
--include ./lib/appengine-toolkit/include.mk
+-include ./lib/appengine-toolkit/make2017/include.mk
 
 boot:
 	git submodule update --init
