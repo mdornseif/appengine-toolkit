@@ -297,13 +297,10 @@ class TestClient(object):
 
     def check(self, *args, **kwargs):
         # see http://stackoverflow.com/questions/9872824/calling-a-python-function-with-args-kwargs-and-optional-default-arguments
-        typ = kwargs.pop('typ', None)
-
+        typ = kwargs.pop('typ', u'').lower()
         for url in args:
             path = urlparse.urlparse(url).path
-            if typ == 'JSON':
-                checkers = [responds_json]
-            elif path.endswith('.json'):
+            if typ == 'json' or path.endswith('.json'):
                 checkers = [responds_json]
             elif path.endswith('.pdf'):
                 checkers = [responds_pdf]
@@ -313,11 +310,12 @@ class TestClient(object):
                 checkers = [responds_basic]
             elif path.endswith('jpeg'):
                 checkers = [responds_jpeg]
-            elif path.endswith('txt'):
+            elif typ == 'txt' or path.endswith('txt'):
                 checkers = [responds_plaintext]
             else:
                 checkers = [responds_html]
                 self.urlfile.write(url + '\n')
+
             self.queue.append((url, kwargs, checkers))
 
     def check_allowdeny(self, *args, **kwargs):
