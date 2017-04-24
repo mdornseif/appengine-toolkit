@@ -137,7 +137,7 @@ def filter_dateformat(value, formatstring='%Y-%m-%d'):
     from huTools.calendar.formats import convert_to_date
     if not value:
         return ''
-    return convert_to_date(value).strftime(formatstring)
+    return Markup(convert_to_date(value).strftime(formatstring).replace('-', '&#8209;'))
 
 
 def filter_datetime(value, formatstring='%Y-%m-%d %H:%M'):
@@ -145,7 +145,7 @@ def filter_datetime(value, formatstring='%Y-%m-%d %H:%M'):
     from huTools.calendar.formats import convert_to_datetime
     if not value:
         return ''
-    return convert_to_datetime(value).strftime(formatstring)
+    return Markup(convert_to_datetime(value).strftime(formatstring).replace('-', '&#8209;'))
 
 
 def filter_yesno(value, answers='yes,no,maybe'):
