@@ -751,8 +751,9 @@ class BasicHandler(webapp2.RequestHandler):
         # init messages array based on session but avoid modifying session if not needed
         if self.session.get('_gaetk_messages', None):
             self.session['_gaetk_messages'] = self.session.get('_gaetk_messages', [])
-        # Give authentication Hooks opportunity to do their thing
-        self.authchecker(method, *args, **kwargs)
+        # Give authentication hooks opportunity to do their thing
+        if callable(self.authchecker):
+            self.authchecker(method, *args, **kwargs)
 
         try:
             response = method(*args, **kwargs)
