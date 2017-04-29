@@ -136,8 +136,6 @@ def write_on_change_instance(obj, data):
     properties = compat.xdb_properties(obj)
     dirty = False
     for key, value in data.iteritems():
-        if key not in properties:
-            raise RuntimeError("unknown property %r" % key)
         if value != getattr(obj, key, None):
             setattr(obj, key, value)
             dirty = True
