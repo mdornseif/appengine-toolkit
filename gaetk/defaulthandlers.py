@@ -15,6 +15,7 @@ import google.appengine.api.memcache
 
 from google.appengine.api import lib_config
 from google.appengine.api import taskqueue
+from google.appengine.api.app_identity import get_application_id
 from google.appengine.ext import db
 from google.appengine.ext.db import stats
 from google.appengine.ext.db.metadata import Kind
@@ -27,10 +28,10 @@ import gaetk.handler
 backup_config = lib_config.register(
     'gaetk_backup',
     dict(
-        gs_bucket_name='*unset*',
-        filesystem='gs',
-        queue='backup',
-        blacklist=[],
+        GS_BUCKET='*unset*',
+        FILESYSTEM='gs',
+        QUEUE='default',
+        BLACKLIST=[],
     )
 )
 
@@ -202,7 +203,12 @@ class BackupHandler(gaetk.handler.BasicHandler):
         if 'X-AppEngine-Cron' not in self.request.headers:
             raise gaetk.handler.HTTP403_Forbidden('Scheduled backups must be started via cron')
 
-        kinds = [kind for kind in get_all_datastore_kinds() if kind not in backup_config.blacklist]
+        kinds = [kind for kind in get_all_datastore_kinds() if kind not in backup_config.BLACKLIST]
+        bucketname = '/'.join((
+                    backup_config.GS_BUCKET,
+                    get_application_id(),
+                    today.isoformat()))
+        logging.info(u'backup to %r', bucketname)
 
         today = datetime.date.today()
         taskqueue.add(
@@ -211,11 +217,11 @@ class BackupHandler(gaetk.handler.BasicHandler):
             target='ah-builtin-python-bundle',
             params=dict(
                 name='datastore_backup_' + today.isoformat(),
-                gs_bucket_name='/'.join((backup_config.gs_bucket_name, today.isoformat())),
-                filesystem=backup_config.filesystem,
-                queue=backup_config.queue,
+                gs_bucket_name=bucketname),
+                filesystem=backup_config.FILESYSTEM,
+                queue=backup_config.QUEUE,
                 kind=kinds,
-            ))
+            )
 
         self.return_text('OK')
 
