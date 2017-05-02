@@ -209,20 +209,22 @@ class BackupHandler(gaetk.handler.BasicHandler):
         bucketname = '/'.join((
                     backup_config.GS_BUCKET,
                     get_application_id(),
-                    today.isoformat()))
-        logging.info(u'backup to %r', bucketname)
-
-        taskqueue.add(
-            url='/_ah/datastore_admin/backup.create',
-            method='POST',
-            target='ah-builtin-python-bundle',
-            params=dict(
+                    today.isoformat())).lstrip('/')
+        params = dict(
                 name='datastore_backup_' + today.isoformat(),
                 gs_bucket_name=bucketname,
                 filesystem=backup_config.FILESYSTEM,
                 queue=backup_config.QUEUE,
                 kind=kinds,
-            ))
+            )
+        logging.info(u'backup to %r %r', bucketname, params)
+
+        taskqueue.add(
+            url='/_ah/datastore_admin/backup.create',
+            method='POST',
+            target='ah-builtin-python-bundle',
+            params=params,
+            )
 
         self.return_text('OK')
 
