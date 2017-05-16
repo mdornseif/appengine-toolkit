@@ -76,8 +76,8 @@ def defer(obj, *args, **kwargs):
     """
     suffix = u'{0}({1!s},{2!r})'.format(
         obj.__name__,
-        u','.join(str(x) for x in args),
-        u','.join((u'{}={}'.format(item for item in kwargs.items() if not item[0].startswith('_'))))
+        u','.join(unicode(x) for x in args),
+        u','.join(u'%s=%s' % item for item in kwargs.items() if not item[0].startswith('_'))
     ).encode('ascii', 'ignore')[:1600]
     suffix = re.sub(r'-+', '-', suffix.replace(' ', '-'))
     suffix = re.sub(r'[^/A-Za-z0-9_,.:@&+$\(\)\-]+', '', suffix)
