@@ -74,16 +74,14 @@ def defer(obj, *args, **kwargs):
             script: google.appengine.ext.deferred.deferred.application
             login: admin
     """
-
-    url = "{0}({1!s},{2!r})".format(
+    suffix = u'{0}({1!s},{2!r})'.format(
         obj.__name__,
-        ','.join([str(x) for x in args]),
-        ','.join(["%s=%s" % (x[0], x[1]) for x in kwargs.items() if not x[0].startswith('_')])
-    )
-    url = url.replace(' ', '-')
-    url = re.sub(r'[^/A-Za-z0-9_,.:@&+$\(\)\-]+', '', url)
-    url = google.appengine.ext.deferred.deferred._DEFAULT_URL + '/' + re.sub(r'-+', '-', url)
-
+        u','.join(str(x) for x in args),
+        u','.join((u'{}={}'.format(item for item in kwargs.items() if not item[0].startswith('_'))))
+    ).encode('ascii', 'ignore')[:1600]
+    suffix = re.sub(r'-+', '-', suffix.replace(' ', '-'))
+    suffix = re.sub(r'[^/A-Za-z0-9_,.:@&+$\(\)\-]+', '', suffix)
+    url = google.appengine.ext.deferred.deferred._DEFAULT_URL + '/' + suffix
     kwargs["_url"] = kwargs.pop("_url", url)
     kwargs["_target"] = kwargs.pop("_target", 'workers')
     kwargs["_queue"] = kwargs.pop("_queue", 'workersq')
