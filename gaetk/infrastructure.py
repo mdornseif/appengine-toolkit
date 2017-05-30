@@ -6,6 +6,7 @@ infrastructure.py
 Created by Maximillian Dornseif on 2011-01-07.
 Copyright (c) 2011, 2012, 2016, 2017 Cyberlogi/HUDORA. All rights reserved.
 """
+import logging
 import re
 import zlib
 
@@ -91,7 +92,12 @@ def defer(obj, *args, **kwargs):
     kwargs["_url"] = kwargs.pop("_url", url)
     kwargs["_target"] = kwargs.pop("_target", 'workers')
     kwargs["_queue"] = kwargs.pop("_queue", 'workersq')
-    return deferred.defer(obj, *args, **kwargs)
+    try:
+        return deferred.defer(obj, *args, **kwargs)
+    except taskqueue.TaskAlreadyExistsError:
+        logging.info('Task already exists')
+    except taskqueue.TombstonedTaskError:
+        logging.info('Task did already run')
 
 
 # Datastore
