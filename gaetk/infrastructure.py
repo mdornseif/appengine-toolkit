@@ -115,13 +115,13 @@ def query_iterator(query, limit=50):
             break
 
 
-def copy_entity(entity, **kwargs):
-    """Copy entity."""
-    klass = type(entity)
-    properties = dict((key, value.__get__(entity, klass)) for (key, value) in klass.properties().iteritems())
-    properties.update(**kwargs)
-    return klass(**properties)
-
+def copy_entity(e, **extra_args):
+    """Copy entity but change values in kwargs."""
+    # see https://stackoverflow.com/a/2712401
+    klass = e.__class__
+    props = dict((v._code_name, v.__get__(e, klass)) for v in klass._properties.itervalues() if type(v) is not ndb.ComputedProperty)
+    props.update(extra_args)
+    return klass(**props)
 
 def write_on_change(model, key, data, flush_cache=False):
     """Schreibe (nur) die geänderten Daten in den Datastore."""
