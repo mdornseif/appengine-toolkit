@@ -36,29 +36,52 @@ check: lib/google_appengine/google/__init__.py
 
 # put onto dev-server run tests
 deploy:
-	# appcfg.py update .
+	-@$(MAKE) code
+	-@$(MAKE) deploy_predeploy
 	appcfg.py update -A $(APPID) -V dev-`whoami` .
+	-@$(MAKE) deploy_postdeploy
 	TESTHOST=dev-`whoami`-dot-$(OPENAPPID).appspot.com make resttest
 	make check
+	make unittest
 	make opendev
+
+deploy_predeploy:
+	echo "deploy_predeploy - this can be overwritten in the project Makefile"
+deploy_postdeploy:
+	echo "deploy_postdeploy - this can be overwritten in the project Makefile"
+code:
+	echo "should build javascript etc. - this can be overwritten in the project Makefile"
+	# (cd js_src; make)
 
 # put onto staging server, run tests, then put onto production server
 deploy_production:
-	# wir legen ein komplett neues tmp verzeichnis mit einem sauberen checkout an und gehen von da weiter
+	# wir legen ein komplett neues tmp Verzeichnis mit einem sauberen Checkout an und gehen von da weiter
 	rm -Rf tmp
 	mkdir tmp
 	(cd tmp ; git clone git@github.com:hudora/$(REPOSNAME).git)
 	(cd tmp/$(REPOSNAME) ; git checkout production ; make boot; NODE_ENV=production make dependencies code)
-	(cd tmp/$(REPOSNAME) ; git show-ref --hash=7 refs/remotes/origin/production > version.txt)
+	(cd tmp/$(REPOSNAME) ; (date +"%y%m%d"; git show-ref --hash=7 refs/remotes/origin/production)|tr -d '\n' > version.txt)
 	(cd tmp/$(REPOSNAME) ; curl https://$(OPENAPPID).appspot.com/version.txt > lastversion.txt)
+	-@$(MAKE) code
+	-@$(MAKE) deploy_production_predeploy
 	# Erst getaggte Version hochladen
 	-appcfg.py update -A $(APPID) -V "v`cat tmp/$(REPOSNAME)/version.txt`" tmp/$(REPOSNAME)
 	# Dann testen
 	(cd tmp/$(REPOSNAME) ; TESTHOST="v`cat version.txt`"-dot-$(OPENAPPID).appspot.com make resttest)
+	-@$(MAKE) deploy_production_posttest
 	# Wenn das geklappt hat: produktionsversion aktivieren.
 	appcfg.py update -A $(APPID) -V $(PRODUCTIONNAME) tmp/$(REPOSNAME)
 	curl -X POST --data-urlencode 'payload={"channel": "#development", "username": "webhookbot", "text": "<$(PRODUCTIONURL)> neu deployed"}' https://hooks.slack.com/services/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
 	(cd tmp/$(REPOSNAME) ; git log --pretty='* %s (%ae)' `cat lastversion.txt`..`cat version.txt`)
+	-@$(MAKE) deploy_production_postdeploy
+
+deploy_production_predeploy:
+	echo "deploy_production_predeploy - this can be overwritten in the project Makefile"
+deploy_production_posttest:
+	echo "deploy_production_posttest - this can be overwritten in the project Makefile"
+deploy_production_postdeploy:
+	echo "deploy_production_postdeploy - this can be overwritten in the project Makefile"
+
 
 openlogs:
 	open "https://console.cloud.google.com/logs/viewer?project=$(APPID)&resource=gae_app%2Fmodule_id%2Fdefault%2Fversion_id%2Fdev-`whoami`&minLogLevel=0&expandAll=false&serviceId=default&versionId=dev-`whoami`&logName=projects%2Fhuwawi2%2Flogs%2Fappengine.googleapis.com%252Frequest_log"
@@ -91,7 +114,16 @@ fixup:
 	find text -name '*.markdown' -print0 | xargs -0 perl -pe 's/[\t ]+$$//g' -i
 	# Tabs in Templates
 
+unittest:
+	echo can be overwritten
+
+precommit: dependencies fixup check unittest deploy
+
 # some stats about this project
 stats:
 	sloccount $(PYCODE_FILES)
 	cloc --unicode templates/ $(PYCODE_FILES) $(JSCODE_FILES)
+	# cloc `git ls-files | grep -v lib`
+
+.PHONY: doc deploy_production_pretest deploy_production_posttest deploy_production_postdeploy code
+
