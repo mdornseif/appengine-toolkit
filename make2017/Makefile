@@ -73,7 +73,7 @@ deploy_production:
 	appcfg.py update -A $(APPID) -V $(PRODUCTIONNAME) tmp/$(REPOSNAME)
 	(cd tmp/$(REPOSNAME) ; $(MAKE) deploy_production_postdeploy)
 	curl -X POST --data-urlencode 'payload={"channel": "#development", "username": "webhookbot", "text": "<$(PRODUCTIONURL)> neu deployed"}' https://hooks.slack.com/services/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
-	(cd tmp/$(REPOSNAME) ; git log --pretty='* %s (%ae)' `cat lastversion.txt`..`cat version.txt`)
+	(cd tmp/$(REPOSNAME) ; git log --pretty='* %s (%ae)' `cut -c 7-99 lastversion.txt`..`cut -c 7-99 version.txt`)
 	(cd tmp/$(REPOSNAME) ; $(MAKE) deploy_production_finish)
 
 deploy_production_predeploy:
