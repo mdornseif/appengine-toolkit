@@ -40,7 +40,7 @@ deploy:
 	-$(MAKE) deploy_predeploy
 	appcfg.py update -A $(APPID) -V dev-`whoami` .
 	-$(MAKE) deploy_postdeploy
-	TESTHOST=dev-`whoami`-dot-$(OPENAPPID).appspot.com make resttest
+	TESTHOST=dev-`whoami`-dot-$(OPENAPPID).appspot.com $(MAKE) resttest
 	$(MAKE) check
 	$(MAKE) unittest
 	$(MAKE) opendev
@@ -67,7 +67,7 @@ deploy_production:
 	# Erst getaggte Version hochladen
 	-appcfg.py update -A $(APPID) -V "v`cat tmp/$(REPOSNAME)/version.txt`" tmp/$(REPOSNAME)
 	# Dann testen
-	(cd tmp/$(REPOSNAME) ; TESTHOST="v`cat version.txt`"-dot-$(OPENAPPID).appspot.com @$(MAKE) resttest)
+	(cd tmp/$(REPOSNAME) ; TESTHOST="v`cat version.txt`"-dot-$(OPENAPPID).appspot.com $(MAKE) resttest)
 	(cd tmp/$(REPOSNAME) ; $(MAKE) deploy_production_posttest)
 	# Wenn das geklappt hat: produktionsversion aktivieren.
 	appcfg.py update -A $(APPID) -V $(PRODUCTIONNAME) tmp/$(REPOSNAME)
