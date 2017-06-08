@@ -36,14 +36,14 @@ check: lib/google_appengine/google/__init__.py
 
 # put onto dev-server run tests
 deploy:
-	-@$(MAKE) code
-	-@$(MAKE) deploy_predeploy
+	-$(MAKE) code
+	-$(MAKE) deploy_predeploy
 	appcfg.py update -A $(APPID) -V dev-`whoami` .
-	-@$(MAKE) deploy_postdeploy
+	-$(MAKE) deploy_postdeploy
 	TESTHOST=dev-`whoami`-dot-$(OPENAPPID).appspot.com make resttest
-	make check
-	make unittest
-	make opendev
+	$(MAKE) check
+	$(MAKE) unittest
+	$(MAKE) opendev
 
 deploy_predeploy:
 	echo "deploy_predeploy - this can be overwritten in the project Makefile"
@@ -59,21 +59,22 @@ deploy_production:
 	rm -Rf tmp
 	mkdir tmp
 	(cd tmp ; git clone git@github.com:hudora/$(REPOSNAME).git)
-	(cd tmp/$(REPOSNAME) ; git checkout production ; make boot; NODE_ENV=production make dependencies code)
+	(cd tmp/$(REPOSNAME) ; git checkout production ; $(MAKE) boot; NODE_ENV=production $(MAKE) dependencies)
 	(cd tmp/$(REPOSNAME) ; (date +"%y%m%d"; git show-ref --hash=7 refs/remotes/origin/production)|tr -d '\n' > version.txt)
 	(cd tmp/$(REPOSNAME) ; curl https://$(OPENAPPID).appspot.com/version.txt > lastversion.txt)
-	-@$(MAKE) code
-	-@$(MAKE) deploy_production_predeploy
+	(cd tmp/$(REPOSNAME) ; $(MAKE) code)
+	(cd tmp/$(REPOSNAME) ; $(MAKE) deploy_production_predeploy)
 	# Erst getaggte Version hochladen
 	-appcfg.py update -A $(APPID) -V "v`cat tmp/$(REPOSNAME)/version.txt`" tmp/$(REPOSNAME)
 	# Dann testen
-	(cd tmp/$(REPOSNAME) ; TESTHOST="v`cat version.txt`"-dot-$(OPENAPPID).appspot.com make resttest)
-	-@$(MAKE) deploy_production_posttest
+	(cd tmp/$(REPOSNAME) ; TESTHOST="v`cat version.txt`"-dot-$(OPENAPPID).appspot.com @$(MAKE) resttest)
+	(cd tmp/$(REPOSNAME) ; $(MAKE) deploy_production_posttest)
 	# Wenn das geklappt hat: produktionsversion aktivieren.
 	appcfg.py update -A $(APPID) -V $(PRODUCTIONNAME) tmp/$(REPOSNAME)
+	(cd tmp/$(REPOSNAME) ; $(MAKE) deploy_production_postdeploy)
 	curl -X POST --data-urlencode 'payload={"channel": "#development", "username": "webhookbot", "text": "<$(PRODUCTIONURL)> neu deployed"}' https://hooks.slack.com/services/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
 	(cd tmp/$(REPOSNAME) ; git log --pretty='* %s (%ae)' `cat lastversion.txt`..`cat version.txt`)
-	-@$(MAKE) deploy_production_postdeploy
+	(cd tmp/$(REPOSNAME) ; $(MAKE) deploy_production_finish)
 
 deploy_production_predeploy:
 	echo "deploy_production_predeploy - this can be overwritten in the project Makefile"
@@ -81,7 +82,8 @@ deploy_production_posttest:
 	echo "deploy_production_posttest - this can be overwritten in the project Makefile"
 deploy_production_postdeploy:
 	echo "deploy_production_postdeploy - this can be overwritten in the project Makefile"
-
+deploy_production_finish:
+	echo "deploy_production_finish - this can be overwritten in the project Makefile"
 
 openlogs:
 	open "https://console.cloud.google.com/logs/viewer?project=$(APPID)&resource=gae_app%2Fmodule_id%2Fdefault%2Fversion_id%2Fdev-`whoami`&minLogLevel=0&expandAll=false&serviceId=default&versionId=dev-`whoami`&logName=projects%2Fhuwawi2%2Flogs%2Fappengine.googleapis.com%252Frequest_log"
@@ -94,6 +96,9 @@ test:
 
 resttest:
 	sh -c "PYTHONPATH=lib/huTools-checkout:lib/appengine-toolkit:$(MYPYTHONPATH) python $(RESTTESTSUITE) --hostname=$(TESTHOST)"
+	-$(MAKE) resttest_finish
+resttest_finish:
+	echo "resttest_finish - this can be overwritten in the project Makefile"
 
 # pull logs from server
 # 4 for CRITICAL, 3 for ERROR, 2 for WARNING, 1 for INFO, 0 for DEBUG
