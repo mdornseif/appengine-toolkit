@@ -7,6 +7,7 @@ Created by Maximillian Dornseif on 2011-01-07.
 Copyright (c) 2011, 2012, 2016, 2017 Cyberlogi/HUDORA. All rights reserved.
 """
 import logging
+import os
 import re
 import zlib
 
@@ -90,14 +91,26 @@ def defer(obj, *args, **kwargs):
     suffix = re.sub(r'[^/A-Za-z0-9_,.:@&+$\(\)\-]+', '', suffix)
     url = google.appengine.ext.deferred.deferred._DEFAULT_URL + '/' + suffix[:1600]
     kwargs["_url"] = kwargs.pop("_url", url)
-    kwargs["_target"] = kwargs.pop("_target", 'workers')
     kwargs["_queue"] = kwargs.pop("_queue", 'workersq')
+    if _is_production():
+        # we only route to the workers backend/module on production machines
+        kwargs["_target"] = kwargs.pop("_target", 'workers')
     try:
         return deferred.defer(obj, *args, **kwargs)
     except taskqueue.TaskAlreadyExistsError:
         logging.info('Task already exists')
     except taskqueue.TombstonedTaskError:
         logging.info('Task did already run')
+
+
+def _is_production():
+    """checks if we can assume to run on a development machine"""
+    if os.environ.get('SERVER_NAME', '').startswith('dev-'):
+        return False
+    elif os.environ.get('SERVER_SOFTWARE', '').startswith('Development'):
+        return False
+    else:
+        return True
 
 
 # Datastore
@@ -122,6 +135,7 @@ def copy_entity(e, **extra_args):
     props = dict((v._code_name, v.__get__(e, klass)) for v in klass._properties.itervalues() if type(v) is not ndb.ComputedProperty)
     props.update(extra_args)
     return klass(**props)
+
 
 def write_on_change(model, key, data, flush_cache=False):
     """Schreibe (nur) die geänderten Daten in den Datastore."""

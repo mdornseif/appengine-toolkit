@@ -166,6 +166,14 @@ def filter_yesno(value, answers='yes,no,maybe'):
     return vno
 
 
+def filter_onoff(value):
+    """Boolean als Icon darstellen."""
+    if value:
+        return Markup('<i class="fa fa-toggle-on" aria-hidden="true" style="color:green"></i>')
+    else:
+        return Markup('<i class="fa fa-toggle-off" aria-hidden="true" style="color:red"></i>')
+
+
 def percent(value):
     """Fomat Percent and handle None"""
     if value is None:
@@ -295,6 +303,7 @@ def register_custom_filters(jinjaenv):
     jinjaenv.filters['dateformat'] = filter_dateformat
     jinjaenv.filters['datetime'] = filter_datetime
     jinjaenv.filters['yesno'] = filter_yesno
+    jinjaenv.filters['onoff'] = filter_onoff
     jinjaenv.filters['percent'] = percent
     jinjaenv.filters['nicenum'] = nicenum
     jinjaenv.filters['eurocent'] = eurocent
