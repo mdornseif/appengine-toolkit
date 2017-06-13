@@ -261,6 +261,16 @@ def filter_attrencode(value):
     return xml.sax.saxutils.quoteattr(value)[1:-1]
 
 
+def filter_cssencode(value):
+    """Makes a string valid as an CSS class name."""
+    if value is None:
+        return u''
+    ret = re.sub('[^A-Za-z0-9-_]+', '-', value)
+    if ret.startswith(tuple('-0123456789')):
+        ret = 'CSS' + ret
+    return ret
+
+
 def filter_urlencode(value):
     """Encode string for usage in URLs"""
     import urllib
@@ -291,5 +301,6 @@ def register_custom_filters(jinjaenv):
     jinjaenv.filters['euroword'] = euroword
     jinjaenv.filters['intword'] = intword
     jinjaenv.filters['attrencode'] = filter_attrencode
+    jinjaenv.filters['cssencode'] = filter_cssencode
     jinjaenv.filters['urlencode'] = filter_urlencode
     jinjaenv.filters['slugify'] = gaetk.tools.slugify
