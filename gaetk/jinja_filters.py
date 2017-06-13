@@ -299,6 +299,7 @@ def register_custom_filters(jinjaenv):
     jinjaenv.filters['markdown'] = filter_markdown
     jinjaenv.filters['nl2br'] = filter_nl2br
     jinjaenv.filters['authorize'] = filter_authorize
+    jinjaenv.filters['tertial'] = filter_tertial
     jinjaenv.filters['to_date'] = filter_to_date
     jinjaenv.filters['dateformat'] = filter_dateformat
     jinjaenv.filters['datetime'] = filter_datetime
