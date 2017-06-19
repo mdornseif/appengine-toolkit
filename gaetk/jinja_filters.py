@@ -98,7 +98,8 @@ def filter_authorize(context, value, permission_types):
     if not isinstance(permission_types, list):
         permission_types = [permission_types]
 
-    granted = not context.get('request').get('_gaetk_disable_permissions', False)
+    # Permissions disabled -> granted
+    granted = context.get('request').get('_gaetk_disable_permissions', False)
     for permission in permission_types:
         if context.get('credential') and permission in context.get('credential').permissions:
             granted = True
