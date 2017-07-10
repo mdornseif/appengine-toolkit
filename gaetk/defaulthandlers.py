@@ -187,7 +187,8 @@ class WarmupHandler(gaetk.handler.BasicHandler):
 
     def get(self):
         """Handle warm up requests"""
-        self.return_text(self.warmup())
+        self.warmup()
+        self.return_text('OK')
 
 
 def get_all_datastore_kinds():
