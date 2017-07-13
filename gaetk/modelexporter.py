@@ -53,7 +53,7 @@ class ModelExporter(object):
                     if name in self.only:
                         fields.append((compat.xdb_prop_creation_counter(prop), name))
                 elif self.ignore:
-                    if name not in self.only:
+                    if name not in self.ignore:
                         fields.append((compat.xdb_prop_creation_counter(prop), name))
                 else:
                     fields.append((compat.xdb_prop_creation_counter(prop), name))
