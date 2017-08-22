@@ -32,7 +32,7 @@ check: lib/google_appengine/google/__init__.py
 	# erster, schnellere, grober check
 	flake8 --builtins=_ --max-line-length=110 --ignore=E711,E712,N801,C901 $(PYCODE_FILES)
 	# pip install prospector[with_vulture] --user python
-	prospector --no-external-config --output-format pylint
+	PYTHONPATH=$(MYPYTHONPATH) prospector --no-external-config --output-format pylint
 
 # put onto dev-server run tests
 deploy:
