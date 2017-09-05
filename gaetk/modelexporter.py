@@ -24,6 +24,15 @@ from gaetk import compat
 from gaetk.infrastructure import query_iterator
 
 
+def encode(val):
+    u"""Encode value for exporter"""
+    if isinstance(val, str):
+        return val.decode('utf-8')
+    if compat.xdb_iskey(val):
+        return compat.xdb_id_or_name(val)
+    return val
+
+
 class ModelExporter(object):
     """Export all entities of a Model as XLS, CSV, etc."""
 
@@ -86,7 +95,7 @@ class ModelExporter(object):
                 tmp = attr()
             else:
                 tmp = attr
-            row.append(unicode(tmp))
+            row.append(encode(tmp))
         if callable(data.key):
             row.append(unicode(data.key()))
         else:

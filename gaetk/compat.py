@@ -189,6 +189,11 @@ def xdb_fetch_page(query, limit, offset=None, start_cursor=None):
     return objects, cursor, more_objects
 
 
+def xdb_iskey(obj):
+    u"""obj is a db or an ndb Key"""
+    return isinstance(obj, (db.Key, ndb.Key))
+
+
 def xdb_str_key(key):
     """Stringrepräsentation eines Keys"""
     if isinstance(key, ndb.key.Key):
