@@ -38,7 +38,7 @@ check: lib/google_appengine/google/__init__.py
 deploy:
 	-$(MAKE) code
 	-$(MAKE) deploy_predeploy
-	./lib/google_appengine/appcfg.py update -A $(APPID) -V dev-`whoami` .
+	$(APPCFG) update -A $(APPID) -V dev-`whoami` .
 	-$(MAKE) deploy_postdeploy
 	TESTHOST=dev-`whoami`-dot-$(OPENAPPID).appspot.com $(MAKE) resttest
 	$(MAKE) check
@@ -65,12 +65,12 @@ deploy_production:
 	(cd tmp/$(REPOSNAME) ; $(MAKE) code)
 	(cd tmp/$(REPOSNAME) ; $(MAKE) deploy_production_predeploy)
 	# Erst getaggte Version hochladen
-	-./lib/google_appengine/appcfg.py update -A $(APPID) -V "v`cat tmp/$(REPOSNAME)/version.txt`" tmp/$(REPOSNAME)
+	-$(APPCFG) update -A $(APPID) -V "v`cat tmp/$(REPOSNAME)/version.txt`" tmp/$(REPOSNAME)
 	# Dann testen
 	(cd tmp/$(REPOSNAME) ; TESTHOST="v`cat version.txt`"-dot-$(OPENAPPID).appspot.com $(MAKE) resttest)
 	(cd tmp/$(REPOSNAME) ; $(MAKE) deploy_production_posttest)
 	# Wenn das geklappt hat: produktionsversion aktivieren.
-	./lib/google_appengine/appcfg.py update -A $(APPID) -V $(PRODUCTIONNAME) tmp/$(REPOSNAME)
+	$(APPCFG) update -A $(APPID) -V $(PRODUCTIONNAME) tmp/$(REPOSNAME)
 	(cd tmp/$(REPOSNAME) ; $(MAKE) deploy_production_postdeploy)
 	curl -X POST --data-urlencode 'payload={"channel": "#development", "username": "webhookbot", "text": "<$(PRODUCTIONURL)> neu deployed"}' https://hooks.slack.com/services/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
 	(cd tmp/$(REPOSNAME) ; git log --pretty='* %s (%ae)' `cut -c 7-99 lastversion.txt`..`cut -c 7-99 version.txt`)
@@ -105,9 +105,9 @@ resttest_finish:
 LOG_SEVERITY?=2
 LOG_DAYS?=5
 request_logs:
-	./lib/google_appengine/appcfg.py --oauth2 request_logs --module workers -V standard -A $(APPID) --severity=$(LOG_SEVERITY) --include_all -n $(LOG_DAYS) . request_workers.log
-	./lib/google_appengine/appcfg.py --oauth2 request_logs -V production -A $(APPID) --severity=$(LOG_SEVERITY) --include_all -n $(LOG_DAYS) . request_production.log
-	./lib/google_appengine/appcfg.py --oauth2 request_logs -V dev-`whoami` -A $(APPID) --include_all -n $(LOG_DAYS) request_dev-`whoami`.log
+	$(APPCFG) request_logs --module workers -V standard -A $(APPID) --severity=$(LOG_SEVERITY) --include_all -n $(LOG_DAYS) . request_workers.log
+	$(APPCFG) request_logs -V production -A $(APPID) --severity=$(LOG_SEVERITY) --include_all -n $(LOG_DAYS) . request_production.log
+	$(APPCFG) request_logs -V dev-`whoami` -A $(APPID) --include_all -n $(LOG_DAYS) request_dev-`whoami`.log
 
 
 # beautify source code
