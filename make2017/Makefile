@@ -49,9 +49,14 @@ deploy_predeploy:
 	echo "deploy_predeploy - this can be overwritten in the project Makefile"
 deploy_postdeploy:
 	echo "deploy_postdeploy - this can be overwritten in the project Makefile"
+
 code:
-	echo "should build javascript etc. - this can be overwritten in the project Makefile"
-	# (cd js_src; make)
+	# echo "should build javascript etc.
+	echo "doing code"
+	[ -f ./js_src/Makefile ] && (cd js_src; $(MAKE) code)
+code_production: code
+	# echo "should minify javascript etc."
+	[ -f ./js_src/Makefile ] && (cd js_src; $(MAKE) code_production)
 
 # put onto staging server, run tests, then put onto production server
 deploy_production:
@@ -62,7 +67,7 @@ deploy_production:
 	(cd tmp/$(REPOSNAME) ; git checkout production ; $(MAKE) boot; NODE_ENV=production $(MAKE) dependencies)
 	(cd tmp/$(REPOSNAME) ; (date +"%y%m%d"; git show-ref --hash=7 refs/remotes/origin/production)|tr -d '\n' > version.txt)
 	(cd tmp/$(REPOSNAME) ; curl https://$(OPENAPPID).appspot.com/version.txt > lastversion.txt)
-	(cd tmp/$(REPOSNAME) ; $(MAKE) code)
+	(cd tmp/$(REPOSNAME) ; $(MAKE) code_production)
 	(cd tmp/$(REPOSNAME) ; $(MAKE) deploy_production_predeploy)
 	# Erst getaggte Version hochladen
 	-$(APPCFG) update -A $(APPID) -V "v`cat tmp/$(REPOSNAME)/version.txt`" tmp/$(REPOSNAME)
@@ -72,9 +77,13 @@ deploy_production:
 	# Wenn das geklappt hat: produktionsversion aktivieren.
 	$(APPCFG) update -A $(APPID) -V $(PRODUCTIONNAME) tmp/$(REPOSNAME)
 	(cd tmp/$(REPOSNAME) ; $(MAKE) deploy_production_postdeploy)
+	# Meldung per Slack
 	curl -X POST --data-urlencode 'payload={"channel": "#development", "username": "webhookbot", "text": "<$(PRODUCTIONURL)> neu deployed"}' https://hooks.slack.com/services/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
+	# Änderungen in der Console auflisten
 	(cd tmp/$(REPOSNAME) ; git log --pretty='* %s (%ae)' `cut -c 7-99 lastversion.txt`..`cut -c 7-99 version.txt`)
 	(cd tmp/$(REPOSNAME) ; $(MAKE) deploy_production_finish)
+	# Show logfile
+	(cd tmp/$(REPOSNAME) ; $(MAKE) openlogs_production)
 
 deploy_production_predeploy:
 	echo "deploy_production_predeploy - this can be overwritten in the project Makefile"
@@ -132,5 +141,5 @@ stats:
 	cloc --unicode templates/ $(PYCODE_FILES) $(JSCODE_FILES)
 	# cloc `git ls-files | grep -v lib`
 
-.PHONY: doc deploy_production_pretest deploy_production_posttest deploy_production_postdeploy code
+.PHONY: doc deploy_production_pretest deploy_production_posttest deploy_production_postdeploy code code_production
 
