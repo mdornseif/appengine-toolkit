@@ -86,7 +86,9 @@ deploy_production_finish:
 	echo "deploy_production_finish - this can be overwritten in the project Makefile"
 
 openlogs:
-	open "https://console.cloud.google.com/logs/viewer?project=$(APPID)&resource=gae_app%2Fmodule_id%2Fdefault%2Fversion_id%2Fdev-`whoami`&minLogLevel=0&expandAll=false&serviceId=default&versionId=dev-`whoami`&logName=projects%2Fhuwawi2%2Flogs%2Fappengine.googleapis.com%252Frequest_log"
+	open "https://console.cloud.google.com/logs/viewer?project=$(OPENAPPID)&resource=gae_app%2Fmodule_id%2Fdefault%2Fversion_id%2Fdev-`whoami`&minLogLevel=0&expandAll=false&key1=default&key2=dev-`whoami`&logName=projects%2F$(OPENAPPID)%2Flogs%2Fappengine.googleapis.com%252Frequest_log"
+openlogs_production:
+	open "https://console.cloud.google.com/logs/viewer?project=$(OPENAPPID)&resource=gae_app%2Fmodule_id%2Fdefault%2Fversion_id%2Fproduction&minLogLevel=400&expandAll=false&key1=default&logName=projects%2F$(OPENAPPID)%2Flogs%2Fappengine.googleapis.com%252Frequest_log"
 
 opendev:
 	open https://dev-`whoami`-dot-$(OPENAPPID).appspot.com$(DEVPAGE)
