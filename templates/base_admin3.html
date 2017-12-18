@@ -97,7 +97,7 @@ body {
 
       <div class="row mainrow">
       {% block mainrow -%}<!--base_admin3:mainrow-->
-        <div class="col-sm-9 maincontent">
+        <div id="maincontent" class="col-sm-9 maincontent">
         {% block maincontent -%}<!--base_admin3:maincontent-->
           {% if content is defined -%}
             {{ content }}
@@ -107,7 +107,7 @@ body {
         <!--/base_admin3:maincontent-->{%- endblock maincontent %}
         </div>
 
-        <div class="col-sm-3 blog-sidebar">
+        <div id="secondarycontent" class="col-sm-3 blog-sidebar">
         {% block secondarycontent -%}<!--base_admin3:secondarycontent-->
           {% if secondarycontent is defined -%}
             {{ secondarycontent }}
