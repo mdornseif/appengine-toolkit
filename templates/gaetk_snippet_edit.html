@@ -7,6 +7,7 @@
 
 <form method="POST">
         <input type="hidden" name="name" value="{{ name }}">
+        <input type="hidden" name="continue_url" value="{{ continue_url }}">
         <textarea name="sniptext" id="sniptext" class="form-control" rows="10">{{ snippet.markdown }}</textarea>
   <input type="submit" value="Speichern">
 </form>
@@ -18,8 +19,8 @@
   <script type="text/javascript" src="/static/pagedown-bootstrap/js/jquery.pagedown-bootstrap.combined.min.js"></script>
   <link href="/static/pagedown-bootstrap/css/jquery.pagedown-bootstrap.css" rel="stylesheet">
   <script>
-      $(document).ready(function(){
-                                        $("textarea#sniptext").pagedownBootstrap();
-        });
+  $(document).ready(function(){
+    $("textarea#sniptext").pagedownBootstrap();
+  });
   </script>
 {%- endblock javascript %}
