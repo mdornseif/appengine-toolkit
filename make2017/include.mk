@@ -11,7 +11,7 @@ PRODUCTIONNAME?= production
 DEVPAGE?= /
 OPENAPPID?= $(APPID)
 RESTTESTSUITE?= tests/resttest.py
-PYCODE_FILES?= modules/ tests/*.py *.py lib/CentralServices/cs lib/appengine-toolkit/gaetk
+PYCODE_FILES?= modules/ tests/*.py *.py lib/CentralServices/cs
 LINT_FILES?= $(PYCODE_FILES)
 JSCODE_FILES?= js_src/src/
 
@@ -41,8 +41,8 @@ JSCODE_FILES?= js_src/src/
 # [W0631(undefined-loop-variable)] so far ONLY false positives
 # [W0703(broad-except), show_snippet] Catching too general exception Exception]
 # [W1306(missing-format-attribute)] - kommt nicht mit Objekten zurecht
-# [I0011(locally-disabled), ] Locally disabling unused-argument (W0613)ı
-# I0013(file-ignored)
+# [I0011(locally-disabled), ] Locally disabling unused-argument (W0613)
+# [I0013(file-ignored)
 
 PYLINT_ARGS= "--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
 			 -rn --ignore=config.py,huwawi_a_models.py,lib \
@@ -64,5 +64,5 @@ PYLINT_ARGS= "--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" \
 
 LINT_LINE_LENGTH= 110
 LINT_FLAKE8_ARGS= --max-complexity=12 --builtins=_ --exclude=appengine_config.py,lib/*.py --max-line-length=$(LINT_LINE_LENGTH) --ignore=E711,E712
-MYPYTHONPATH?= lib/google_appengine:lib/google_appengine/lib/jinja2-2.6:./lib/google_appengine/lib/webob-1.2.3:./lib/google_appengine/lib/webapp2-2.5.2
+MYPYTHONPATH?= `python config.py`:lib/google_appengine:lib/google_appengine/lib/jinja2-2.6:./lib/google_appengine/lib/webob-1.2.3:./lib/google_appengine/lib/webapp2-2.5.2
 APPCFG?=./lib/google_appengine/appcfg.py --oauth2

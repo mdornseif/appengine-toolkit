@@ -5,8 +5,8 @@
 # [your defs]
 # -include ./lib/appengine-toolkit/make2017/include.mk
 # boot:
-# 	git submodule update --init
 #	pip install --upgrade --target lib/site-packages -r requirements.txt
+# 	git submodule update --init
 # [your targets]
 # %: force
 #	@$(MAKE) -f ./lib/appengine-toolkit/make2017/Makefile $@
@@ -26,11 +26,10 @@ lib/google_appengine/google/__init__.py:
 	mv google_appengine lib/
 	rm google_appengine_$(GAE_VERSION).zip
 
-
 # check code quality
 check: lib/google_appengine/google/__init__.py
 	# erster, schnellere, grober check
-	flake8 --builtins=_ --max-line-length=110 --ignore=E711,E712,N801,C901 $(PYCODE_FILES)
+	flake8 --builtins=_ --max-line-length=110 --ignore=E711,E712,E722,E741,N801,C901 $(PYCODE_FILES)
 	# pip install prospector[with_vulture] --user python
 	PYTHONPATH=$(MYPYTHONPATH) prospector --no-external-config --output-format pylint
 
@@ -95,7 +94,7 @@ deploy_production_finish:
 	echo "deploy_production_finish - this can be overwritten in the project Makefile"
 
 openlogs:
-	open "https://console.cloud.google.com/logs/viewer?project=$(OPENAPPID)&resource=gae_app%2Fmodule_id%2Fdefault%2Fversion_id%2Fdev-`whoami`&minLogLevel=0&expandAll=false&key1=default&key2=dev-`whoami`&logName=projects%2F$(OPENAPPID)%2Flogs%2Fappengine.googleapis.com%252Frequest_log"
+	open "https://console.cloud.google.com/logs/viewer?project=$(OPENAPPID)&resource=gae_app%2Fmodule_id%2Fdefault%2Fversion_id%2Fdev-`whoami`&minLogLevel=&expandAll=false&key1=default&key2=dev-`whoami`&logName=projects%2F$(OPENAPPID)%2Flogs%2Fappengine.googleapis.com%252Frequest_log"
 openlogs_production:
 	open "https://console.cloud.google.com/logs/viewer?project=$(OPENAPPID)&resource=gae_app%2Fmodule_id%2Fdefault%2Fversion_id%2Fproduction&minLogLevel=400&expandAll=false&key1=default&logName=projects%2F$(OPENAPPID)%2Flogs%2Fappengine.googleapis.com%252Frequest_log"
 
