@@ -6,19 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}{% if title is defined %}{{ title|e }}{% else %}gaetk{% endif %}{% endblock %}</title>
 
-    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
-    <script src="/gaetk/static/jquery/jquery-1.11.3.min.js"></script>
-    <!-- brauchen wir jquery-ui? nur fuer admin? -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
-    <!-- Bootstrap -->
-    {% if gaetk_production -%}
-      <link type="text/css" href="/gaetk/static/bootstrap/3.3.x/css/bootstrap.min.css" rel="stylesheet">
-      <link type="text/css" href="/gaetk/static/font-awesome-4.5.0/css/font-awesome.min.css" rel="stylesheet">
-    {%- else -%}
-      <link type="text/css" href="/gaetk/static/bootstrap/3.3.x/css/bootstrap.css" rel="stylesheet">
-      <link type="text/css" href="/gaetk/static/font-awesome-4.5.0/css/font-awesome.css" rel="stylesheet">
-    {%- endif %}
-    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <script src="https://www.google.com/jsapi" type="text/javascript"></script>
+    <script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js" integrity="sha256-VazP97ZCwtekAsvgPBSUwPFKdrwD3unUfSGVYrahUqU=" crossorigin="anonymous"></script>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
       <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
@@ -126,11 +118,7 @@ body {
     <!-- Le javascript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
-    {% if gaetk_production -%}
-      <script src="/gaetk/static/bootstrap/3.3.x/js/bootstrap.min.js"></script>
-    {%- else -%}
-      <script src="/gaetk/static/bootstrap/3.3.x/js/bootstrap.js"></script>
-    {%- endif %}
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
     {% block basejavascript -%}<!--base_admin3:basejavascript--><!--/base_admin3:basejavascript-->{%- endblock basejavascript %}
     {% block javascript -%}<!--base_admin3:javascript--><!--/base_admin3:javascript-->{%- endblock javascript %}
     {% block analytics_tracking -%}<!--base_admin3:analytics_tracking--><!--/base_admin3:analytics_tracking-->{%- endblock analytics_tracking %}
