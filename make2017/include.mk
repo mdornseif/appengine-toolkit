@@ -3,7 +3,7 @@
 # This file includes all kinds of default defenitions.
 
 # see https://cloud.google.com/appengine/docs/standard/python/release-notes
-GAE_VERSION=1.9.51
+GAE_VERSION=1.9.65
 PRODUCTIONURL?= https://$(APPID).appspot.com/
 # name of the version running public facing code and the git branch
 PRODUCTIONNAME?= production
