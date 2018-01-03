@@ -9,10 +9,11 @@ Copyright (c) 2010, 2012, 2015 HUDORA. All rights reserved.
 
 try:
     import webapp2  # on AppEngine python27
-    from gaetk import handler
-    from gaetk.lib import _gaesessions as gaesessions
 except ImportError:
     pass
+
+from gaetk import handler
+from gaetk.lib import _gaesessions as gaesessions
 
 
 __all__ = [
