@@ -62,7 +62,7 @@ deploy_production:
 	# wir legen ein komplett neues tmp Verzeichnis mit einem sauberen Checkout an und gehen von da weiter
 	rm -Rf tmp
 	mkdir tmp
-	(cd tmp ; git clone git@github.com:hudora/$(REPOSNAME).git)
+	(cd tmp ; git clone --branch production --recurse-submodules git@github.com:hudora/$(REPOSNAME).git)
 	(cd tmp/$(REPOSNAME) ; git checkout production ; $(MAKE) boot; NODE_ENV=production $(MAKE) dependencies)
 	(cd tmp/$(REPOSNAME) ; (date +"%y%m%d"; git show-ref --hash=7 refs/remotes/origin/production)|tr -d '\n' > version.txt)
 	(cd tmp/$(REPOSNAME) ; curl https://$(OPENAPPID).appspot.com/version.txt > lastversion.txt)
