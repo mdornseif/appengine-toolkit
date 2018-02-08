@@ -79,7 +79,7 @@ deploy_production:
 	# Meldung per Slack
 	curl -X POST --data-urlencode 'payload={"channel": "#development", "username": "webhookbot", "text": "<$(PRODUCTIONURL)> neu deployed"}' https://hooks.slack.com/services/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
 	# Änderungen in der Console auflisten
-	(cd tmp/$(REPOSNAME) ; git log --pretty='* %s (%ae)' `cut -c 7-99 lastversion.txt`..`cut -c 7-99 version.txt`)
+	# (cd tmp/$(REPOSNAME) ; git log --pretty='* %s (%ae)' `cut -c 7-99 lastversion.txt`..`cut -c 7-99 version.txt`)
 	(cd tmp/$(REPOSNAME) ; $(MAKE) deploy_production_finish)
 	# Show logfile
 	(cd tmp/$(REPOSNAME) ; $(MAKE) openlogs_production)
