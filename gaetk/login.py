@@ -205,13 +205,14 @@ def get_oauth_url(session, request):
 def get_oauth_callback_url(oauth_config, host_url):
     url = host_url + '/gaetk/auth/oauth2callback'
     if url not in oauth_config['web']['redirect_uris']:
-        logging.debug("%s not valid", url)
+        logging.critical("%r not valid", url)
+        logging.error("should be in %r", oauth_config['web']['redirect_uris'])
         url = 'https://' + os.environ.get('SERVER_NAME') + '/gaetk/auth/oauth2callback'
     if url not in oauth_config['web']['redirect_uris']:
-        logging.debug("%s not valid", url)
+        logging.error("fallback %s not valid", url)
         url = 'https://' + os.environ.get('DEFAULT_VERSION_HOSTNAME') + '/gaetk/auth/oauth2callback'
     if url not in oauth_config['web']['redirect_uris']:
-        logging.debug("%s not valid", url)
+        logging.error("%s not valid", url)
         url = oauth_config['web']['redirect_uris'][0]
     return url
 
@@ -250,7 +251,7 @@ class OAuth2Callback(gaetk.handler.BasicHandler):
         if self.request.get('state') != self.session.get('oauth_state'):
             logging.error(
                 "wrong state: %r != %r", self.request.get('state'), self.session.get('oauth_state'))
-            logging.debug("session: %s", vars(self.session))
+            logging.debug("session: %s", self.session)
             logging.debug("request: %s", self.request.GET)
             self.session.terminate()
             if self.session.get('oauth_state'):
@@ -306,7 +307,7 @@ class LogoutHandler(gaetk.handler.BasicHandler):
 
         logging.info("forcing logout")
         self.session['uid'] = None
-        if self.session.is_active():
+        if self.session and self.session.is_active():
             self.session.terminate()
         self.session.regenerate_id()
 
