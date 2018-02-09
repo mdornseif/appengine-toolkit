@@ -57,10 +57,10 @@ body {
               <span class="icon-bar"></span>
             </button>
             <a class="navbar-brand" href="/">{% block projectname -%}<!--base_admin3:projectname-->
-              {% if projectname is defined -%}
-                {{ projectname|e }} Admin
+              {% if gaetk_app_name is defined -%}
+                {{ gaetk_app_name|e }} Admin
               {%- else -%}
-                gaetk used without setting `projectname`
+                gaetk used without setting `gaetk_app_name`
               {%- endif -%}
             <!--/base_admin3:projectname-->{%- endblock projectname %}</a>
           </div>
@@ -123,5 +123,52 @@ body {
     {% block javascript -%}<!--base_admin3:javascript--><!--/base_admin3:javascript-->{%- endblock javascript %}
     {% block analytics_tracking -%}<!--base_admin3:analytics_tracking--><!--/base_admin3:analytics_tracking-->{%- endblock analytics_tracking %}
     {% block footer -%}<!--base_admin3:footer--><!--/base_admin3:footer-->{%- endblock footer %}
+
+    <!--  from https://codepen.io/eode9/pen/twkKm -->
+    <style>
+      .corner-ribbon{
+        z-index: 1001;
+        width: 200px;
+        opacity: 0.4;
+        background: #e43;
+        position: absolute;
+        top: 25px;
+        left: -50px;
+        text-align: center;
+        line-height: 50px;
+        letter-spacing: 1px;
+        color: #f0f0f0;
+        transform: rotate(-45deg);
+        -webkit-transform: rotate(-45deg);
+      }
+      .corner-ribbon.sticky{
+        position: fixed;
+      }
+      .corner-ribbon.shadow{
+        box-shadow: 0 0 3px rgba(0,0,0,.3);
+      }
+      .corner-ribbon.bottom-right{
+        top: auto;
+        right: -50px;
+        bottom: 25px;
+        left: auto;
+        transform: rotate(-45deg);
+        -webkit-transform: rotate(-45deg);
+      }
+      .corner-ribbon.red{
+        background: #e43;
+      }
+    </style>
+    {# for debugging #}
+
+    {% if gaetk_development %}
+      <div class="corner-ribbon bottom-right sticky red shadow">Development</div>
+      <script>
+        {% autoescape false %}
+var gaetk_global = {{ gaetk_globalcontext_json }};
+var gaetk_context = {{ gaetk_localcontext_json }};
+        {% endautoescape %}
+      </script>
+    {% endif %}
   </body>
 </html>
