@@ -8,7 +8,6 @@ Copyright (c) 2011-2015 HUDORA GmbH. All rights reserved.
 """
 import mimetypes
 
-import cloudstorage
 import config
 
 from gaetk.compat import xdb_kind
@@ -93,6 +92,7 @@ def upload_to_blobstore(obj, key_name, blob):
 
     Der Rückgabewert ist der Blob-Key des neuen Objekts.
     """
+    import cloudstorage  # this makes Sphynx barf
     mime_type, _ = mimetypes.guess_type(blob.filename)
     bucket = getattr(config, 'GCS_BUCKET_NAME', app_identity.get_default_gcs_bucket_name())
     file_name = '/%s/admin/%s/%s/%s' % (bucket, xdb_kind(obj), key_name, blob.filename)
