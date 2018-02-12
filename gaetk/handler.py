@@ -388,9 +388,17 @@ class BasicHandler(webapp2.RequestHandler):
                 bytecode_cache=jinja2.MemcachedBytecodeCache(memcache, timeout=3600)
             )
             myfilters.register_custom_filters(env)
+            env.exception_handler = self._jinja2_exception_handler
             _jinja_env_cache[key] = env
         self.add_jinja2env_globals(_jinja_env_cache[key])
         return _jinja_env_cache[key]
+
+    def _jinja2_exception_handler(self, traceback):
+        """Is called during Jinja2 Exception processing to provide logging."""
+        # see http://flask.pocoo.org/snippets/74/
+        # here we still get the correct traceback information
+        logger.exception("Template Exception %s", traceback.render_as_text())
+        sentry_client.captureException(exc_info=traceback.exc_info)
 
     def add_jinja2env_globals(self, env):
         """To be everwritten  by subclasses.

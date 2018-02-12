@@ -83,15 +83,16 @@ def show_snippet(env, name, default=''):
                 content = render(name, env, snippet.markdown)
             except Exception as exception:
                 # TODO: raise in raven
+                logging.info('env = %s', env)
                 logging.exception(u'Fehler beim Rendern des Snippet %s: %s', snippet.key.id(), exception)
-                return '<!-- Rendering error: %s -->%s' % (cgi.escape(str(exception)), edit)
+                ret = u'Fehler!<!-- Rendering error: %s -->%s' % (cgi.escape(str(exception)), edit)
+                return jinja2.Markup(ret)
 
     assert content is not None
     return jinja2.Markup(u'''<div
             class="snippetenvelope"
             id="snippet_{css_name}_envelop"
-            data-snippet="{name}"
-        >{edit}<div
+            data-snippet="{name}">{edit}<div
             class="snippet" id="snippet_{css_name}">{content}
         </div></div>'''.format(
             css_name=css_name, name=name, edit=edit, content=content))
