@@ -398,7 +398,6 @@ class BasicHandler(webapp2.RequestHandler):
         # see http://flask.pocoo.org/snippets/74/
         # here we still get the correct traceback information
         logger.exception("Template Exception %s", traceback.render_as_text())
-        sentry_client.captureException(exc_info=traceback.exc_info)
 
     def add_jinja2env_globals(self, env):
         """To be everwritten  by subclasses.
