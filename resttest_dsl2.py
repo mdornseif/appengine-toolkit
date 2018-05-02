@@ -24,7 +24,6 @@ import huTools.http._httplib2  # for ServerNotFoundError
 import requests
 
 from huTools import hujson2
-from huTools.http import fetch
 from requests.auth import HTTPBasicAuth
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
@@ -300,7 +299,7 @@ class TestClient(object):
         typ = kwargs.pop('typ', u'').lower()
         for url in args:
             path = urlparse.urlparse(url).path
-            if typ == 'json' or path.endswith('.json'):
+            if typ == 'json' or path.endswith('json'):
                 checkers = [responds_json]
             elif path.endswith('.pdf'):
                 checkers = [responds_pdf]

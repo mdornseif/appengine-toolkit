@@ -226,6 +226,7 @@ class BasicHandler(webapp2.RequestHandler):
 
         if (self.request.is_xhr
             # ES6 Fetch API
+            or 'xmlhttprequest' in self.request.headers.get('X-Requested-With', '').lower()
             or 'Fetch' in self.request.headers.get('X-Requested-With', '')
             # JSON only client
                 or self.request.headers.get('Accept', '') == 'application/json'):
@@ -693,6 +694,8 @@ class BasicHandler(webapp2.RequestHandler):
     def _parse_authorisation(self):
         """Parse Authorization Header"""
         auth_type, encoded = self.request.headers.get('Authorization').split(None, 1)
+        if auth_type.lower() == 'bearer':
+            return '', ''
         if auth_type.lower() != 'basic':
             raise HTTP400_BadRequest(
                 "unknown HTTP-Login type %r %s %s", auth_type, self.request.remote_addr,
