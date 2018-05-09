@@ -28,11 +28,11 @@ body {
   margin-bottom: 20px;
 }
 
-/* hide links when printing
+/* Don't print link hrefs */
 @media print {
   a[href]:after {
-    content: "" !important;
-  }*/
+    content: none
+  }
 }
     </style>
     <!--/base_admin3:gaetkstyle-->{% endblock gaetkstyle %}

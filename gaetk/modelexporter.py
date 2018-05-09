@@ -104,7 +104,7 @@ class ModelExporter(object):
 
     def create_writer(self, fileobj):
         """Generiert den Ausgabedatenstrom aus fileobj."""
-        return csv.writer(fileobj, dialect='excel', delimiter='\t')
+        return csv.writer(fileobj, dialect='excel', delimiter=str('\t'))
 
     def to_csv(self, fileobj):
         """generate CSV in fileobj"""
