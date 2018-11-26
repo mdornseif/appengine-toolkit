@@ -20,7 +20,6 @@ import gaetk.handler
 import gaetk.jinja_filters
 import gaetk.tools
 import huTools.http.tools
-import huTools.markdown2
 
 from google.appengine.api import memcache
 from google.appengine.api import users
@@ -99,6 +98,7 @@ def show_snippet(env, name, default=''):
 
 def render(name, env, markdown):
     """Snippet mit Jinja2 rendern und in memcache speichern"""
+    import huTools.markdown2
     template = env.from_string(huTools.markdown2.markdown(markdown))
     content = template.render({})
     if not memcache.set('gaetk_snippet2:%s:rendered' % name, content, 600):
