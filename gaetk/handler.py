@@ -661,7 +661,7 @@ class BasicHandler(webapp2.RequestHandler):
                         self.request.headers.get('Authorization'))
                     raise HTTP401_Unauthorized(
                         "Invalid HTTP-Auth",
-                        headers={'WWW-Authenticate': 'Basic realm="API Login"'})
+                        headers={b'WWW-Authenticate': b'Basic realm="API Login"'})
 
         # HTTP Basic Auth failed
         # we don't accept login based soley on Google Infrastructure login
@@ -680,7 +680,7 @@ class BasicHandler(webapp2.RequestHandler):
                 # We assume the access came via cURL et al, request Auth via 401 Status code.
                 logging.info("requesting HTTP-Auth %s %s", self.request.remote_addr,
                              self.request.headers.get('Authorization'))
-                raise HTTP401_Unauthorized(headers={'WWW-Authenticate': 'Basic realm="API Login"'})
+                raise HTTP401_Unauthorized(headers={b'WWW-Authenticate': b'Basic realm="API Login"'})
 
         self.request._login_required_called = True
 
