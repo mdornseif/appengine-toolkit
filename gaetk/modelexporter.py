@@ -19,9 +19,10 @@ Usage:
 import csv
 import datetime
 import time
+import collections
 
 from gaetk import compat
-from gaetk.infrastructure import query_iterator
+from gaetk2.datastore import query_iterator
 
 
 def encode(val):
@@ -86,8 +87,12 @@ class ModelExporter(object):
             output.writerow(fixer(['# Exported at:', str(datetime.datetime.now())]))
         output.writerow(fixer(self.fields + [u'Datenbankschlüssel']))
 
-    def create_row(self, output, data, fixer=lambda x: x):
+    def create_row(self, output, data, fixer=None):
         """Erzeugt eine einzelne Zeile im Output."""
+
+        if not fixer:
+            fixer = defaultfixer
+
         row = []
         for field in self.fields:
             attr = getattr(data, field)
@@ -104,7 +109,7 @@ class ModelExporter(object):
 
     def create_writer(self, fileobj):
         """Generiert den Ausgabedatenstrom aus fileobj."""
-        return csv.writer(fileobj, dialect='excel', delimiter='\t')
+        return csv.writer(fileobj, dialect='excel', delimiter=b'\t')
 
     def to_csv(self, fileobj):
         """generate CSV in fileobj"""
@@ -130,3 +135,12 @@ class ModelExporter(object):
                 xlswriter.writerow(['truncated ...'])
                 break
         xlswriter.save(fileobj)
+
+
+def defaultfixer(x):
+    """Get rid of special data types."""
+    if not isinstance(x, (basestring, float, int)):
+        if isinstance(x, collections.Iterable):
+            return ', '.join([str(y) for y in x])
+        return unicode(x)
+    return x
