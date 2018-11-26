@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # encoding: utf-8
-"""
-gaetk/modelexporter.py Export db/ndb Tables / Models
+"""gaetk/modelexporter.py Export db/ndb Tables / Models.
 
 Created by Maximillian on 2014-12-10.
 Copyright (c) 2014-2016 HUDORA GmbH. All rights reserved.

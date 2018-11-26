@@ -57,8 +57,14 @@ import jinja2
 import webapp2
 
 from gaetk.lib import _itsdangerous
+
+from gaetk.lib._gaesessions import Session
+from gaetk.lib._gaesessions import _tls
 from gaetk.lib._gaesessions import get_current_session
+from gaetk.lib._gaesessions import set_current_session
 from gaetk.lib._lru_cache import lru_cache
+
+logger = logging.getLogger(__name__)
 
 
 LOGIN_ALLOWED_DOMAINS = getattr(config, 'LOGIN_ALLOWED_DOMAINS', [])
@@ -107,13 +113,14 @@ def login_user(credential, session, via, response=None):
         else:
             os.environ['USER_EMAIL'] = '%s@auth.hudora.de' % credential.uid
     if response:
-        s = _itsdangerous.URLSafeTimedSerializer(session.base_key)
-        domain = gaetk.tools.get_cookie_domain()
-        uidcookie = s.dumps(dict(uid=credential.uid, provider=os.environ.get('HTTP_HOST', '')))
-        response.set_cookie('gaetkuid', uidcookie, domain='.%s' % domain, max_age=60 * 60 * 2)
+        if hasattr(session, 'base_key'):
+            s = _itsdangerous.URLSafeTimedSerializer(session.base_key)
+            domain = gaetk.tools.get_cookie_domain()
+            uidcookie = s.dumps(dict(uid=credential.uid, provider=os.environ.get('HTTP_HOST', '')))
+            response.set_cookie('gaetkuid', uidcookie, domain='.%s' % domain, max_age=60 * 60 * 2)
 
     if config.DEBUG:
-        logging.debug(
+        logger.debug(
             "%s logged in via %s since %s sid:%s",
             credential.uid, session['login_via'], session['login_time'], session.sid)
 
@@ -197,9 +204,13 @@ class BasicHandler(webapp2.RequestHandler):
             self.session = get_current_session()
         except AttributeError:
             # session middleware might not be enabled
-            self.session = {}  # pylint: disable=R0204
+            # or is acting up
+            logger.warn('could not read session, using dummy session')
+            self.session = Session(cookie_key='changeme')
+
         # Careful! `webapp2.RequestHandler` does not call super()!
         super(BasicHandler, self).__init__(*args, **kwargs)
+        logger.debug("session:%s", self.session)
         self.credential = None
 
     def abs_url(self, url):
@@ -213,7 +224,7 @@ class BasicHandler(webapp2.RequestHandler):
 
           code: the HTTP status error code (e.g., 501)
         """
-        logging.info('Errorhandler: %s', code)
+        logger.info('Errorhandler: %s', code)
         assert code.isdigit()
         super(BasicHandler, self).error(code)
         if str(code) == '404':
@@ -378,9 +389,16 @@ class BasicHandler(webapp2.RequestHandler):
                 bytecode_cache=jinja2.MemcachedBytecodeCache(memcache, timeout=3600)
             )
             myfilters.register_custom_filters(env)
+            env.exception_handler = self._jinja2_exception_handler
             _jinja_env_cache[key] = env
         self.add_jinja2env_globals(_jinja_env_cache[key])
         return _jinja_env_cache[key]
+
+    def _jinja2_exception_handler(self, traceback):
+        """Is called during Jinja2 Exception processing to provide logging."""
+        # see http://flask.pocoo.org/snippets/74/
+        # here we still get the correct traceback information
+        logger.exception("Template Exception %s", traceback.render_as_text())
 
     def add_jinja2env_globals(self, env):
         """To be everwritten  by subclasses.
@@ -416,8 +434,8 @@ class BasicHandler(webapp2.RequestHandler):
         except jinja2.TemplateNotFound:
             # better error reporting
             # TODO: https://docs.sentry.io/clientdev/interfaces/template/
-            logging.info('jinja2 environment: %s', env)
-            logging.info('template dirs: %s', config.template_dirs)
+            logger.info('jinja2 environment: %s', env)
+            logger.info('template dirs: %s', config.template_dirs)
             raise
 
         return content
@@ -444,7 +462,7 @@ class BasicHandler(webapp2.RequestHandler):
         self.response.out.write(self.rendered(values, template_name))
         delta = time.time() - start
         if delta > 500:
-            logging.warn("rendering took %d ms", (delta * 1000.0))
+            logger.warn("rendering took %d ms", (delta * 1000.0))
 
     def return_text(self, text, status=200, content_type='text/plain', encoding='utf-8'):
         """Quick and dirty sending of some plaintext to the client."""
@@ -642,7 +660,7 @@ class BasicHandler(webapp2.RequestHandler):
             if self.credential:
                 login_user(self.credential, self.session, 'session', self.response)
             else:
-                logging.warn("kein credential zur session: %s", self.session.get('uid'))
+                logger.warn("kein credential zur session: %s", self.session.get('uid'))
 
         if not self.credential:
             # still no session information - try HTTP - Auth
@@ -655,9 +673,9 @@ class BasicHandler(webapp2.RequestHandler):
                     # Successful login
                     self.credential = credential
                     login_user(self.credential, self.session, 'HTTP', self.response)
-                    logging.debug("HTTP-Login from %s/%s", uid, self.request.remote_addr)
+                    logger.debug("HTTP-Login from %s/%s", uid, self.request.remote_addr)
                 else:
-                    logging.error(
+                    logger.error(
                         "failed HTTP-Login from %s/%s %s", uid, self.request.remote_addr,
                         self.request.headers.get('Authorization'))
                     raise HTTP401_Unauthorized(
@@ -671,7 +689,7 @@ class BasicHandler(webapp2.RequestHandler):
         if not self.credential:
             # Login not successful
             if self.browser_redirectable:
-                logging.info("404/302. headers: %r", self.request.headers)
+                logger.info("404/302. headers: %r", self.request.headers)
                 # we assume the request came via a browser - redirect to the "nice" login page
                 # let login.py handle it from there
                 absolute_url = self.abs_url(
@@ -679,7 +697,7 @@ class BasicHandler(webapp2.RequestHandler):
                 raise HTTP302_Found(location=absolute_url)
             else:
                 # We assume the access came via cURL et al, request Auth via 401 Status code.
-                logging.info("requesting HTTP-Auth %s %s", self.request.remote_addr,
+                logger.info("requesting HTTP-Auth %s %s", self.request.remote_addr,
                              self.request.headers.get('Authorization'))
                 raise HTTP401_Unauthorized(headers={b'WWW-Authenticate': b'Basic realm="API Login"'})
 
@@ -713,7 +731,7 @@ class BasicHandler(webapp2.RequestHandler):
         """Function to allow implementing authentication for all subclasses. To be overwritten."""
         # ensure that users with empty password are never logged in
         if self.credential and not self.credential.secret:
-            logging.debug('%r %r %r', method, args, kwargs)
+            logger.debug('%r %r %r', method, args, kwargs)
             raise HTTP401_Unauthorized("Account disabled")
 
     def finished_hook(self, ret, method, *args, **kwargs):
@@ -723,7 +741,7 @@ class BasicHandler(webapp2.RequestHandler):
         # simple sample implementation: check compliance for headers/wsgiref
         for name, val in self.response.headers.items():
             if not (isinstance(name, basestring) and isinstance(val, basestring)):
-                logging.error("Header names and values must be strings: {%r: %r} in %s(%r, %r) => %r",
+                logger.error("Header names and values must be strings: {%r: %r} in %s(%r, %r) => %r",
                               name, val, method, args, kwargs, ret)
 
     def dispatch(self):
@@ -779,7 +797,7 @@ class BasicHandler(webapp2.RequestHandler):
         messages.append(dict(type=typ, html=html, expires=time.time() + ttl))
         # We can't use `.append()` because this doesn't result in automatic session saving.
         self.session['_gaetk_messages'] = messages
-        logging.debug(u'add_message(%r, %r, %r)', typ, html, ttl)
+        logger.debug(u'add_message(%r, %r, %r)', typ, html, ttl)
 
 
 class JsonResponseHandler(BasicHandler):
@@ -922,7 +940,7 @@ class MarkdownFileHandler(BasicHandler):
                 '%a, %d %b %y %H:%M:%S GMT', time.gmtime(stbuf.st_mtime))
             self.render({'text': text, 'title': title, 'path': path}, self.template_name)
         except IOError as exception:
-            logging.exception(u'Path %s: %s', textfile, exception)
+            logger.exception(u'Path %s: %s', textfile, exception)
             raise gaetk.handler.HTTP404_NotFound("%s not available" % textfile)
 
 

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # encoding: utf-8
-"""
-snippets.py - editable parts of webpages
+"""snippets.py - editable parts of webpages.
 
 Created by Maximillian Dornseif on 2014-11-22.
 Copyright (c) 2014, 2017 HUDORA. All rights reserved.
@@ -35,9 +34,10 @@ class gaetk_Snippet(ndb.Model):
     created_at = ndb.DateTimeProperty(auto_now_add=True)
 
 
-@jinja2.environmentfunction
-def show_snippet(env, name, default=''):
+@jinja2.contextfunction
+def show_snippet(ctx, name, default=''):
     """Render a snippet inside a jinja2 template."""
+    env = ctx.environment  # see http://jinja.pocoo.org/docs/2.10/api/#jinja2.runtime.Context
     db_name = gaetk.tools.slugify(name.replace(' ', ''))
     url_name = huTools.http.tools.quote(db_name)
     css_name = gaetk.jinja_filters.filter_cssencode(db_name)
@@ -79,28 +79,31 @@ def show_snippet(env, name, default=''):
         # generate snippet
         if content is None:
             try:
-                content = render(name, env, snippet.markdown)
+                content = render(name, ctx, snippet.markdown)
             except Exception as exception:
                 # TODO: raise in raven
+                logging.info('ctx = %s', ctx.vars)
+                logging.info('exported = %s', ctx.get_exported())
+                logging.info('env = %s', vars(env))
                 logging.exception(u'Fehler beim Rendern des Snippet %s: %s', snippet.key.id(), exception)
-                return '<!-- Rendering error: %s -->%s' % (cgi.escape(str(exception)), edit)
+                ret = u'Fehler!<!-- Rendering error: %s -->%s' % (cgi.escape(str(exception)), edit)
+                return jinja2.Markup(ret)
 
     assert content is not None
     return jinja2.Markup(u'''<div
             class="snippetenvelope"
             id="snippet_{css_name}_envelop"
-            data-snippet="{name}"
-        >{edit}<div
+            data-snippet="{name}">{edit}<div
             class="snippet" id="snippet_{css_name}">{content}
         </div></div>'''.format(
             css_name=css_name, name=name, edit=edit, content=content))
 
 
-def render(name, env, markdown):
+def render(name, ctx, markdown):
     """Snippet mit Jinja2 rendern und in memcache speichern"""
     import huTools.markdown2
-    template = env.from_string(huTools.markdown2.markdown(markdown))
-    content = template.render({})
+    template = ctx.environment.from_string(huTools.markdown2.markdown(markdown))
+    content = template.render(dict(ctx.items()))
     if not memcache.set('gaetk_snippet2:%s:rendered' % name, content, 600):
         logging.error('Memcache set failed.')
     return content
