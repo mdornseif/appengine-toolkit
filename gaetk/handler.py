@@ -844,7 +844,13 @@ class JsonResponseHandler(BasicHandler):
             args = ()
 
         # bind session on dispatch (not in __init__)
-        self.session = get_current_session()
+        # this fails during unit tests
+        try:
+            self.session = get_current_session()
+        except AttributeError:
+            self.session ={}
+            if not os.environ.get('GAETK2_UNITTEST'):
+
         # init messages array based on session but avoid modifying session if not needed
         if self.session.get('_gaetk_messages', None):
             self.session['_gaetk_messages'] = self.session.get('_gaetk_messages', [])
