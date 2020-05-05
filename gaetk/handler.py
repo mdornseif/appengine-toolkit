@@ -850,6 +850,7 @@ class JsonResponseHandler(BasicHandler):
         except AttributeError:
             self.session ={}
             if not os.environ.get('GAETK2_UNITTEST'):
+                raise
 
         # init messages array based on session but avoid modifying session if not needed
         if self.session.get('_gaetk_messages', None):
