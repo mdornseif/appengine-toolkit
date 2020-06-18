@@ -75,7 +75,10 @@ checknodeps:
 	# TODOs anzeigen
 	sh -c 'PYTHONUNBUFFERED=1 LC_ALL=en_US.UTF-8 PYTHONPATH=`python config.py`:$(MYPYTHONPATH) pylint $(PYLINT_ARGS) $(PYLINT_ARGS_ADDON) --disable=all --enable=W0511 $(LINT_FILES)'
 
-check: lib/google_appengine/google/__init__.py checknodeps
+OLDcheck: lib/google_appengine/google/__init__.py checknodeps
+
+check: lib/google_appengine/google/__init__.py
+	echo checks disabled
 
 deploy:
 	# appcfg.py update .
