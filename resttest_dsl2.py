@@ -2,13 +2,14 @@
 """
 DSL zur Beschreibung von REST-interfaces, angelehnt an https://gist.github.com/805540
 
-Copyright (c) 2011, 2013, 2016 HUDORA. All rights reserved.
+Copyright (c) 2011, 2013, 2016, 2017 HUDORA. All rights reserved.
 File created by Philipp Benjamin Koeppchen on 2011-02-23
 """
 
 import logging
 import optparse
 import os
+import random
 import sys
 import time
 import urlparse
@@ -23,7 +24,6 @@ import huTools.http._httplib2  # for ServerNotFoundError
 import requests
 
 from huTools import hujson2
-from huTools.http import fetch
 from requests.auth import HTTPBasicAuth
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
@@ -100,6 +100,9 @@ class Response(object):
         else:
             print repr(self.content[:50])
         print '=' * 50
+        if 'X-Cloud-Trace-Context' in self.headers:
+            print ('http://console.developer.google.com/traces/details/%s'
+                   % self.headers['X-Cloud-Trace-Context'].split(';')[0])
         print
 
     def succeed(self, message):
@@ -236,6 +239,7 @@ class TestClient(object):
         self.sessions = {None: requests.Session()}
         self.sessions[None].trust_env = False  # avoid reading .netrc!
         self.queue = []  # contains URLs to be checked, kwargs, and checks to be done
+        self.urlfile = open('.resttest-urls.txt', 'w')  # für JavaScript Tests
 
         for user in users:
             key, creds = user.split('=', 1)
@@ -258,7 +262,10 @@ class TestClient(object):
         if auth and auth not in self.authdict:
             raise ValueError("Unknown auth '%s'" % auth)
 
-        myheaders = {'User-Agent': 'resttest/%s' % requests.utils.default_user_agent()}
+        self.cloudtrace = "%032x" % (random.getrandbits(128))
+        myheaders = {
+            'User-Agent': 'resttest/%s' % requests.utils.default_user_agent(),
+            'X-Cloud-Trace-Context': '%s/0;o=1' % self.cloudtrace}
         if accept:
             myheaders['Accept'] = accept
         myheaders.update(headers)
@@ -288,21 +295,26 @@ class TestClient(object):
     # New API
 
     def check(self, *args, **kwargs):
+        # see http://stackoverflow.com/questions/9872824/calling-a-python-function-with-args-kwargs-and-optional-default-arguments
+        typ = kwargs.pop('typ', u'').lower()
         for url in args:
-            if url.endswith('.json'):
+            path = urlparse.urlparse(url).path
+            if typ == 'json' or path.endswith('json'):
                 checkers = [responds_json]
-            elif url.endswith('.pdf'):
+            elif path.endswith('.pdf'):
                 checkers = [responds_pdf]
-            elif url.endswith('.xml'):
+            elif path.endswith(('.xml', '/xml/')):
                 checkers = [responds_xml]
-            elif url.endswith('.csv') or url.endswith('.xls'):
+            elif path.endswith(('.csv', '/csv/', '/xls/', '.xls')):
                 checkers = [responds_basic]
-            elif url.endswith('jpeg'):
+            elif path.endswith('jpeg'):
                 checkers = [responds_jpeg]
-            elif url.endswith('txt'):
+            elif typ == 'txt' or path.endswith('txt'):
                 checkers = [responds_plaintext]
             else:
                 checkers = [responds_html]
+                self.urlfile.write(url + '\n')
+
             self.queue.append((url, kwargs, checkers))
 
     def check_allowdeny(self, *args, **kwargs):

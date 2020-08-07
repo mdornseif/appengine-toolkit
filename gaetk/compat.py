@@ -4,13 +4,14 @@
 gaetk/compat.py compability layer for App Engine
 
 Created by Dr. Maximillian Dornseif on 2014-12-10.
-Copyright (c) 2014 HUDORA GmbH. All rights reserved.
+Copyright (c) 2014, 2016 HUDORA GmbH. All rights reserved.
 """
 from urllib import unquote
 
 from google.appengine.datastore.datastore_query import Cursor
 from google.appengine.ext import db
 from google.appengine.ext import ndb
+from google.appengine.ext.ndb import model
 
 
 def xdb_create_key(model_class, id_or_name, parent=None):
@@ -21,22 +22,30 @@ def xdb_create_key(model_class, id_or_name, parent=None):
         return db.Key.from_path(model_class.kind(), id_or_name, parent=parent)
 
 
-def get_by_id_or_name(model_class, id_or_name, parent=None):
+def get_by_id_or_name(model_class, id_or_name, parent=None, **kwargs):
     """Getting by key value."""
     if issubclass(model_class, ndb.Model):
-        return model_class.get_by_id(id_or_name, parent=parent)
+        return model_class.get_by_id(id_or_name, parent=parent, **kwargs)
     else:
-        return model_class.get_by_key_name(id_or_name, parent=parent)
+        return model_class.get_by_key_name(id_or_name, parent=parent, **kwargs)
 
 
 def xdb_kind(model_class):
-    """Get kind from db or ndb model class"""
+    """Get kind (table-name, string) for ndb model class"""
     kind = getattr(model_class, '_get_kind', None)
     if not kind:
         kind = getattr(model_class, 'kind', None)
         if not kind:
             return model_class.__name__
     return kind()
+
+
+def xdb_kind_from_query(query):
+    """Get kind-Model-Object from db or ndb model class"""
+
+    if getattr(query, 'kind', None):
+        return model.Model._lookup_model(query.kind)
+    return query._model_class
 
 
 def xdb_get_instance(model_class, encoded_key):
@@ -167,12 +176,22 @@ def xdb_fetch_page(query, limit, offset=None, start_cursor=None):
             more_objects = len(objects) == limit
         else:
             objects = query.fetch(limit, offset=offset)
-            _cursor = query.cursor()
-            more_objects = query.with_cursor(_cursor).count(1) > 0
-            cursor = Cursor(urlsafe=_cursor)
+            # MultiQuery kann keine Cursor
+            if len(getattr(query, '_Query__query_sets', [])) < 2:
+                _cursor = query.cursor()
+                more_objects = query.with_cursor(_cursor).count(1) > 0
+                cursor = Cursor(urlsafe=_cursor)
+            else:
+                more_objects = len(objects) == limit
+                cursor = None
     else:
         raise RuntimeError('unknown query class: %s' % type(query))
     return objects, cursor, more_objects
+
+
+def xdb_iskey(obj):
+    u"""obj is a db or an ndb Key"""
+    return isinstance(obj, (db.Key, ndb.Key))
 
 
 def xdb_str_key(key):
@@ -181,3 +200,19 @@ def xdb_str_key(key):
         return key.urlsafe()
     else:
         return str(key)
+
+
+def xdb_prop_name(prop):
+    """Get the name of a property."""
+    if isinstance(prop, ndb.Property):
+        return prop._name
+    elif isinstance(prop, db.Property):
+        return prop.name
+
+
+def xdb_prop_creation_counter(prop):
+    """Get the order in which a property was created."""
+    if isinstance(prop, ndb.Property):
+        return prop._creation_counter
+    elif isinstance(prop, db.Property):
+        return prop.creation_counter

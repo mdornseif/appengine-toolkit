@@ -4,21 +4,37 @@
 defaulthandlers.py - handlers implementing common functionality for gaetk
 
 Created by Maximillian Dornseif on 2011-01-09.
-Copyright (c) 2011, 2015 HUDORA. All rights reserved.
+Copyright (c) 2011, 2015, 2017 HUDORA. All rights reserved.
 """
 import datetime
 import json
+import logging
 import os
 
 import google.appengine.api.app_identity
 import google.appengine.api.memcache
 
+from google.appengine.api import lib_config
+from google.appengine.api import taskqueue
+from google.appengine.api.app_identity import get_application_id
+from google.appengine.ext import db
+from google.appengine.ext.db import stats
+from google.appengine.ext.db.metadata import Kind
+
 import config
 import gaetk
 import gaetk.handler
 
-from google.appengine.ext import db
-from google.appengine.ext.db import stats
+
+backup_config = lib_config.register(
+    'gaetk_backup',
+    dict(
+        GS_BUCKET='*unset*',
+        FILESYSTEM='gs',
+        QUEUE='default',
+        BLACKLIST=[],
+    )
+)
 
 
 # you can add to plugins to extend the stat handler
@@ -171,12 +187,53 @@ class WarmupHandler(gaetk.handler.BasicHandler):
 
     def get(self):
         """Handle warm up requests"""
-        self.return_text(self.warmup())
+        self.warmup()
+        self.return_text('OK')
+
+
+def get_all_datastore_kinds():
+    for kind in Kind.all():
+        if not kind.kind_name.startswith('_'):
+            yield kind.kind_name
+
+
+class BackupHandler(gaetk.handler.BasicHandler):
+    """Handler to start scheduled backups"""
+
+    def get(self):
+
+        if 'X-AppEngine-Cron' not in self.request.headers:
+            raise gaetk.handler.HTTP403_Forbidden('Scheduled backups must be started via cron')
+
+        today = datetime.date.today()
+        kinds = [kind for kind in get_all_datastore_kinds() if kind not in backup_config.BLACKLIST]
+        bucketname = '/'.join((
+                    backup_config.GS_BUCKET,
+                    get_application_id(),
+                    today.isoformat())).lstrip('/')
+        params = dict(
+                name='datastore_backup_' + today.isoformat(),
+                gs_bucket_name=bucketname,
+                filesystem=backup_config.FILESYSTEM,
+                queue=backup_config.QUEUE,
+                kind=kinds,
+            )
+        logging.info(u'backup to %r %r', bucketname, params)
+
+        taskqueue.add(
+            url='/_ah/datastore_admin/backup.create',
+            method='POST',
+            target='ah-builtin-python-bundle',
+            params=params,
+            )
+
+        self.return_text('OK')
 
 
 application = gaetk.webapp2.WSGIApplication([
-    (r'^/gaetk/stats.json', Stats),
-    (r'^/robots.txt', RobotTxtHandler),
-    (r'^/version.txt', VersionHandler),
+    (r'^/gaetk/stats\.json', Stats),
+    (r'^/robots\.txt', RobotTxtHandler),
+    (r'^/version\.txt', VersionHandler),
     (r'^/_ah/warmup$', WarmupHandler),
+    (r'^/gaetk/backup/$', BackupHandler),
 ])

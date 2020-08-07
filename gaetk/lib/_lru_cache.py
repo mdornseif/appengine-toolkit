@@ -2,6 +2,7 @@
 # encoding: utf-8
 import threading
 import time
+
 from collections import namedtuple
 from functools import update_wrapper
 
@@ -41,7 +42,7 @@ def _make_key(args, kwds, typed,
     return _HashedSeq(key)
 
 
-def lru_cache(maxsize=64, typed=False, ttl=None):
+def lru_cache(maxsize=64, typed=False, ttl=600):
     """Least-recently-used cache decorator.
 
     If *maxsize* is set to None, the LRU features are disabled and the cache

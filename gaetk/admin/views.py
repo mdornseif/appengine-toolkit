@@ -61,7 +61,8 @@ class AdminHandler(gaetk.handler.BasicHandler):
         if hasattr(config, 'PROJECTNAME'):
             values['projectname'] = config.PROJECTNAME
 
-        self.title = values.get('title')
+        if not hasattr(self, 'title'):
+            self.title = values.get('title')
         return values
 
 

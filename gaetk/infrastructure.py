@@ -4,15 +4,24 @@
 infrastructure.py
 
 Created by Maximillian Dornseif on 2011-01-07.
-Copyright (c) 2011, 2012 HUDORA. All rights reserved.
+Copyright (c) 2011, 2012, 2016, 2017 Cyberlogi/HUDORA. All rights reserved.
 """
+import logging
+import os
+import re
 import zlib
+
+import google.appengine.ext.deferred.deferred
 
 from gaetk import compat
 from google.appengine.api import memcache
 from google.appengine.api import taskqueue
+from google.appengine.ext import db
+from google.appengine.ext import deferred
 from google.appengine.ext import ndb
 
+
+# Tasks
 
 def taskqueue_add_multi(qname, url, paramlist, **kwargs):
     """Adds more than one Task to the same Taskqueue/URL.
@@ -54,6 +63,58 @@ def taskqueue_add_multi_payload(name, url, payloadlist, **kwargs):
         taskqueue.Queue(name=name).add(tasks)
 
 
+def defer(obj, *args, **kwargs):
+    """Defers a callable for execution later.
+
+    like https://cloud.google.com/appengine/articles/deferred
+    but adds the function name to the url for easier debugging.
+
+    Add this to `app.yaml`:
+        handlers:
+          # needed to allow abritary postfixes
+          - url: /_ah/queue/deferred(.*)
+            script: google.appengine.ext.deferred.deferred.application
+            login: admin
+    """
+    def to_str(value):
+        """Convert all datatypes to str"""
+        if isinstance(value, unicode):
+            return value.encode('ascii', 'ignore')
+        return str(value)
+
+    suffix = '{0}({1!s},{2!r})'.format(
+        obj.__name__,
+        ','.join(to_str(arg) for arg in args),
+        ','.join('%s=%s' % (key, to_str(value)) for (key, value) in kwargs.items() if not key.startswith('_'))
+    )
+    suffix = re.sub(r'-+', '-', suffix.replace(' ', '-'))
+    suffix = re.sub(r'[^/A-Za-z0-9_,.:@&+$\(\)\-]+', '', suffix)
+    url = google.appengine.ext.deferred.deferred._DEFAULT_URL + '/' + suffix[:1600]
+    kwargs["_url"] = kwargs.pop("_url", url)
+    kwargs["_queue"] = kwargs.pop("_queue", 'workersq')
+    if _is_production():
+        # we only route to the workers backend/module on production machines
+        kwargs["_target"] = kwargs.pop("_target", 'workers')
+    try:
+        return deferred.defer(obj, *args, **kwargs)
+    except taskqueue.TaskAlreadyExistsError:
+        logging.info('Task already exists')
+    except taskqueue.TombstonedTaskError:
+        logging.info('Task did already run')
+
+
+def _is_production():
+    """checks if we can assume to run on a development machine"""
+    if os.environ.get('SERVER_NAME', '').startswith('dev-'):
+        return False
+    elif os.environ.get('SERVER_SOFTWARE', '').startswith('Development'):
+        return False
+    else:
+        return True
+
+
+# Datastore
+
 def query_iterator(query, limit=50):
     """Iterates over a datastore query while avoiding timeouts via a cursor."""
     cursor = None
@@ -67,26 +128,17 @@ def query_iterator(query, limit=50):
             break
 
 
-def copy_entity(entity, **kwargs):
-    """Copy entity"""
-    klass = type(entity)
-    properties = dict((key, value.__get__(entity, klass)) for (key, value) in klass.properties().iteritems())
-    properties.update(**kwargs)
-    return klass(**properties)
-
-
-def flush_ndb_cache(instance):
-    """
-    Flush memcached ndb instance
-
-    Especially usefull if you mix (old) db and ndb for a model.
-    """
-    key = ndb.Context._memcache_prefix + str(instance.key())
-    memcache.delete(key)
+def copy_entity(e, **extra_args):
+    """Copy entity but change values in kwargs."""
+    # see https://stackoverflow.com/a/2712401
+    klass = e.__class__
+    props = dict((v._code_name, v.__get__(e, klass)) for v in klass._properties.itervalues() if type(v) is not ndb.ComputedProperty)
+    props.update(extra_args)
+    return klass(**props)
 
 
 def write_on_change(model, key, data, flush_cache=False):
-    """Schreibe (nur) die geänderten Daten in den Datastore"""
+    """Schreibe (nur) die geänderten Daten in den Datastore."""
 
     key_name = data[key]
     obj = compat.get_by_id_or_name(model, key_name)
@@ -103,8 +155,9 @@ def write_on_change(model, key, data, flush_cache=False):
 
 
 def write_on_change_instance(obj, data):
-    """Schreibe Instanz mit geänderten Daten in Datastore"""
+    """Schreibe Instanz mit geänderten Daten in Datastore."""
 
+    properties = compat.xdb_properties(obj)
     dirty = False
     for key, value in data.iteritems():
         if value != getattr(obj, key, None):
@@ -114,3 +167,20 @@ def write_on_change_instance(obj, data):
         obj.put()
 
     return dirty, obj
+
+def flush_ndb_cache(instance):
+    """
+    Flush memcached ndb instance.
+
+    Especially usefull if you mix (old) db and ndb for a model.
+    """
+    key = ndb.Context._memcache_prefix + compat.xdb_str_key(compat.xdb_key(instance))
+    memcache.delete(key)
+
+
+def reload_obj(obj):
+    """Objekt ohne Cache neu laden."""
+    if compat.xdb_is_ndb(obj):
+        return obj.key.get(use_cache=False, use_memcache=False)
+    else:
+        return db.get(obj.key())

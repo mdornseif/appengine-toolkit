@@ -17,42 +17,43 @@ None
 u'5711'
 
 Created by Christian Klein on 2011-11-24.
-Copyright (c) 2011, 2012, 2016 HUDORA. All rights reserved.
+Copyright (c) 2011, 2012, 2016, 2017 HUDORA. All rights reserved.
 """
 import json
+import logging
 
 import gaetk.handler
 
 from google.appengine.ext import ndb
 
 
-class Configuration(ndb.Model):
+class gaetk_Configuration(ndb.Model):
     """Generic configuration object"""
-    value = ndb.JsonProperty(default=u'')
+    value = ndb.TextProperty(default=u'', indexed=False)
     updated_at = ndb.DateTimeProperty(auto_now_add=True, auto_now=True)
+    created_at = ndb.DateTimeProperty(auto_now_add=True)
 
 
 def get_config(key, default=None):
     """Get configuration value for key"""
 
-    obj = Configuration.get_by_id(key)
+    obj = gaetk_Configuration.get_by_id(key)
     if obj:
-        return obj.value  # json.loads(obj.value)
-    else:
-        return set_config(key, default)
+        return json.loads(obj.value)
+    return set_config(key, default)
 
 
 def get_config_multi(keys):
     """Get multiple configuration values, no defaults"""
 
-    objs = ndb.get_multi([ndb.Key(Configuration, key) for key in keys])
+    objs = ndb.get_multi([ndb.Key(gaetk_Configuration, key) for key in keys])
     return dict((obj.key.id(), obj.value) for obj in objs if obj is not None)
 
 
 def set_config(key, value):
     """Set configuration value for key"""
 
-    obj = Configuration(id=key, value=value)  # json.dumps(value)).put()
+    obj = gaetk_Configuration(id=key, value=json.dumps(value))
     obj.put()
     return value
 
@@ -69,30 +70,27 @@ class ConfigHandler(gaetk.handler.JsonResponseHandler):
 
     def get(self, key):
         """Lese Konfigurationsvariable"""
-        obj = gaetk.handler.get_object_or_404(Configuration, key)
+        obj = gaetk.handler.get_object_or_404(gaetk_Configuration, key)
         self.response.headers['Last-Modified'] = obj.updated_at.strftime('%a, %d %b %Y %H:%M:%S GMT')
         return obj.value
 
     def post(self, key):
         """Schreibe Konfigurationsvariable"""
 
-        import logging
         header = self.request.headers.get('Content-Type')
-        if header.split(';', 1)[0] != 'application/json':
-            logging.debug(u'%s not json?', self.request.headers.get('Content-Type'))
-            raise gaetk.handler.HTTP400_BadRequest
-        try:
-            value = json.loads(self.request.body)
-        except (ValueError, TypeError) as exception:
-            logging.error(u'body: %r, exception: %s', self.request.body, exception)
-            raise gaetk.handler.HTTP400_BadRequest
+        if header.split(';', 1)[0] == 'application/json':
+            data = self.request.body
+        else:
+            data = self.request.get('value', '')
 
-        obj = Configuration.get_or_insert(key)
-        obj.value = value
-        obj.put()
-        return obj.value
+        try:
+            value = json.loads(data)
+        except (ValueError, TypeError) as exception:
+            logging.exception(u'Err: %r, %s', data, exception)
+            raise gaetk.handler.HTTP400_BadRequest
+        return set_config(key, value)
 
 
 application = gaetk.handler.WSGIApplication([
-    (r'.*/(\w+)/', ConfigHandler),
+    (r'.*/([\w_-]+)/', ConfigHandler),
 ])

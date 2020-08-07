@@ -10,12 +10,13 @@ import config
 
 import logging
 
-from google.appengine.api import memcache
 import gae_mini_profiler.templatetags
 import gaetk
 import gaetk.defaulthandlers
 import gaetk.handler
 import jinja2
+
+from google.appengine.api import memcache
 from jinja2.utils import Markup
 
 # In-Process-Caching des Jinja2 Environment - das sollte threadsafe sein.
@@ -62,7 +63,8 @@ class wwwHandler(gaetk.handler.BasicHandler):
             request=self.request,
             # show_snippet=snippets.show_snippet,
         )
-        self.title = values.get('title')
+        if not hasattr(self, 'title'):
+            self.title = values.get('title')
         return values
 
 

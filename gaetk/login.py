@@ -159,6 +159,15 @@ class LoginHandler(gaetk.handler.BasicHandler):
         self.response.out.write(huTools.hujson2.dumps(response))
 
 
+def get_oauth_config(request):
+    """OAuth-Config lesen"""
+
+    if hasattr(config, 'get_oauth_config'):
+        return config.get_oauth_config(request)
+    else:
+        return getattr(config, 'OAUTH', {})
+
+
 def get_oauth_url(session, request):
     # Create a state token to prevent request forgery.
     # Store it in the session for later validation.
@@ -166,21 +175,23 @@ def get_oauth_url(session, request):
         state = ''.join(random.choice(string.ascii_uppercase + string.digits)
                         for x in xrange(32))
         session['oauth_state'] = state
+
+    oauth_config = get_oauth_config(request)
+
     # Set the client ID, token state, and application name in the HTML while
     # serving it.
-    url = config.OAUTH['web']['auth_uri']
     params = dict(
-        client_id=config.OAUTH['web']['client_id'],
+        client_id=oauth_config['web']['client_id'],
         response_type="code",
         scope="openid email profile",
-        redirect_uri=get_oauth_callback_url(request),
+        redirect_uri=get_oauth_callback_url(oauth_config, request.host_url),
         state=session['oauth_state'],
         # login_hint="jsmith@example.com", TODO: gaetkoauthmail
     )
     if len(LOGIN_ALLOWED_DOMAINS) == 1:
         params['hd'] = LOGIN_ALLOWED_DOMAINS[0]
 
-    # intf you know the user's email address, include it in the authentication
+    # If you know the user's email address, include it in the authentication
     # URI as the value of the login_hint parameter. If you do not include a
     # login_hint and the user is signed into Google with multiple accounts,
     # they will see an "account chooser" asking them to select one account.
@@ -188,20 +199,21 @@ def get_oauth_url(session, request):
     # than the one your application is trying to authorize, which could
     # increase the complexity of your task.
 
-    return '?'.join([url, urllib.urlencode(params)])
+    return oauth_config['web']['auth_uri'] + '?' + urllib.urlencode(params)
 
 
-def get_oauth_callback_url(request):
-    url = request.host_url + '/gaetk/auth/oauth2callback'
-    if url not in config.OAUTH['web']['redirect_uris']:
-        logging.debug("%s not valid", url)
+def get_oauth_callback_url(oauth_config, host_url):
+    url = host_url + '/gaetk/auth/oauth2callback'
+    if url not in oauth_config['web']['redirect_uris']:
+        logging.critical("%r not valid", url)
+        logging.error("should be in %r", oauth_config['web']['redirect_uris'])
         url = 'https://' + os.environ.get('SERVER_NAME') + '/gaetk/auth/oauth2callback'
-    if url not in config.OAUTH['web']['redirect_uris']:
-        logging.debug("%s not valid", url)
+    if url not in oauth_config['web']['redirect_uris']:
+        logging.error("fallback %s not valid", url)
         url = 'https://' + os.environ.get('DEFAULT_VERSION_HOSTNAME') + '/gaetk/auth/oauth2callback'
-    if url not in config.OAUTH['web']['redirect_uris']:
-        logging.debug("%s not valid", url)
-        url = config.OAUTH['web']['redirect_uris'][0]
+    if url not in oauth_config['web']['redirect_uris']:
+        logging.error("%s not valid", url)
+        url = oauth_config['web']['redirect_uris'][0]
     return url
 
 
@@ -239,7 +251,7 @@ class OAuth2Callback(gaetk.handler.BasicHandler):
         if self.request.get('state') != self.session.get('oauth_state'):
             logging.error(
                 "wrong state: %r != %r", self.request.get('state'), self.session.get('oauth_state'))
-            logging.debug("session: %s", vars(self.session))
+            logging.debug("session: %s", self.session)
             logging.debug("request: %s", self.request.GET)
             self.session.terminate()
             if self.session.get('oauth_state'):
@@ -251,13 +263,14 @@ class OAuth2Callback(gaetk.handler.BasicHandler):
                 "Wrong domain: %r not in %r" % (self.request.get('hd'), LOGIN_ALLOWED_DOMAINS))
 
         # 4. Exchange code for access token and ID token
-        url = config.OAUTH['web']['token_uri']
+        oauth_config = get_oauth_config(self.request)
+        url = oauth_config['web']['token_uri']
         # get token
         params = dict(
             code=self.request.get('code'),
-            client_id=config.OAUTH['web']['client_id'],
-            client_secret=config.OAUTH['web']['client_secret'],
-            redirect_uri=get_oauth_callback_url(self.request),
+            client_id=oauth_config['web']['client_id'],
+            client_secret=oauth_config['web']['client_secret'],
+            redirect_uri=get_oauth_callback_url(oauth_config, self.request.host_url),
             grant_type="authorization_code")
         data = huTools.http.fetch_json2xx(url, method='POST', content=params)
         input_jwt = data['id_token'].split('.')[1]
@@ -269,7 +282,7 @@ class OAuth2Callback(gaetk.handler.BasicHandler):
         logging.info("jwt = %r", jwt)
         # email_verified True if the user's e-mail address has been verified
         assert jwt['iss'] == 'accounts.google.com'
-        assert jwt['aud'] == config.OAUTH['web']['client_id']
+        assert jwt['aud'] == oauth_config['web']['client_id']
         assert jwt['hd'] in LOGIN_ALLOWED_DOMAINS
         # note that the user is logged in
 
@@ -294,7 +307,7 @@ class LogoutHandler(gaetk.handler.BasicHandler):
 
         logging.info("forcing logout")
         self.session['uid'] = None
-        if self.session.is_active():
+        if self.session and self.session.is_active():
             self.session.terminate()
         self.session.regenerate_id()
 

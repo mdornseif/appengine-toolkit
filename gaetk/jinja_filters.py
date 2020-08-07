@@ -2,7 +2,7 @@
 # encoding: utf-8
 """
 jinja_filters.py - custom jinja2 filters
-Copyright (c) 2010, 2012, 2014 HUDORA. All rights reserved.
+Copyright (c) 2010, 2012, 2014, 2017 HUDORA. All rights reserved.
 """
 import decimal
 import json
@@ -34,7 +34,7 @@ def to_json(value):
     return json.dumps(value)
 
 
-def make_attrgetter(environment, attribute):
+def _make_attrgetter(environment, attribute):
     """Returns a callable that looks up the given attribute from a
     passed object with the rules of the environment. Dots are allowed
     to access attributes of attributes.
@@ -61,11 +61,11 @@ def plural(value, singular_str, plural_str):
     return plural_str
 
 
-def filter_dateformat(value, formatstring='%Y-%m-%d'):
-    """Formates a date"""
-
-    from huTools.calendar.formats import convert_to_date
-    return convert_to_date(value).strftime(formatstring)
+def none(value):
+    """converts `None` to ''"""
+    if value is None:
+        return u''
+    return value
 
 
 def filter_markdown(value):
@@ -98,7 +98,8 @@ def filter_authorize(context, value, permission_types):
     if not isinstance(permission_types, list):
         permission_types = [permission_types]
 
-    granted = not context.get('request').get('_gaetk_disable_permissions', False)
+    # Permissions disabled -> granted
+    granted = context.get('request').get('_gaetk_disable_permissions', False)
     for permission in permission_types:
         if context.get('credential') and permission in context.get('credential').permissions:
             granted = True
@@ -116,25 +117,40 @@ def filter_authorize(context, value, permission_types):
     return value
 
 
-@jinja2.contextfilter
-def filter_tertial(_context, value):
-    """Wandelt ein Date oder Datetime-Objekt in einen Tertial-String"""
+def filter_tertial(value):
+    """Wandelt ein Date oder Datetime-Objekt in einen Tertial-String."""
     from huTools.calendar.formats import tertial
+    if not value:
+        return ''
     return tertial(value)
 
 
-@jinja2.contextfilter
-def filter_to_date(_context, value):
-    """Wandelt ein Date oder Datetime-Objekt in einen Dat-Objekt"""
+def filter_to_date(value):
+    """Wandelt ein Date oder Datetime-Objekt in einen Date-Objekt."""
     from huTools.calendar.formats import convert_to_date
+    if not value:
+        return ''
     return convert_to_date(value)
 
 
-@jinja2.contextfilter
-def filter_yesno(_context, value, answers='yes,no,maybe'):
-    """
-    Beispiel: {{ value|yesno:"yeah,nope,maybe" }}
-    """
+def filter_dateformat(value, formatstring='%Y-%m-%d'):
+    """Formates a date."""
+    from huTools.calendar.formats import convert_to_date
+    if not value:
+        return ''
+    return Markup(convert_to_date(value).strftime(formatstring).replace('-', '&#8209;'))
+
+
+def filter_datetime(value, formatstring='%Y-%m-%d %H:%M'):
+    """Formates a datetime."""
+    from huTools.calendar.formats import convert_to_datetime
+    if not value:
+        return ''
+    return Markup(convert_to_datetime(value).strftime(formatstring).replace('-', '&#8209;'))
+
+
+def filter_yesno(value, answers='yes,no,maybe'):
+    """Beispiel: {{ value|yesno:"yeah,nope,maybe" }}."""
 
     bits = answers.split(u',')
     if len(bits) == 3:
@@ -151,8 +167,15 @@ def filter_yesno(_context, value, answers='yes,no,maybe'):
     return vno
 
 
-@jinja2.contextfilter
-def percent(_context, value):
+def filter_onoff(value):
+    """Boolean als Icon darstellen."""
+    if value:
+        return Markup('<i class="fa fa-toggle-on" aria-hidden="true" style="color:green"></i>')
+    else:
+        return Markup('<i class="fa fa-toggle-off" aria-hidden="true" style="color:red"></i>')
+
+
+def percent(value):
     """Fomat Percent and handle None"""
     if value is None:
         return u'␀'
@@ -204,8 +227,7 @@ def eurocent(value, spacer='&#8239;', decimalplaces=2, plain=False):
         return '<span class="currency">%s.%s</span>' % (euro_value, cent_value)
 
 
-@jinja2.contextfilter
-def euroword(_context, value):
+def euroword(value, plain=False):
     """Fomat Cents as pretty Euros"""
     if value is None:
         return u'␀'
@@ -248,6 +270,16 @@ def filter_attrencode(value):
     return xml.sax.saxutils.quoteattr(value)[1:-1]
 
 
+def filter_cssencode(value):
+    """Makes a string valid as an CSS class name."""
+    if value is None:
+        return u''
+    ret = re.sub('[^A-Za-z0-9-_]+', '-', value)
+    if ret.startswith(tuple('-0123456789')):
+        ret = 'CSS' + ret
+    return ret
+
+
 def filter_urlencode(value):
     """Encode string for usage in URLs"""
     import urllib
@@ -264,17 +296,22 @@ def register_custom_filters(jinjaenv):
     jinjaenv.filters['rjustify'] = right_justify
     jinjaenv.filters['to_json'] = to_json
     jinjaenv.filters['plural'] = plural
-    jinjaenv.filters['dateformat'] = filter_dateformat
+    jinjaenv.filters['none'] = none
     jinjaenv.filters['markdown'] = filter_markdown
     jinjaenv.filters['nl2br'] = filter_nl2br
     jinjaenv.filters['authorize'] = filter_authorize
+    jinjaenv.filters['tertial'] = filter_tertial
     jinjaenv.filters['to_date'] = filter_to_date
+    jinjaenv.filters['dateformat'] = filter_dateformat
+    jinjaenv.filters['datetime'] = filter_datetime
     jinjaenv.filters['yesno'] = filter_yesno
+    jinjaenv.filters['onoff'] = filter_onoff
     jinjaenv.filters['percent'] = percent
     jinjaenv.filters['nicenum'] = nicenum
     jinjaenv.filters['eurocent'] = eurocent
     jinjaenv.filters['euroword'] = euroword
     jinjaenv.filters['intword'] = intword
     jinjaenv.filters['attrencode'] = filter_attrencode
+    jinjaenv.filters['cssencode'] = filter_cssencode
     jinjaenv.filters['urlencode'] = filter_urlencode
     jinjaenv.filters['slugify'] = gaetk.tools.slugify

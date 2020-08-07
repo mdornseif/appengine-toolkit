@@ -6,13 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}{% if title is defined %}{{ title|e }}{% else %}gaetk{% endif %}{% endblock %}</title>
 
-    <script src="/gaetk/static/jquery/jquery-1.11.3.min.js"></script>
-    <script async src="/gaetk/static/jquery/jquery-ui.min.js"></script>
-    <!-- Bootstrap -->
-    <link type="text/css" href="/gaetk/static/bootstrap/3.3.x/css/bootstrap.min.css" rel="stylesheet">
-    <link type="text/css" href="/gaetk/static/font-awesome-4.5.0/css/font-awesome.min.css" rel="stylesheet">
-
-    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <script src="https://www.google.com/jsapi" type="text/javascript"></script>
+    <script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js" integrity="sha256-VazP97ZCwtekAsvgPBSUwPFKdrwD3unUfSGVYrahUqU=" crossorigin="anonymous"></script>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
       <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
@@ -28,6 +26,13 @@ body {
 
 .navbar {
   margin-bottom: 20px;
+}
+
+/* Don't print link hrefs */
+@media print {
+  a[href]:after {
+    content: none
+  }
 }
     </style>
     <!--/base_admin3:gaetkstyle-->{% endblock gaetkstyle %}
@@ -52,10 +57,10 @@ body {
               <span class="icon-bar"></span>
             </button>
             <a class="navbar-brand" href="/">{% block projectname -%}<!--base_admin3:projectname-->
-              {% if projectname is defined -%}
-                {{ projectname|e }} Admin
+              {% if gaetk_app_name is defined -%}
+                {{ gaetk_app_name|e }} Admin
               {%- else -%}
-                gaetk used without setting `projectname`
+                gaetk used without setting `gaetk_app_name`
               {%- endif -%}
             <!--/base_admin3:projectname-->{%- endblock projectname %}</a>
           </div>
@@ -64,7 +69,6 @@ body {
      <!--/base_admin3:navbar-->{%- endblock navbar %}
 
     {% block content -%}<!--base_admin3:content-->
-
         {# display session specific messages #}
         {% if _gaetk_messages is defined -%}
           {% for message in _gaetk_messages -%}
@@ -85,7 +89,7 @@ body {
 
       <div class="row mainrow">
       {% block mainrow -%}<!--base_admin3:mainrow-->
-        <div class="col-sm-8 maincontent">
+        <div id="maincontent" class="col-sm-9 maincontent">
         {% block maincontent -%}<!--base_admin3:maincontent-->
           {% if content is defined -%}
             {{ content }}
@@ -95,7 +99,7 @@ body {
         <!--/base_admin3:maincontent-->{%- endblock maincontent %}
         </div>
 
-        <div class="col-sm-3 col-sm-offset-1 blog-sidebar">
+        <div id="secondarycontent" class="col-sm-3 blog-sidebar">
         {% block secondarycontent -%}<!--base_admin3:secondarycontent-->
           {% if secondarycontent is defined -%}
             {{ secondarycontent }}
@@ -114,10 +118,57 @@ body {
     <!-- Le javascript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
-    <script src="/gaetk/static/bootstrap/3.3.x/js/bootstrap.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
     {% block basejavascript -%}<!--base_admin3:basejavascript--><!--/base_admin3:basejavascript-->{%- endblock basejavascript %}
     {% block javascript -%}<!--base_admin3:javascript--><!--/base_admin3:javascript-->{%- endblock javascript %}
     {% block analytics_tracking -%}<!--base_admin3:analytics_tracking--><!--/base_admin3:analytics_tracking-->{%- endblock analytics_tracking %}
     {% block footer -%}<!--base_admin3:footer--><!--/base_admin3:footer-->{%- endblock footer %}
+
+    <!--  from https://codepen.io/eode9/pen/twkKm -->
+    <style>
+      .corner-ribbon{
+        z-index: 1001;
+        width: 200px;
+        opacity: 0.4;
+        background: #e43;
+        position: absolute;
+        top: 25px;
+        left: -50px;
+        text-align: center;
+        line-height: 50px;
+        letter-spacing: 1px;
+        color: #f0f0f0;
+        transform: rotate(-45deg);
+        -webkit-transform: rotate(-45deg);
+      }
+      .corner-ribbon.sticky{
+        position: fixed;
+      }
+      .corner-ribbon.shadow{
+        box-shadow: 0 0 3px rgba(0,0,0,.3);
+      }
+      .corner-ribbon.bottom-right{
+        top: auto;
+        right: -50px;
+        bottom: 25px;
+        left: auto;
+        transform: rotate(-45deg);
+        -webkit-transform: rotate(-45deg);
+      }
+      .corner-ribbon.red{
+        background: #e43;
+      }
+    </style>
+    {# for debugging #}
+
+    {% if gaetk_development %}
+      <div class="corner-ribbon bottom-right sticky red shadow">Development</div>
+      <script>
+        {% autoescape false %}
+var gaetk_global = {{ gaetk_globalcontext_json }};
+var gaetk_context = {{ gaetk_localcontext_json }};
+        {% endautoescape %}
+      </script>
+    {% endif %}
   </body>
 </html>

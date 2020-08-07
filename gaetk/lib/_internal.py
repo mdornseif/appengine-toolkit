@@ -9,6 +9,8 @@ Copyright (c) 2013 HUDORA. All rights reserved.
 
 # from http://code.activestate.com/recipes/578078-py26-and-py30-backport-of-python-33s-lru-cache/
 
+import warnings
+
 from collections import namedtuple
 from functools import update_wrapper
 from threading import RLock
@@ -174,4 +176,8 @@ def lru_cache(maxsize=100, typed=False):
         wrapper.cache_clear = cache_clear
         return update_wrapper(wrapper, user_function)
 
+
+    warnings.warn(
+        "use `gaetk.lib._lru_cache.lru_cache` instead of `gaetk.lib._internal.lru_cache`",
+         DeprecationWarning, stacklevel=2)
     return decorating_function
